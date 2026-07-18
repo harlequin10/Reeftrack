@@ -1,0 +1,206 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Confirm Duplicate - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Duplicate Detection</h4>
+            </div>
+            <div class="card-body">
+
+                <!-- Flash Cards -->
+                <div class="mb-4">
+                    {% for w in dup_warnings %}
+                    <div class="dup-flash {% if 'EXACT DUPLICATE' in w %}dup-flash-exact{% elif 'High similarity' in w %}dup-flash-high{% else %}dup-flash-moderate{% endif %}">
+                        <div class="dup-flash-bar"></div>
+                        <div class="dup-flash-content">
+                            <div class="dup-flash-top">
+                                <span class="dup-flash-icon">
+                                    {% if 'EXACT DUPLICATE' in w %}
+                                        <i class="fas fa-times-circle"></i>
+                                    {% elif 'High similarity' in w %}
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    {% else %}
+                                        <i class="fas fa-info-circle"></i>
+                                    {% endif %}
+                                </span>
+                                <span class="dup-flash-label">
+                                    {% if 'EXACT DUPLICATE' in w %}
+                                        EXACT DUPLICATE
+                                    {% elif 'High similarity' in w %}
+                                        HIGH SIMILARITY
+                                    {% else %}
+                                        SIMILAR DATA
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="dup-flash-text">{{ w }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Species Summary -->
+                <div class="card mb-4 border-secondary">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-table"></i> File Contents Summary</h6>
+                    </div>
+                    <div class="card-body py-3">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="fw-bold text-primary fs-4">{{ species_count }}</div>
+                                <small class="text-muted">Total Species</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-info fs-4">{{ transect.shallow_species|length }}</div>
+                                <small class="text-muted">Shallow</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-primary fs-4">{{ transect.deep_species|length }}</div>
+                                <small class="text-muted">Deep</small>
+                            </div>
+                        </div>
+                        {% if transect.shallow_start_lat or transect.shallow_end_lat %}
+                        <div class="text-center mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-map-marker-alt"></i>
+                                Shallow: {{ transect.shallow_start_lat|default:"-" }}, {{ transect.shallow_start_lng|default:"-" }} → {{ transect.shallow_end_lat|default:"-" }}, {{ transect.shallow_end_lng|default:"-" }}
+                                {% if transect.deep_start_lat or transect.deep_end_lat %}
+                                    | Deep: {{ transect.deep_start_lat|default:"-" }}, {{ transect.deep_start_lng|default:"-" }} → {{ transect.deep_end_lat|default:"-" }}, {{ transect.deep_end_lng|default:"-" }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Species Tables -->
+                {% if transect.shallow_species %}
+                <div class="mb-3">
+                    <h6 class="text-info"><i class="fas fa-water"></i> Shallow Species</h6>
+                    <div class="table-responsive" style="max-height:200px; overflow-y:auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr><th>#</th><th>Species</th><th>Family</th><th class="text-end">Cover %</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for sp in transect.shallow_species %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ sp.sub_category }}</td>
+                                    <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                                    <td class="text-end">{{ sp.cover }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if transect.deep_species %}
+                <div class="mb-3">
+                    <h6 class="text-primary"><i class="fas fa-water"></i> Deep Species</h6>
+                    <div class="table-responsive" style="max-height:200px; overflow-y:auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr><th>#</th><th>Species</th><th>Family</th><th class="text-end">Cover %</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for sp in transect.deep_species %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ sp.sub_category }}</td>
+                                    <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                                    <td class="text-end">{{ sp.cover }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Actions -->
+                <div class="d-flex justify-content-between mt-4">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="cancel">
+                        <button type="submit" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-times"></i> Discard
+                        </button>
+                    </form>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="proceed">
+                        <button type="submit" class="btn btn-warning btn-lg fw-bold">
+                            <i class="fas fa-arrow-right"></i> Proceed Anyway
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.dup-flash {
+    display: flex;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    background: #fff;
+    animation: dupSlideIn 0.35s ease-out;
+}
+@keyframes dupSlideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+.dup-flash-bar {
+    width: 6px;
+    flex-shrink: 0;
+}
+.dup-flash-exact .dup-flash-bar { background: linear-gradient(180deg, #dc3545, #a71d2a); }
+.dup-flash-high .dup-flash-bar { background: linear-gradient(180deg, #ffc107, #cc9a06); }
+.dup-flash-moderate .dup-flash-bar { background: linear-gradient(180deg, #17a2b8, #0f7585); }
+
+.dup-flash-content {
+    padding: 14px 16px;
+    flex: 1;
+}
+.dup-flash-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.dup-flash-icon {
+    font-size: 1.1rem;
+}
+.dup-flash-exact .dup-flash-icon { color: #dc3545; }
+.dup-flash-high .dup-flash-icon { color: #ffc107; }
+.dup-flash-moderate .dup-flash-icon { color: #17a2b8; }
+
+.dup-flash-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.dup-flash-exact .dup-flash-label { background: #f8d7da; color: #721c24; }
+.dup-flash-high .dup-flash-label { background: #fff3cd; color: #856404; }
+.dup-flash-moderate .dup-flash-label { background: #d1ecf1; color: #0c5460; }
+
+.dup-flash-text {
+    font-size: 0.88rem;
+    color: #444;
+    line-height: 1.5;
+}
+</style>
+{% endblock %}

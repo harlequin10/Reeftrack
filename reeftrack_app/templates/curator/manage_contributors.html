@@ -1,0 +1,290 @@
+{% extends 'curator/base_curator.html' %}
+
+{% block title %}Manage Contributors - ReefTrack{% endblock %}
+
+{% block content %}
+<style>
+    .stat-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        border-radius: 15px;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.3;
+    }
+    .badge-status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    .action-dropdown .dropdown-menu {
+        min-width: 200px;
+    }
+    .action-dropdown .dropdown-item {
+        padding: 8px 20px;
+        cursor: pointer;
+    }
+    .action-dropdown .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    .action-dropdown .dropdown-item i {
+        width: 20px;
+        margin-right: 10px;
+    }
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-users"></i> Manage Contributors</h4>
+                {% if pending_count > 0 %}
+                    <a href="{% url 'curator_manage_contributors' %}?status=pending" class="btn btn-danger btn-sm">
+                        <i class="fas fa-clock"></i> {{ pending_count }} Pending Approvals
+                    </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <!-- Stats Row -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card stat-card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-uppercase mb-1">Total Contributors</h6>
+                                        <h2 class="mb-0">{{ total_contributors }}</h2>
+                                    </div>
+                                    <div class="stat-icon">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-uppercase mb-1">Approved</h6>
+                                        <h2 class="mb-0">{{ approved_count }}</h2>
+                                    </div>
+                                    <div class="stat-icon">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card bg-warning text-dark">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-uppercase mb-1">Pending</h6>
+                                        <h2 class="mb-0">{{ pending_count }}</h2>
+                                    </div>
+                                    <div class="stat-icon">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card bg-danger text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-uppercase mb-1">Rejected</h6>
+                                        <h2 class="mb-0">{{ rejected_count }}</h2>
+                                    </div>
+                                    <div class="stat-icon">
+                                        <i class="fas fa-times-circle"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <form method="GET" class="row g-2">
+                            <div class="col-md-4">
+                                <input type="text" name="search" class="form-control" 
+                                       placeholder="Search by username or email..." value="{{ search_query }}">
+                            </div>
+                            <div class="col-md-3">
+                                <select name="status" class="form-select">
+                                    <option value="">All Status</option>
+                                    {% for status_value, status_label in status_choices %}
+                                        <option value="{{ status_value }}" {% if status_filter == status_value %}selected{% endif %}>
+                                            {{ status_label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-warning w-100">
+                                    <i class="fas fa-filter"></i> Filter
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <a href="{% url 'curator_manage_contributors' %}" class="btn btn-secondary w-100">
+                                    <i class="fas fa-undo"></i> Reset
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Contributors Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Active</th>
+                                <th>Joined</th>
+                                <th style="min-width: 180px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contributor in contributors %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    {{ contributor.profile.get_full_name|default:contributor.email }}
+                                    {% if contributor == request.user %}
+                                        <span class="badge bg-info ms-1">You</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ contributor.email }}</td>
+                                <td>
+                                    <span class="badge-status 
+                                        {% if contributor.profile.status == 'approved' %}bg-success text-white
+                                        {% elif contributor.profile.status == 'pending' %}bg-warning text-dark
+                                        {% else %}bg-danger text-white{% endif %}">
+                                        {{ contributor.profile.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if contributor.is_active %}
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ contributor.date_joined|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if contributor != request.user %}
+                                        <div class="dropdown action-dropdown">
+                                            <button class="btn btn-warning btn-sm dropdown-toggle" type="button" 
+                                                    id="dropdownMenuButton{{ contributor.id }}" 
+                                                    data-bs-toggle="dropdown" 
+                                                    aria-expanded="false">
+                                                <i class="fas fa-cog"></i> Actions
+                                            </button>
+                                            
+                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ contributor.id }}">
+                                                <li>
+                                                    <a class="dropdown-item text-primary" 
+                                                       href="{% url 'curator_edit_contributor' contributor.id %}">
+                                                        <i class="fas fa-edit"></i> Edit Contributor
+                                                    </a>
+                                                </li>
+                                                
+                                                <li><hr class="dropdown-divider"></li>
+                                                
+                                                {% if contributor.profile.status == 'pending' %}
+                                                    <li>
+                                                        <form method="POST" action="{% url 'curator_contributor_action' contributor.id %}" style="display: inline;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="action" value="approve">
+                                                            <button type="submit" class="dropdown-item text-success">
+                                                                <i class="fas fa-check-circle"></i> Approve
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item text-danger" 
+                                                                data-bs-toggle="modal" data-bs-target="#rejectModal{{ contributor.id }}">
+                                                            <i class="fas fa-times-circle"></i> Reject
+                                                        </button>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                {% endif %}
+                                                
+                                                <li>
+                                                    <form method="POST" action="{% url 'curator_contributor_action' contributor.id %}" style="display: inline;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="action" value="{% if contributor.is_active %}deactivate{% else %}activate{% endif %}">
+                                                        <button type="submit" class="dropdown-item {% if contributor.is_active %}text-warning{% else %}text-success{% endif %}">
+                                                            <i class="fas {% if contributor.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
+                                                            {% if contributor.is_active %}Deactivate{% else %}Activate{% endif %}
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+
+                                        <!-- Reject Modal -->
+                                        <div class="modal fade" id="rejectModal{{ contributor.id }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-danger text-white">
+                                                        <h5 class="modal-title"><i class="fas fa-times-circle"></i> Reject Contributor</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <form method="POST" action="{% url 'curator_contributor_action' contributor.id %}">
+                                                        {% csrf_token %}
+                                                        <div class="modal-body">
+                                                            <p>Are you sure you want to reject <strong>{{ contributor.profile.get_full_name|default:contributor.email }}</strong>?</p>
+                                                            <input type="hidden" name="action" value="reject">
+                                                            <div class="mb-3">
+                                                                <label for="rejection_reason" class="form-label">Rejection Reason</label>
+                                                                <textarea name="rejection_reason" class="form-control" rows="3" 
+                                                                          placeholder="Provide a reason for rejection (optional)"></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-danger">Reject</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Cannot modify yourself</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
+                                    <h5>No contributors found</h5>
+                                    <p class="text-muted">Try adjusting your filters or wait for users to register.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Reject User - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h4><i class="fas fa-times-circle"></i> Reject User</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p class="mt-2">Are you sure you want to reject <strong>{{ user.profile.get_full_name|default:user.email }}</strong>?</p>
+                    <p class="text-muted">This action can be reversed by approving the user later.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <p><strong>Email:</strong> {{ user.email }}</p>
+                    <p><strong>Email:</strong> {{ user.email }}</p>
+                    <p><strong>Registered:</strong> {{ user.date_joined|date:"M d, Y H:i" }}</p>
+                </div>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">Rejection Reason</label>
+                        <textarea name="rejection_reason" id="rejection_reason" 
+                                  class="form-control" rows="3"
+                                  placeholder="Provide a reason for rejection (optional)"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Reject User
+                    </button>
+                    <a href="{% url 'admin_pending_users' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

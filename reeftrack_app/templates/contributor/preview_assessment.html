@@ -1,0 +1,385 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Preview Assessment - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-eye"></i> Preview Assessment</h4>
+                <span class="badge bg-light text-dark">{{ transects|length }} transect(s)</span>
+            </div>
+            <div class="card-body">
+                <!-- Step Indicator -->
+                <div class="d-flex justify-content-center mb-4">
+                    <div class="step-indicator completed">
+                        <span class="step-number"><i class="fas fa-check"></i></span>
+                        <span class="step-label">Assessment Info</span>
+                    </div>
+                    <div class="step-connector active"></div>
+                    <div class="step-indicator completed">
+                        <span class="step-number"><i class="fas fa-check"></i></span>
+                        <span class="step-label">Add Transects</span>
+                    </div>
+                    <div class="step-connector active"></div>
+                    <div class="step-indicator active">
+                        <span class="step-number">3</span>
+                        <span class="step-label">Preview</span>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step-indicator">
+                        <span class="step-number">4</span>
+                        <span class="step-label">Confirm</span>
+                    </div>
+                </div>
+
+                <form method="POST" action="{% url 'confirm_assessment' %}">
+                    {% csrf_token %}
+
+                    <!-- Assessment Metadata -->
+                    <div class="card mb-4 border-success">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info-circle text-success"></i> Assessment Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <small class="text-muted">Municipality</small><br>
+                                    <strong>{{ pending.municipality_name|default:"-" }}</strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Barangay</small><br>
+                                    <strong>{{ pending.barangay_name|default:"-" }}</strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Date</small><br>
+                                    <strong>{{ pending.assessment_date }}</strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Methodology</small><br>
+                                    <strong>{{ pending.methodology|title }}</strong>
+                                </div>
+                            </div>
+                            {% if pending.description %}
+                            <div class="mt-2">
+                                <small class="text-muted">Description</small><br>
+                                <strong>{{ pending.description }}</strong>
+                            </div>
+                            {% endif %}
+                            {% if contributor_names %}
+                            <div class="mt-2">
+                                <small class="text-muted">Contributors</small><br>
+                                {% for name in contributor_names %}
+                                <span class="badge bg-secondary me-1">{{ name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="mt-2">
+                                {% if pending.thesis_tmp %}<span class="badge bg-danger me-1"><i class="fas fa-file-pdf"></i> Thesis PDF</span>{% endif %}
+                                {% if pending.image_tmps %}<span class="badge bg-info"><i class="fas fa-images"></i> {{ pending.image_tmps|length }} image(s)</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Species Validation -->
+                    {% if species_validation %}
+                    <div class="card mb-4 {% if has_new_species %}border-warning{% else %}border-success{% endif %}">
+                        <div class="card-header {% if has_new_species %}bg-warning text-dark{% else %}bg-success text-white{% endif %} d-flex justify-content-between">
+                            <h6 class="mb-0">
+                                <i class="fas fa-microscope"></i> Species Validation
+                            </h6>
+                            <span class="badge bg-light text-dark">{{ species_validation|length }} unique species</span>
+                        </div>
+                        <div class="card-body">
+                            {% if has_new_species %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                <strong>New or unrecognized species detected.</strong>
+                                Review and confirm each one below before saving.
+                            </div>
+                            {% else %}
+                            <div class="alert alert-success mb-3">
+                                <i class="fas fa-check-circle me-1"></i>
+                                All species matched existing records.
+                            </div>
+                            {% endif %}
+
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width:30px;">#</th>
+                                            <th>Species from Excel</th>
+                                            <th>Family</th>
+                                            <th>Status</th>
+                                            <th>Action / Correction</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for sv in species_validation %}
+                                        <tr class="{% if sv.status == 'new' %}table-danger{% elif sv.status == 'similar' %}table-warning{% endif %}">
+                                            <td>{{ forloop.counter }}</td>
+                                            <td><strong>{{ sv.sub_category }}</strong></td>
+                                            <td><span class="badge bg-secondary">{{ sv.major_category }}</span></td>
+                                            <td>
+                                                {% if sv.status == 'existing' %}
+                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Existing</span>
+                                                {% elif sv.status == 'similar' %}
+                                                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Similar</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger"><i class="fas fa-question-circle"></i> New</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if sv.status == 'existing' %}
+                                                    <small class="text-muted">Will use existing record (ID: {{ sv.matched_species_id }})</small>
+                                                    <input type="hidden" name="species_map_{{ sv.sub_category }}|||{{ sv.major_category }}" value="{{ sv.matched_species_id }}">
+                                                {% elif sv.status == 'similar' %}
+                                                    <div class="mb-1">
+                                                        <small class="text-info">
+                                                            <i class="fas fa-link"></i> Suggested: <strong>{{ sv.suggested_name }}</strong>
+                                                        </small>
+                                                    </div>
+                                                    <div class="input-group input-group-sm">
+                                                        <select class="form-select form-select-sm" style="max-width:250px;"
+                                                                name="species_map_{{ sv.sub_category }}|||{{ sv.major_category }}">
+                                                            <option value="{{ sv.suggested_match }}">Use: {{ sv.suggested_name }}</option>
+                                                            <option value="new">Create as new species</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="mt-1">
+                                                        <small class="text-muted">Or correct the name:</small>
+                                                        <div class="row g-1 mt-1">
+                                                            <div class="col-6">
+                                                                <input type="text" class="form-control form-control-sm"
+                                                                       name="species_correct_{{ sv.sub_category }}|||{{ sv.major_category }}"
+                                                                       placeholder="Corrected sub category"
+                                                                       value="{{ sv.sub_category }}">
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <input type="text" class="form-control form-control-sm"
+                                                                       name="species_major_{{ sv.sub_category }}|||{{ sv.major_category }}"
+                                                                       placeholder="Corrected family"
+                                                                       value="{{ sv.major_category }}">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="mb-1">
+                                                        <small class="text-danger">
+                                                            <i class="fas fa-info-circle"></i> Not in database. Will be created.
+                                                        </small>
+                                                    </div>
+                                                    <input type="hidden" name="species_map_{{ sv.sub_category }}|||{{ sv.major_category }}" value="new">
+                                                    <div class="row g-1 mt-1">
+                                                        <div class="col-6">
+                                                            <input type="text" class="form-control form-control-sm"
+                                                                   name="species_correct_{{ sv.sub_category }}|||{{ sv.major_category }}"
+                                                                   placeholder="Sub category"
+                                                                   value="{{ sv.sub_category }}">
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <input type="text" class="form-control form-control-sm"
+                                                                   name="species_major_{{ sv.sub_category }}|||{{ sv.major_category }}"
+                                                                   placeholder="Family"
+                                                                   value="{{ sv.major_category }}">
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Transects with Species -->
+                    {% for t in transects %}
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between">
+                            <h6 class="mb-0"><i class="fas fa-ruler-horizontal"></i> Transect {{ t.transect_number }}</h6>
+                            <small>
+                                {% if t.shallow_species %}{{ t.shallow_species|length }} shallow{% endif %}
+                                {% if t.shallow_species and t.deep_species %} | {% endif %}
+                                {% if t.deep_species %}{{ t.deep_species|length }} deep{% endif %}
+                                species
+                            </small>
+                        </div>
+                        <div class="card-body">
+                            <!-- Location Info -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-info"><i class="fas fa-water"></i> Shallow</h6>
+                                    <small>
+                                        {% if t.shallow_start_lat or t.shallow_end_lat %}
+                                            Start: {{ t.shallow_start_lat|default:"-" }}, {{ t.shallow_start_lng|default:"-" }}<br>
+                                            End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}
+                                        {% else %}
+                                            <span class="text-muted">No coordinates provided</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-primary"><i class="fas fa-water"></i> Deep</h6>
+                                    <small>
+                                        {% if t.deep_start_lat or t.deep_end_lat %}
+                                            Start: {{ t.deep_start_lat|default:"-" }}, {{ t.deep_start_lng|default:"-" }}<br>
+                                            End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}
+                                        {% else %}
+                                            <span class="text-muted">No coordinates provided</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Shallow Species Table -->
+                            {% if t.shallow_species %}
+                            <h6 class="text-info mt-3"><i class="fas fa-table"></i> Shallow Species</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Species (Sub Category)</th>
+                                            <th>Family (Major Category)</th>
+                                            <th class="text-end">Cover %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for sp in t.shallow_species %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>{{ sp.sub_category }}</td>
+                                            <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                                            <td class="text-end"><strong>{{ sp.cover }}</strong></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endif %}
+
+                            <!-- Deep Species Table -->
+                            {% if t.deep_species %}
+                            <h6 class="text-primary mt-3"><i class="fas fa-table"></i> Deep Species</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Species (Sub Category)</th>
+                                            <th>Family (Major Category)</th>
+                                            <th class="text-end">Cover %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for sp in t.deep_species %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>{{ sp.sub_category }}</td>
+                                            <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                                            <td class="text-end"><strong>{{ sp.cover }}</strong></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endif %}
+
+                            {% if not t.shallow_species and not t.deep_species %}
+                            <p class="text-muted text-center py-2 mb-0">No species data parsed from Excel files.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Auto-approve option for Admin/Curator -->
+                    {% if user_role == 'admin' or user_role == 'curator' %}
+                    <div class="card mb-4 border-warning">
+                        <div class="card-body">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoApprove" name="auto_approve">
+                                <label class="form-check-label fw-bold" for="autoApprove">
+                                    <i class="fas fa-bolt text-warning"></i> Auto-approve this assessment
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                As an {{ user_role|title }}, you can approve this assessment immediately.
+                                If unchecked, it will be submitted for review like a normal submission.
+                            </small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'add_transect' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Transects
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-check-circle"></i> Confirm & Save Assessment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 80px;
+}
+.step-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #dee2e6;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+.step-indicator.active .step-number {
+    background: #198754;
+    color: #fff;
+}
+.step-indicator.completed .step-number {
+    background: #198754;
+    color: #fff;
+}
+.step-label {
+    font-size: 11px;
+    color: #6c757d;
+}
+.step-indicator.active .step-label {
+    color: #198754;
+    font-weight: 600;
+}
+.step-indicator.completed .step-label {
+    color: #198754;
+}
+.step-connector {
+    width: 40px;
+    height: 2px;
+    background: #dee2e6;
+    margin-top: 17px;
+    margin-left: -10px;
+    margin-right: -10px;
+}
+.step-connector.active {
+    background: #198754;
+}
+</style>
+{% endblock %}

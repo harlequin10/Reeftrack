@@ -1,0 +1,231 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Edit User - Admin Panel{% endblock %}
+
+{% block content %}
+<style>
+    .form-card {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .form-control:focus {
+        border-color: var(--rt-teal);
+        box-shadow: 0 0 0 0.2rem rgba(42, 127, 138, 0.25);
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow form-card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-edit"></i> Edit User</h4>
+                <a href="{% url 'admin_manage_users' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    <strong>Editing:</strong> {{ user.profile.get_full_name|default:user.email }}
+                    <span class="badge 
+                        {% if user.profile.role == 'admin' %}bg-danger
+                        {% elif user.profile.role == 'curator' %}bg-warning text-dark
+                        {% else %}bg-success{% endif %} ms-2">
+                        {{ user.profile.get_role_display }}
+                    </span>
+                </div>
+                
+                <form method="POST" id="editForm">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="first_name" class="form-label">First Name</label>
+                            <input type="text" name="first_name" id="first_name" 
+                                   class="form-control" value="{{ user.first_name }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="middle_initial" class="form-label">M.I.</label>
+                            <input type="text" name="middle_initial" id="middle_initial" 
+                                   class="form-control" value="{{ user.profile.middle_initial }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            <input type="text" name="last_name" id="last_name" 
+                                   class="form-control" value="{{ user.last_name }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="suffix" class="form-label">Suffix</label>
+                            <input type="text" name="suffix" id="suffix" 
+                                   class="form-control" value="{{ user.profile.suffix }}">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" id="email" 
+                                   class="form-control" value="{{ user.email }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Username (auto-generated)</label>
+                            <input type="text" class="form-control" value="{{ user.username }}" disabled>
+                            <div class="form-text">Username is generated from email and cannot be changed.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
+                                <select name="role" id="role" class="form-select">
+                                    {% for role_value, role_label in role_choices %}
+                                        <option value="{{ role_value }}" 
+                                            {% if user.profile.role == role_value %}selected{% endif %}>
+                                            {{ role_label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Changing to Admin or Curator will auto-approve the user.
+                                    {% if not is_superuser %}
+                                    <br><i class="fas fa-exclamation-triangle text-warning"></i> 
+                                    Only superusers can assign Admin role.
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select name="status" id="status" class="form-select">
+                                    <option value="approved" {% if user.profile.status == 'approved' %}selected{% endif %}>Approved</option>
+                                    <option value="pending" {% if user.profile.status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="rejected" {% if user.profile.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                                </select>
+                                <div class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Status only applies to <strong>Contributors</strong>. Admins and Curators are auto-approved.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Current Role:</strong>
+                                    <span class="badge 
+                                        {% if user.profile.role == 'admin' %}bg-danger
+                                        {% elif user.profile.role == 'curator' %}bg-warning text-dark
+                                        {% else %}bg-success{% endif %}">
+                                        {{ user.profile.get_role_display }}
+                                    </span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Current Status:</strong>
+                                    {% if user.profile.role == 'contributor' %}
+                                        <span class="badge 
+                                            {% if user.profile.status == 'approved' %}bg-success
+                                            {% elif user.profile.status == 'pending' %}bg-warning text-dark
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ user.profile.get_status_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">N/A (Auto-approved)</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <strong>Active:</strong>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">No</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Joined:</strong> {{ user.date_joined|date:"M d, Y H:i" }}
+                                </div>
+                            </div>
+                            {% if user.profile.rejection_reason %}
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <strong>Rejection Reason:</strong> {{ user.profile.rejection_reason }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if user.profile.approved_by %}
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <strong>Approved By:</strong> {{ user.profile.approved_by.username }}
+                                    <span class="text-muted ms-2">on {{ user.profile.approved_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if is_superuser %}
+                    <div class="card border-warning mb-3">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="fas fa-key"></i> Reset Password <small class="fw-normal">(Super Admin Only)</small></h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">Leave blank to keep the current password.</p>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="new_password" class="form-label">New Password</label>
+                                    <input type="password" name="new_password" id="new_password"
+                                           class="form-control" minlength="8" placeholder="Min. 8 characters">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="confirm_password" class="form-label">Confirm Password</label>
+                                    <input type="password" name="confirm_password" id="confirm_password"
+                                           class="form-control" minlength="8" placeholder="Re-enter password">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'admin_manage_users' %}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Update User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    var pw = document.getElementById('new_password');
+    var cp = document.getElementById('confirm_password');
+    if (pw && cp && pw.value && pw.value !== cp.value) {
+        e.preventDefault();
+        cp.classList.add('is-invalid');
+        var msg = document.getElementById('pwMatchError');
+        if (!msg) {
+            msg = document.createElement('div');
+            msg.id = 'pwMatchError';
+            msg.className = 'invalid-feedback d-block';
+            msg.textContent = 'Passwords do not match.';
+            cp.parentNode.appendChild(msg);
+        }
+        return;
+    }
+    var submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+});
+</script>
+{% endblock %}

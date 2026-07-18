@@ -1,0 +1,119 @@
+{% extends 'public/base.html' %}
+
+{% block title %}My Profile - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-id-card"></i> My Profile</h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    {% if user.profile.profile_picture %}
+                        <img src="{{ user.profile.profile_picture.url }}" alt="Profile"
+                             class="rounded-circle shadow" style="width:120px; height:120px; object-fit:cover;">
+                    {% else %}
+                        <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center shadow"
+                             style="width:120px; height:120px;">
+                            <i class="fas fa-user text-white" style="font-size:3rem;"></i>
+                        </div>
+                    {% endif %}
+                    <h5 class="mt-2 mb-0">{{ user.profile.get_full_name|default:user.email }}</h5>
+                    <small class="text-muted">{{ user.email }}</small>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="mb-3">
+                            <label class="fw-bold">Name</label>
+                            <p class="form-control-plaintext">{{ user.profile.get_full_name|default:user.email }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Email</label>
+                            <p class="form-control-plaintext">{{ user.email }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Role</label>
+                            <p class="form-control-plaintext">
+                                <span class="badge 
+                                    {% if user.profile.role == 'admin' %}bg-danger
+                                    {% elif user.profile.role == 'curator' %}bg-warning text-dark
+                                    {% else %}bg-success{% endif %}">
+                                    {{ user.profile.get_role_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Status</label>
+                            <p class="form-control-plaintext">
+                                {% if user.profile.role == 'contributor' %}
+                                    <span class="badge 
+                                        {% if user.profile.status == 'approved' %}bg-success
+                                        {% elif user.profile.status == 'pending' %}bg-warning text-dark
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ user.profile.get_status_display }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">N/A (Auto-approved)</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Bio</label>
+                            <p class="form-control-plaintext">
+                                {% if user.profile.bio %}
+                                    {{ user.profile.bio }}
+                                {% else %}
+                                    <span class="text-muted">No bio provided</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Account Created</label>
+                            <p class="form-control-plaintext">{{ user.date_joined|date:"F d, Y H:i" }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Last Login</label>
+                            <p class="form-control-plaintext">
+                                {% if user.last_login %}
+                                    {{ user.last_login|date:"F d, Y H:i" }}
+                                {% else %}
+                                    <span class="text-muted">Never</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% if user.profile.approved_by %}
+                        <div class="mb-3">
+                            <label class="fw-bold">Approved By</label>
+                            <p class="form-control-plaintext">
+                                {{ user.profile.approved_by.profile.get_full_name|default:user.profile.approved_by.email }}
+                                <span class="text-muted ms-2">on {{ user.profile.approved_at|date:"F d, Y H:i" }}</span>
+                            </p>
+                        </div>
+                        {% endif %}
+                        {% if user.profile.rejection_reason %}
+                        <div class="mb-3">
+                            <label class="fw-bold">Rejection Reason</label>
+                            <p class="form-control-plaintext text-danger">{{ user.profile.rejection_reason }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                    <a href="{% url 'profile_edit' %}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Edit Profile
+                    </a>
+                    <a href="{% url 'profile_change_password' %}" class="btn btn-warning">
+                        <i class="fas fa-key"></i> Change Password
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

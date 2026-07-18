@@ -1,0 +1,303 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+{% block title %}{{ barangay.name }} Reference Coordinates - Admin - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">
+                <i class="fas fa-map-marked-alt"></i> {{ barangay.name }}, {{ barangay.municipality.name }}
+            </h4>
+            <small class="text-muted">Reference Coordinates ({{ transect_coords.count }})</small>
+        </div>
+        <a href="{% url 'admin_manage_transect_coords' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-list"></i> Saved Reference Coordinates</h6>
+        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addTransectModal">
+            <i class="fas fa-plus"></i> Add Reference
+        </button>
+    </div>
+    <div class="card-body">
+        {% if transect_coords %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Ref #</th>
+                        <th>Shallow Start</th>
+                        <th>Shallow End</th>
+                        <th>Deep Start</th>
+                        <th>Deep End</th>
+                        <th>Source</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tc in transect_coords %}
+                    <tr>
+                        <td><strong>{{ forloop.counter }}</strong></td>
+                        <td><small>{{ tc.shallow_start_lat|default:"-" }}, {{ tc.shallow_start_lng|default:"-" }}</small></td>
+                        <td><small>{{ tc.shallow_end_lat|default:"-" }}, {{ tc.shallow_end_lng|default:"-" }}</small></td>
+                        <td><small>{{ tc.deep_start_lat|default:"-" }}, {{ tc.deep_start_lng|default:"-" }}</small></td>
+                        <td><small>{{ tc.deep_end_lat|default:"-" }}, {{ tc.deep_end_lng|default:"-" }}</small></td>
+                        <td>
+                            {% if tc.source == 'assessment' %}
+                            <span class="badge bg-info">Assessment</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Manual</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editTransect{{ tc.id }}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form method="POST" class="d-inline" onsubmit="return confirm('Delete reference coordinates from {{ barangay.name }}?')">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="transect_id" value="{{ tc.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <!-- Edit Modal -->
+                    <div class="modal fade" id="editTransect{{ tc.id }}" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Reference {{ forloop.counter }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="edit">
+                                    <input type="hidden" name="transect_id" value="{{ tc.id }}">
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <h6 class="text-info"><i class="fas fa-arrow-up"></i> Shallow</h6>
+                                                <div class="row g-2">
+                                                    <div class="col-6">
+                                                        <label class="form-label">Start Lat</label>
+                                                        <input type="number" step="any" min="-90" max="90" required name="shallow_start_lat" class="form-control" value="{{ tc.shallow_start_lat|default:'' }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label">Start Lng</label>
+                                                        <input type="number" step="any" min="-180" max="180" required name="shallow_start_lng" class="form-control" value="{{ tc.shallow_start_lng|default:'' }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label">End Lat</label>
+                                                        <input type="number" step="any" min="-90" max="90" required name="shallow_end_lat" class="form-control" value="{{ tc.shallow_end_lat|default:'' }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label">End Lng</label>
+                                                        <input type="number" step="any" min="-180" max="180" required name="shallow_end_lng" class="form-control" value="{{ tc.shallow_end_lng|default:'' }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6 class="text-primary"><i class="fas fa-arrow-down"></i> Deep</h6>
+                                                <div class="row g-2">
+                                                    <div class="col-6">
+                                                        <label class="form-label">Start Lat</label>
+                                                        <input type="number" step="any" min="-90" max="90" required name="deep_start_lat" class="form-control" value="{{ tc.deep_start_lat|default:'' }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label">Start Lng</label>
+                                                        <input type="number" step="any" min="-180" max="180" required name="deep_start_lng" class="form-control" value="{{ tc.deep_start_lng|default:'' }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label">End Lat</label>
+                                                        <input type="number" step="any" min="-90" max="90" required name="deep_end_lat" class="form-control" value="{{ tc.deep_end_lat|default:'' }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label">End Lng</label>
+                                                        <input type="number" step="any" min="-180" max="180" required name="deep_end_lng" class="form-control" value="{{ tc.deep_end_lng|default:'' }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="fas fa-map-pin fa-2x mb-3 d-block" style="opacity:0.3;"></i>
+            No reference coordinates saved for this barangay yet.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Reference Modal -->
+<div class="modal fade" id="addTransectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus-circle"></i> Add Reference to {{ barangay.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+                <div class="modal-body">
+                    <div id="addRefAlert" class="alert alert-danger d-none"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="text-info"><i class="fas fa-arrow-up"></i> Shallow</h6>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label">Start Lat</label>
+                                    <input type="number" step="any" min="-90" max="90" required name="shallow_start_lat" class="form-control ref-coord-input" placeholder="6.1234">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Start Lng</label>
+                                    <input type="number" step="any" min="-180" max="180" required name="shallow_start_lng" class="form-control ref-coord-input" placeholder="125.1234">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">End Lat</label>
+                                    <input type="number" step="any" min="-90" max="90" required name="shallow_end_lat" class="form-control ref-coord-input" placeholder="6.1235">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">End Lng</label>
+                                    <input type="number" step="any" min="-180" max="180" required name="shallow_end_lng" class="form-control ref-coord-input" placeholder="125.1235">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-primary"><i class="fas fa-arrow-down"></i> Deep</h6>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label">Start Lat</label>
+                                    <input type="number" step="any" min="-90" max="90" required name="deep_start_lat" class="form-control ref-coord-input" placeholder="6.1234">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Start Lng</label>
+                                    <input type="number" step="any" min="-180" max="180" required name="deep_start_lng" class="form-control ref-coord-input" placeholder="125.1234">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">End Lat</label>
+                                    <input type="number" step="any" min="-90" max="90" required name="deep_end_lat" class="form-control ref-coord-input" placeholder="6.1235">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">End Lng</label>
+                                    <input type="number" step="any" min="-180" max="180" required name="deep_end_lng" class="form-control ref-coord-input" placeholder="125.1235">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted">Contributors will assign transect numbers when using this reference.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add Reference</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if transect_coords %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-map"></i> Map View</h6>
+    </div>
+    <div class="card-body">
+        <div id="coordMap" style="height:350px; border-radius:8px; border:1px solid #dee2e6;"></div>
+        <div class="d-flex gap-3 mt-2">
+            <small><span style="display:inline-block;width:14px;height:3px;background:#0dcaf0;vertical-align:middle;"></span> Shallow</small>
+            <small><span style="display:inline-block;width:14px;height:3px;background:#0d6efd;vertical-align:middle;"></span> Deep</small>
+            <small><span style="display:inline-block;width:14px;height:3px;background:#6c757d;vertical-align:middle;border-style:dashed;"></span> Manual</small>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var data = [
+        {% for tc in transect_coords %}
+        {
+            num: {{ forloop.counter }},
+            manual: {{ tc.source|yesno:"true,false" }},
+            sLat: {{ tc.shallow_start_lat|default:"null" }},
+            sLng: {{ tc.shallow_start_lng|default:"null" }},
+            eLat: {{ tc.shallow_end_lat|default:"null" }},
+            eLng: {{ tc.shallow_end_lng|default:"null" }},
+            dSLat: {{ tc.deep_start_lat|default:"null" }},
+            dSLng: {{ tc.deep_start_lng|default:"null" }},
+            dELat: {{ tc.deep_end_lat|default:"null" }},
+            dELng: {{ tc.deep_end_lng|default:"null" }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    var mapEl = document.getElementById('coordMap');
+    if (!mapEl) return;
+    var map = L.map(mapEl).setView([6.1164, 125.3125], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    function makeIcon(color, label) {
+        return L.divIcon({
+            className: '',
+            html: '<div style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:' + color + ';color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);line-height:1;">' + label + '</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+    }
+
+    var bounds = [];
+    data.forEach(function(t) {
+        var shallowColor = '#0dcaf0';
+        var deepColor = '#0d6efd';
+        var shallowDash = null;
+        var deepDash = null;
+        if (t.manual) { shallowDash = '6,4'; deepDash = '6,4'; }
+
+        if (t.sLat && t.sLng && t.eLat && t.eLng) {
+            var opts = {color: shallowColor, weight: 4, opacity: 0.9};
+            if (shallowDash) opts.dashArray = shallowDash;
+            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], opts).addTo(map).bindPopup('Ref ' + t.num + ' - Shallow');
+            L.marker([t.sLat, t.sLng], {icon: makeIcon(shallowColor, 'S' + t.num)}).addTo(map).bindPopup('Ref ' + t.num + ' Shallow Start');
+            L.marker([t.eLat, t.eLng], {icon: makeIcon(shallowColor, 'E' + t.num)}).addTo(map).bindPopup('Ref ' + t.num + ' Shallow End');
+            bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
+        }
+        if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
+            var opts = {color: deepColor, weight: 4, opacity: 0.9};
+            if (deepDash) opts.dashArray = deepDash;
+            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], opts).addTo(map).bindPopup('Ref ' + t.num + ' - Deep');
+            L.marker([t.dSLat, t.dSLng], {icon: makeIcon(deepColor, 'S' + t.num)}).addTo(map).bindPopup('Ref ' + t.num + ' Deep Start');
+            L.marker([t.dELat, t.dELng], {icon: makeIcon(deepColor, 'E' + t.num)}).addTo(map).bindPopup('Ref ' + t.num + ' Deep End');
+            bounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);
+        }
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, {padding: [40, 40], maxZoom: 15});
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

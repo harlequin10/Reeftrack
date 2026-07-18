@@ -1,0 +1,140 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+{% block title %}Species - Admin - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-fish"></i> Coral Families</h4>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addFamilyModal">
+            <i class="fas fa-plus"></i> Add Family
+        </button>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body text-center">
+        <div class="d-flex justify-content-center gap-5">
+            <div>
+                <h3 class="mb-0" style="color:var(--rt-primary);">{{ total_species }}</h3>
+                <small class="text-muted">Total Species</small>
+            </div>
+            <div>
+                <h3 class="mb-0" style="color:var(--rt-secondary);">{{ families|length }}</h3>
+                <small class="text-muted">Families</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Family (Major Category)</th>
+                        <th>Species Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in families %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <a href="{% url 'admin_manage_family_species' %}?name={{ f.major_category|urlencode }}" class="text-decoration-none fw-bold" style="color:var(--rt-primary);">
+                                {{ f.major_category }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_manage_family_species' %}?name={{ f.major_category|urlencode }}" class="badge bg-info text-decoration-none">
+                                {{ f.species_count }} species
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_manage_family_species' %}?name={{ f.major_category|urlencode }}" class="btn btn-sm btn-outline-info" title="Manage Species">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger" title="Delete Family"
+                                    data-bs-toggle="modal" data-bs-target="#deleteFamily{{ forloop.counter }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+
+                            <div class="modal fade" id="deleteFamily{{ forloop.counter }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content rt-card">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" style="color:var(--accent-coral);">
+                                                <i class="fas fa-exclamation-triangle"></i> Delete Family
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Delete family <strong>{{ f.major_category }}</strong> and all <strong>{{ f.species_count }}</strong> species inside it?</p>
+                                            <div class="alert alert-warning">
+                                                <small><i class="fas fa-exclamation-triangle"></i> This cannot be undone. Species used in assessment records cannot be deleted.</small>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form action="{% url 'admin_delete_family' f.major_category|urlencode %}" method="post">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete Family</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            <i class="fas fa-fish fa-2x mb-3 d-block" style="color:var(--rt-muted);"></i>
+                            No families found. Click <strong>Add Family</strong> to create one.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addFamilyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content rt-card">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color:var(--accent-coral);"><i class="fas fa-plus-circle"></i> Add Family</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'admin_add_family' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Major Category / Family Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control rt-form-control" required
+                               placeholder="e.g. ACROPORA">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Initial Species Sub Category</label>
+                        <input type="text" name="sub_category" class="form-control rt-form-control"
+                               placeholder="e.g. ACROPORA BRIDGESI (optional)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Species Code</label>
+                        <input type="text" name="code" class="form-control rt-form-control"
+                               placeholder="e.g. ACRO-01 (optional)">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add Family</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

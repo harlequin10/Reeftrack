@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="48" viewBox="0 0 320 48">
+  <path d="M0 24 C 40 4, 80 44, 120 24 S 200 4, 240 24 S 320 4, 320 24 V48 H0 Z" fill="#2A7F8A" opacity="0.9"/>
+  <path d="M0 32 C 40 16, 80 48, 120 32 S 200 16, 240 32 S 320 16, 320 32 V48 H0 Z" fill="#A9D6C4" opacity="0.6"/>
+</svg>

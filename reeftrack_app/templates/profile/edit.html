@@ -1,0 +1,100 @@
+{% extends 'public/base.html' %}
+
+{% block title %}Edit Profile - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-edit"></i> Edit Profile</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="text-center mb-4">
+                        {% if user.profile.profile_picture %}
+                            <img src="{{ user.profile.profile_picture.url }}" alt="Profile" id="picturePreview"
+                                 class="rounded-circle shadow" style="width:100px; height:100px; object-fit:cover;">
+                        {% else %}
+                            <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center shadow"
+                                 id="picturePreviewPlaceholder" style="width:100px; height:100px;">
+                                <i class="fas fa-user text-white" style="font-size:2.5rem;"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_profile_picture" class="form-label">Profile Picture (optional)</label>
+                        {{ form.profile_picture }}
+                        <div class="form-text">JPG or PNG. Max 5MB.</div>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="id_first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <div class="text-danger small">{{ form.first_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label for="id_middle_initial" class="form-label">M.I.</label>
+                            {{ form.middle_initial }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="id_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <div class="text-danger small">{{ form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label for="id_suffix" class="form-label">Suffix</label>
+                            {{ form.suffix }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label">Email <span class="text-danger">*</span></label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" value="{{ user.username }}" disabled>
+                        <div class="form-text">Username is auto-generated and cannot be changed.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_bio" class="form-label">Bio</label>
+                        {{ form.bio }}
+                        {% if form.bio.errors %}
+                            <div class="text-danger small">{{ form.bio.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Tell us a little about yourself (optional)</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> You cannot change your role or status here. Contact an administrator if you need to change your role.
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'profile_view' %}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

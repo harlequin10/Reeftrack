@@ -1,0 +1,63 @@
+{% extends 'public/base.html' %}
+
+{% block title %}Login - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="rt-wave-divider"></div>
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4><i class="fas fa-sign-in-alt"></i> Login</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label">Email</label>
+                        {{ form.email }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label">Password</label>
+                        <div class="position-relative">
+                            {{ form.password }}
+                            <button class="btn position-absolute top-50 end-0 translate-middle-y me-3 p-1 border-0 bg-transparent text-muted" type="button" onclick="togglePassword('id_password', this)" style="z-index:5;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Note:</strong> Your account must be approved by an admin before you can login.
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </form>
+                <div class="mt-3 text-center">
+                    <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword(fieldId, btn) {
+    var field = document.getElementById(fieldId);
+    var icon = btn.querySelector('i');
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,353 @@
+{% extends 'public/base.html' %}
+
+{% block title %}Home - ReefTrack{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="text-center py-5 rt-bubble-field" style="margin-top: 1rem;">
+    <div class="rt-bubble"></div>
+    <div class="rt-bubble"></div>
+    <div class="rt-bubble"></div>
+    <div class="rt-bubble"></div>
+    <div class="rt-bubble"></div>
+    <div class="rt-bubble"></div>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="rt-animate fade-up">
+                <h1 class="display-4 fw-bold" style="color: var(--rt-navy);">
+                    <i class="fas fa-water" style="color: var(--rt-teal);"></i> ReefTrack
+                </h1>
+                <p class="lead mt-3" style="color: var(--rt-ink-soft);">
+                    A web-based coral reef assessment and monitoring information system
+                    with geospatial mapping and time-series analytics.
+                </p>
+                <div class="rt-wave-divider"></div>
+                <div class="mt-4">
+                    {% if not user.is_authenticated %}
+                        <a href="{% url 'register' %}" class="btn btn-primary btn-lg me-2">
+                            <i class="fas fa-user-plus"></i> Get Started
+                        </a>
+                        <a href="{% url 'about' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-info-circle"></i> Learn More
+                        </a>
+                    {% else %}
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5 rt-animate fade-up">
+            <h2 class="fw-bold" style="color: var(--rt-navy);">What We Do</h2>
+            <p style="color: var(--rt-ink-soft);">Empowering communities to monitor and protect coral reef ecosystems</p>
+        </div>
+        <div class="row g-4 rt-stagger">
+            <div class="col-md-4">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-map-marked-alt fa-3x rt-icon-float" style="color: var(--rt-teal);"></i>
+                        </div>
+                        <h5 style="color: var(--rt-navy);">Geospatial Mapping</h5>
+                        <p style="color: var(--rt-ink-soft);">Track and visualize coral reef locations with interactive maps for better spatial analysis.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-chart-line fa-3x rt-icon-float" style="color: var(--rt-coral); animation-delay: 0.5s;"></i>
+                        </div>
+                        <h5 style="color: var(--rt-navy);">Time-Series Analytics</h5>
+                        <p style="color: var(--rt-ink-soft);">Monitor reef health over time with data-driven insights and trend analysis.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-3x rt-icon-float" style="color: var(--rt-success-dark); animation-delay: 1s;"></i>
+                        </div>
+                        <h5 style="color: var(--rt-navy);">Community Collaboration</h5>
+                        <p style="color: var(--rt-ink-soft);">Connect researchers, curators, and contributors in a unified platform for reef conservation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Preview Section -->
+<section class="py-5" style="background-color: var(--rt-sand-light);">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0 rt-animate fade-left">
+                <h2 class="fw-bold" style="color: var(--rt-navy);">Why ReefTrack?</h2>
+                <p style="color: var(--rt-ink-soft);">
+                    Coral reefs are among the most biodiverse ecosystems on the planet, yet they face unprecedented threats 
+                    from climate change, pollution, and overfishing. ReefTrack provides a centralized platform for 
+                    collecting, managing, and analyzing coral reef data.
+                </p>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle me-2" style="color: var(--rt-success-dark);"></i>
+                        Standardized data collection for consistent monitoring
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle me-2" style="color: var(--rt-success-dark);"></i>
+                        Role-based access control for data quality assurance
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle me-2" style="color: var(--rt-success-dark);"></i>
+                        Approval workflow ensuring verified contributions
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle me-2" style="color: var(--rt-success-dark);"></i>
+                        Real-time dashboard for monitoring reef health status
+                    </li>
+                </ul>
+                <a href="{% url 'about' %}" class="btn btn-primary mt-2">
+                    <i class="fas fa-arrow-right"></i> Read More About Us
+                </a>
+            </div>
+            <div class="col-lg-6 text-center rt-animate fade-right">
+                <div class="p-4">
+                    <i class="fas fa-seedling rt-icon-float" style="font-size: 8rem; color: var(--rt-seafoam-dark); opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Roles Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5 rt-animate fade-up">
+            <h2 class="fw-bold" style="color: var(--rt-navy);">How It Works</h2>
+            <p style="color: var(--rt-ink-soft);">Three roles working together for reef conservation</p>
+        </div>
+        <div class="row g-4 rt-stagger">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 rt-step-circle" 
+                             style="width: 70px; height: 70px; background-color: var(--rt-coral); opacity: 0.9;">
+                            <i class="fas fa-crown fa-2x text-white"></i>
+                        </div>
+                        <h5 style="color: var(--rt-navy);">Admin</h5>
+                        <p style="color: var(--rt-ink-soft);">Manages the system, creates user accounts, and oversees all operations.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 rt-step-circle" 
+                             style="width: 70px; height: 70px; background-color: var(--rt-amber);">
+                            <i class="fas fa-edit fa-2x text-white"></i>
+                        </div>
+                        <h5 style="color: var(--rt-navy);">Curator</h5>
+                        <p style="color: var(--rt-ink-soft);">Reviews and approves contributor submissions, ensuring data accuracy.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 rt-step-circle" 
+                             style="width: 70px; height: 70px; background-color: var(--rt-teal);">
+                            <i class="fas fa-pen fa-2x text-white"></i>
+                        </div>
+                        <h5 style="color: var(--rt-navy);">Contributor</h5>
+                        <p style="color: var(--rt-ink-soft);">Submits coral reef monitoring data from field observations and research.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Reef Map Section -->
+<section id="map-section" class="py-5" style="background-color: var(--rt-sand-light);">
+    <div class="container">
+        <div class="text-center mb-5 rt-animate fade-up">
+            <h2 class="fw-bold" style="color: var(--rt-navy);">
+                <i class="fas fa-map-marked-alt" style="color: var(--rt-teal);"></i> Reef Map
+            </h2>
+            <p style="color: var(--rt-ink-soft);">Explore coral reef monitoring sites across Sarangani Bay</p>
+        </div>
+        <div class="rt-animate fade-up">
+            <div class="card border-0 shadow-sm overflow-hidden">
+                <div class="card-body p-0">
+                    <div id="reef-map" style="width: 100%; height: 500px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    .reef-popup .leaflet-popup-content-wrapper {
+        border-radius: 10px;
+        border: 2px solid #0E7C86;
+    }
+    .reef-popup .leaflet-popup-content {
+        margin: 10px 14px;
+        font-size: 14px;
+    }
+    .reef-popup .leaflet-popup-tip {
+        border-top-color: #0E7C86;
+    }
+    .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
+        background-color: rgba(14, 124, 134, 0.3);
+    }
+    .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
+        background-color: rgba(14, 124, 134, 0.7);
+        color: white;
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var map = L.map('reef-map').setView([6.10, 125.15], 10);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 18
+    }).addTo(map);
+
+    var reefIcon = L.divIcon({
+        className: '',
+        html: '<div style="background:#0E7C86;width:28px;height:28px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><i class="fas fa-water" style="color:white;font-size:12px;"></i></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -16]
+    });
+
+    var municipalities = [
+        { name: "Alabel", lat: 6.1021, lng: 125.2933, desc: "Municipality of Alabel, Sarangani" },
+        { name: "Glan", lat: 5.9914, lng: 125.2536, desc: "Municipality of Glan, Sarangani" },
+        { name: "Maasim", lat: 5.9417, lng: 125.0167, desc: "Municipality of Maasim, Sarangani" },
+        { name: "Malapatan", lat: 5.9719, lng: 125.2861, desc: "Municipality of Malapatan, Sarangani" },
+        { name: "Malungon", lat: 6.0500, lng: 125.2833, desc: "Municipality of Malungon, Sarangani" }
+    ];
+
+    municipalities.forEach(function(m) {
+        L.marker([m.lat, m.lng], {icon: reefIcon})
+            .addTo(map)
+            .bindPopup(
+                '<div style="text-align:center;">' +
+                '<strong style="color:#0E7C86;font-size:15px;">' + m.name + '</strong><br>' +
+                '<small style="color:#666;">' + m.desc + '</small><br>' +
+                '<span style="display:inline-block;margin-top:4px;background:#0E7C86;color:white;padding:2px 8px;border-radius:10px;font-size:11px;">Sarangani Bay</span>' +
+                '</div>',
+                {className: 'reef-popup'}
+            );
+    });
+});
+</script>
+
+<!-- Recent Assessments Section -->
+<section id="assessments-section" class="py-5">
+    <div class="container">
+        <div class="text-center mb-5 rt-animate fade-up">
+            <h2 class="fw-bold" style="color: var(--rt-navy);">
+                <i class="fas fa-clipboard-list" style="color: var(--rt-coral);"></i> Recent Assessments
+            </h2>
+            <p style="color: var(--rt-ink-soft);">Latest coral reef monitoring data from the field</p>
+        </div>
+        {% if recent_assessments %}
+        <div class="row g-4 rt-stagger">
+            {% for a in recent_assessments %}
+            <div class="col-md-4">
+                <a href="{% url 'public_assessment_detail' a.id %}" class="text-decoration-none" style="color:inherit;">
+                <div class="card h-100 border-0 shadow-sm" style="transition: transform 0.2s, box-shadow 0.2s; cursor:pointer;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center me-3 overflow-hidden" style="width:48px;height:48px;background:{% if a.uploaded_by.profile.profile_picture %}transparent{% elif a.condition == 'excellent' %}#d1fae5{% elif a.condition == 'good' %}#dbeafe{% elif a.condition == 'fair' %}#fef3c7{% elif a.condition == 'poor' %}#fee2e2{% else %}#f3f4f6{% endif %};">
+                                {% if a.uploaded_by.profile.profile_picture %}
+                                <img src="{{ a.uploaded_by.profile.profile_picture.url }}" alt="{{ a.uploaded_by.profile.get_full_name }}" style="width:100%;height:100%;object-fit:cover;">
+                                {% else %}
+                                <i class="fas fa-user" style="color:{% if a.condition == 'excellent' %}#059669{% elif a.condition == 'good' %}#2563eb{% elif a.condition == 'fair' %}#d97706{% elif a.condition == 'poor' %}#dc2626{% else %}#6b7280{% endif %};"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0 fw-bold" style="color: var(--rt-navy);">{{ a.barangay.name }}</h6>
+                                <small style="color: var(--rt-ink-soft);">{{ a.municipality.name }}</small><br>
+                                <small style="color: var(--rt-ink-soft);">Uploaded by {{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</small>
+                </div>
+                </a>
+            </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            {% if a.condition %}
+                            <span class="badge" style="background:{% if a.condition == 'excellent' %}#059669{% elif a.condition == 'good' %}#2563eb{% elif a.condition == 'fair' %}#d97706{% elif a.condition == 'poor' %}#dc2626{% else %}#6b7280{% endif %};color:#fff;font-size:0.75rem;">
+                                {{ a.get_condition_display|title }}
+                            </span>
+                            {% endif %}
+                            <small style="color: var(--rt-ink-soft);">{{ a.assessment_date }}</small>
+                        </div>
+                        {% if a.approved_at %}
+                        <div class="mb-2">
+                            <small class="text-success"><i class="fas fa-check-circle"></i> Approved {{ a.approved_at|date:"M d, Y" }}</small>
+                        </div>
+                        {% endif %}
+                        {% if a.overall_coral_cover is not None %}
+                        <div class="mb-2">
+                            <small class="fw-bold" style="color: var(--rt-ink-soft);">Coral Cover</small>
+                            <div class="progress" style="height:6px;border-radius:3px;">
+                                <div class="progress-bar" style="width:{{ a.overall_coral_cover }}%;background:{% if a.overall_coral_cover >= 50 %}#059669{% elif a.overall_coral_cover >= 25 %}#2563eb{% elif a.overall_coral_cover >= 10 %}#d97706{% else %}#dc2626{% endif %};border-radius:3px;"></div>
+                            </div>
+                            <small style="color: var(--rt-ink-soft);">{{ a.overall_coral_cover }}% cover</small>
+                        </div>
+                        {% endif %}
+                        <p class="mb-0" style="color: var(--rt-ink-soft); font-size: 0.85rem;">
+                            {{ a.get_methodology_display_name }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center rt-animate fade-up">
+            <div class="py-4">
+                <i class="fas fa-water fa-3x mb-3" style="color: var(--rt-seafoam); opacity: 0.5;"></i>
+                <p style="color: var(--rt-ink-soft);">No assessments published yet. Check back soon!</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 rt-animate zoom-in" style="background: linear-gradient(135deg, var(--rt-navy) 0%, var(--rt-navy-light) 100%); color: var(--rt-white);">
+    <div class="container text-center">
+        <h2 class="fw-bold text-white">Ready to Make a Difference?</h2>
+        <p class="mb-4" style="color: var(--rt-seafoam);">Join our community and contribute to coral reef conservation.</p>
+        {% if not user.is_authenticated %}
+            <a href="{% url 'register' %}" class="btn btn-light btn-lg me-2">
+                <i class="fas fa-user-plus"></i> Register Now
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </a>
+        {% else %}
+            <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg">
+                <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+            </a>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

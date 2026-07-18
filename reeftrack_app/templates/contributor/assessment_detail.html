@@ -1,0 +1,360 @@
+{% extends 'contributor/base_contributor.html' %}
+
+{% block title %}Assessment #{{ assessment.id }} - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-0">
+                    <i class="fas fa-clipboard-list"></i> Assessment #{{ assessment.id }}
+                    <span class="badge
+                        {% if assessment.status == 'approved' %}bg-success
+                        {% elif assessment.status == 'submitted' %}bg-warning text-dark
+                        {% elif assessment.status == 'rejected' %}bg-danger
+                        {% else %}bg-secondary{% endif %} ms-2">
+                        {{ assessment.get_status_display }}
+                    </span>
+                </h4>
+            </div>
+            <a href="{% url 'my_assessments' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+
+        <!-- Assessment Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Assessment Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <small class="text-muted">Municipality</small><br>
+                        <strong>{{ assessment.municipality }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Barangay</small><br>
+                        <strong>{{ assessment.barangay }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Date</small><br>
+                        <strong>{{ assessment.assessment_date|date:"M d, Y" }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Methodology</small><br>
+                        <strong>{{ assessment.get_methodology_display }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Uploaded By</small><br>
+                        <strong>{{ assessment.uploaded_by.profile.get_full_name|default:assessment.uploaded_by.email }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Coral Cover</small><br>
+                        <strong>{% if assessment.overall_coral_cover %}{{ assessment.overall_coral_cover }}%{% else %}-{% endif %}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Condition</small><br>
+                        {% if assessment.condition %}
+                            <span class="badge
+                                {% if assessment.condition == 'excellent' %}bg-success
+                                {% elif assessment.condition == 'good' %}bg-primary
+                                {% elif assessment.condition == 'fair' %}bg-warning text-dark
+                                {% else %}bg-danger{% endif %}">
+                                {{ assessment.get_condition_display }}
+                            </span>
+                        {% else %}-{% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Reviewed By</small><br>
+                        <strong>{% if assessment.reviewed_by %}{{ assessment.reviewed_by.profile.get_full_name|default:assessment.reviewed_by.email }}{% else %}-{% endif %}</strong>
+                    </div>
+                    {% if assessment.description %}
+                    <div class="col-12">
+                        <small class="text-muted">Description</small><br>
+                        <strong>{{ assessment.description }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if assessment.contributors.all %}
+                    <div class="col-12">
+                        <small class="text-muted">Contributors</small><br>
+                        {% for c in assessment.contributors.all %}
+                        <span class="badge bg-secondary me-1">{{ c.get_full_name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% if assessment.thesis_pdf %}
+                <div class="mt-3">
+                    <a href="{{ assessment.thesis_pdf.url }}" class="btn btn-sm btn-outline-danger" target="_blank">
+                        <i class="fas fa-file-pdf"></i> View Thesis PDF
+                    </a>
+                </div>
+                {% endif %}
+                {% if assessment.notes %}
+                <div class="mt-3">
+                    <small class="text-muted">Rejection Reason:</small><br>
+                    <div class="alert alert-danger py-2 mb-0">{{ assessment.notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if assessment.thesis_pdf %}
+        <div class="card mb-4 rt-card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-file-pdf"></i> Thesis / Reference PDF</h6>
+            </div>
+            <div class="card-body">
+                <a href="{{ assessment.thesis_pdf.url }}" target="_blank" class="pdf-link">
+                    <i class="fas fa-file-pdf fa-lg"></i>
+                    <div>
+                        <div style="font-weight:600;">{{ assessment.thesis_pdf.name|cut:"assessments/thesis/" }}</div>
+                        <small style="opacity:0.8;">Click to open in new tab</small>
+                    </div>
+                </a>
+                <div class="mt-3">
+                    <iframe src="{{ assessment.thesis_pdf.url }}" style="width:100%; height:500px; border:1px solid #dee2e6; border-radius:8px;" frameborder="0"></iframe>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if assessment.images.all %}
+        <div class="card mb-4 rt-card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-images"></i> Assessment Images ({{ assessment.images.count }})</h6>
+            </div>
+            <div class="card-body">
+                <div id="imgCarousel" class="carousel slide" data-bs-ride="false">
+                    <div class="carousel-inner" style="border-radius:8px; overflow:hidden; background:#000;">
+                        {% for img in assessment.images.all %}
+                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                            <img src="{{ img.image.url }}" class="d-block w-100" style="max-height:500px; object-fit:contain;" alt="{{ img.caption|default:'Assessment image' }}">
+                            {% if img.caption %}
+                            <div class="carousel-caption d-none d-md-block" style="background:rgba(0,0,0,0.5); border-radius:4px; padding:4px 12px;">
+                                <small>{{ img.caption }}</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if assessment.images.count > 1 %}
+                    <button class="carousel-control-prev" type="button" data-bs-target="#imgCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.6));"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#imgCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.6));"></span>
+                    </button>
+                    {% endif %}
+                </div>
+                {% if assessment.images.count > 1 %}
+                <div class="text-center mt-2">
+                    <small class="text-muted">Use arrows to navigate ({{ assessment.images.count }} images)</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Transects -->
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="fas fa-map-marked-alt"></i> Transect Locations</h6>
+            </div>
+            <div class="card-body">
+                <div id="transectMap" style="height:350px; border-radius:8px; border:1px solid #dee2e6; margin-bottom:1rem;"></div>
+                <div class="d-flex gap-3 mb-0">
+                    <small><span style="display:inline-block;width:14px;height:3px;background:#0dcaf0;vertical-align:middle;"></span> Shallow transect</small>
+                    <small><span style="display:inline-block;width:14px;height:3px;background:#0d6efd;vertical-align:middle;"></span> Deep transect</small>
+                </div>
+            </div>
+        </div>
+        {% for t in transects %}
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white d-flex justify-content-between">
+                <h6 class="mb-0"><i class="fas fa-ruler-horizontal"></i> Transect {{ t.transect_number }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <h6 class="text-info"><i class="fas fa-water"></i> Shallow</h6>
+                        <small>
+                            {% if t.shallow_start_lat or t.shallow_end_lat %}
+                                Start: {{ t.shallow_start_lat|default:"-" }}, {{ t.shallow_start_lng|default:"-" }}<br>
+                                End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}
+                            {% else %}
+                                <span class="text-muted">No coordinates</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="fas fa-water"></i> Deep</h6>
+                        <small>
+                            {% if t.deep_start_lat or t.deep_end_lat %}
+                                Start: {{ t.deep_start_lat|default:"-" }}, {{ t.deep_start_lng|default:"-" }}<br>
+                                End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}
+                            {% else %}
+                                <span class="text-muted">No coordinates</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+
+                {% if has_species_records %}
+                {% regroup t.species_data.all by depth as depth_groups %}
+                {% for depth_group in depth_groups %}
+                <h6 class="{% if depth_group.grouper == 'shallow' %}text-info{% else %}text-primary{% endif %} mt-3">
+                    <i class="fas fa-table"></i> {{ depth_group.grouper|title }} Species
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Species</th>
+                                <th>Family</th>
+                                <th class="text-end">Cover %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ts in depth_group.list %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ ts.species.sub_category }}</td>
+                                <td><span class="badge bg-secondary">{{ ts.species.major_category }}</span></td>
+                                <td class="text-end"><strong>{{ ts.cover }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not has_species_records and parsed_species %}
+        <div class="card mb-4 rt-card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-file-excel"></i> Parsed Species from Excel Files</h6>
+            </div>
+            <div class="card-body">
+                {% regroup parsed_species by depth as parsed_depth_groups %}
+                {% for depth_group in parsed_depth_groups %}
+                <h6 class="{% if depth_group.grouper == 'Shallow' %}text-info{% else %}text-primary{% endif %} mt-3">
+                    <i class="fas fa-table"></i> {{ depth_group.grouper }} Species ({{ depth_group.list|length }})
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Transect</th>
+                                <th>Species</th>
+                                <th>Family</th>
+                                <th class="text-end">Cover %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sp in depth_group.list %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>T{{ sp.transect_number }}</td>
+                                <td>{{ sp.sub_category }}</td>
+                                <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                                <td class="text-end"><strong>{{ sp.cover|floatformat:1 }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not has_species_records and not parsed_species %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> No species data available for this assessment.
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        {% if assessment.status == 'submitted' or assessment.status == 'rejected' %}
+        <div class="card mb-4 border-danger">
+            <div class="card-body">
+                <form method="POST" action="{% url 'delete_assessment' assessment.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-lg w-100"
+                            onclick="return confirm('Are you sure you want to delete Assessment #{{ assessment.id }}? This cannot be undone.')">
+                        <i class="fas fa-trash"></i> Delete Assessment
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var transectData = [
+        {% for t in transects %}
+        {
+            num: {{ t.transect_number }},
+            sLat: {{ t.shallow_start_lat|default:"null" }},
+            sLng: {{ t.shallow_start_lng|default:"null" }},
+            eLat: {{ t.shallow_end_lat|default:"null" }},
+            eLng: {{ t.shallow_end_lng|default:"null" }},
+            dSLat: {{ t.deep_start_lat|default:"null" }},
+            dSLng: {{ t.deep_start_lng|default:"null" }},
+            dELat: {{ t.deep_end_lat|default:"null" }},
+            dELng: {{ t.deep_end_lng|default:"null" }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    var mapEl = document.getElementById('transectMap');
+    if (!mapEl) return;
+    var map = L.map(mapEl).setView([6.1164, 125.3125], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    function makeIcon(color, num) {
+        return L.divIcon({
+            className: '',
+            html: '<div style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:' + color + ';color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);line-height:1;">' + num + '</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+    }
+
+    var bounds = [];
+    transectData.forEach(function(t) {
+        if (t.sLat && t.sLng && t.eLat && t.eLng) {
+            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Shallow');
+            L.marker([t.sLat, t.sLng], {icon: makeIcon('#0dcaf0', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow Start');
+            L.marker([t.eLat, t.eLng], {icon: makeIcon('#0dcaf0', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow End');
+            bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
+        }
+        if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
+            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Deep');
+            L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#0d6efd', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep Start');
+            L.marker([t.dELat, t.dELng], {icon: makeIcon('#0d6efd', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep End');
+            bounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);
+        }
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, {padding: [40, 40], maxZoom: 15});
+    }
+});
+</script>
+{% endblock %}

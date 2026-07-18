@@ -1,0 +1,461 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{{ municipality.name }} Barangays - Admin - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">
+                <a href="{% url 'admin_manage_locations' %}" class="text-decoration-none text-muted">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <i class="fas fa-map-pin"></i> {{ municipality.name }} — Barangays &amp; Reference Coordinates
+            </h4>
+        </div>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBarangayModal">
+            <i class="fas fa-plus"></i> Add Barangay
+        </button>
+    </div>
+</div>
+
+{% if barangays %}
+<div class="mb-3">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="brgySearch" class="form-control" placeholder="Search barangay...">
+            </div>
+        </div>
+        <div class="col-md-6 text-end">
+            <small class="text-muted" id="brgyCount">{{ barangay_data|length }} barangay{{ barangay_data|length|pluralize }}</small>
+        </div>
+    </div>
+</div>
+<div class="accordion" id="barangayAccordion">
+    {% for item in barangay_data %}
+    {% with b=item.barangay coords=item.coords %}
+    <div class="accordion-item brgy-item" data-name="{{ b.name|lower }}">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#brgy{{ b.id }}">
+                <strong>{{ b.name }}</strong>
+                <span class="badge bg-secondary ms-2">{{ coords|length }} ref{{ coords|length|pluralize }}</span>
+                {% if b.assessments.count > 0 %}
+                <span class="badge bg-info ms-1">{{ b.assessments.count }} assessment{{ b.assessments.count|pluralize }}</span>
+                {% endif %}
+            </button>
+        </h2>
+        <div id="brgy{{ b.id }}" class="accordion-collapse collapse" data-bs-parent="#barangayAccordion">
+            <div class="accordion-body">
+                <div class="d-flex justify-content-end mb-2">
+                    <button class="btn btn-sm btn-outline-primary me-1" title="Edit Barangay Name"
+                            data-bs-toggle="modal" data-bs-target="#editBrgy{{ b.id }}">
+                        <i class="fas fa-edit"></i> Edit Name
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" title="Delete Barangay"
+                            data-bs-toggle="modal" data-bs-target="#deleteBrgy{{ b.id }}">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0"><i class="fas fa-map-marked-alt"></i> Reference Coordinates</h6>
+                    <div>
+                        {% if coords %}
+                        <button class="btn btn-sm btn-outline-info me-1" type="button"
+                                onclick="toggleAllMap({{ b.id }})">
+                            <i class="fas fa-globe"></i> Show All
+                        </button>
+                        {% endif %}
+                        <button class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                data-bs-target="#addRef{{ b.id }}">
+                            <i class="fas fa-plus"></i> Add Reference
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-2">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ref #</th>
+                                <th>Shallow Start</th>
+                                <th>Shallow End</th>
+                                <th>Deep Start</th>
+                                <th>Deep End</th>
+                                <th>Source</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in coords %}
+                            <tr>
+                                <td><strong>{{ forloop.counter }}</strong></td>
+                                <td>{% if t.shallow_start_lat and t.shallow_start_lng %}{{ t.shallow_start_lat }}, {{ t.shallow_start_lng }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>{% if t.shallow_end_lat and t.shallow_end_lng %}{{ t.shallow_end_lat }}, {{ t.shallow_end_lng }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>{% if t.deep_start_lat and t.deep_start_lng %}{{ t.deep_start_lat }}, {{ t.deep_start_lng }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>{% if t.deep_end_lat and t.deep_end_lng %}{{ t.deep_end_lat }}, {{ t.deep_end_lng }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>
+                                    {% if t.source == 'assessment' %}
+                                    <span class="badge bg-info"><i class="fas fa-file-alt"></i> Assessment</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary"><i class="fas fa-hand-pointer"></i> Manual</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" title="Show on map"
+                                            onclick="showSingleMap({{ b.id }}, {{ t.id }}, {{ forloop.counter }})">
+                                        <i class="fas fa-map"></i>
+                                    </button>
+                                    {% if t.source == 'assessment' %}
+                                    <span class="text-muted small ms-1"><i class="fas fa-lock"></i></span>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-outline-primary" title="Edit"
+                                            data-bs-toggle="modal" data-bs-target="#editRef{{ t.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" title="Delete"
+                                            data-bs-toggle="modal" data-bs-target="#deleteRef{{ t.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-3">
+                                    <i class="fas fa-map-pin"></i> No reference coordinates saved yet.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="singleMap{{ b.id }}" style="display:none; height:350px; border-radius:8px; border:1px solid #dee2e6;" class="mt-2"></div>
+                <div id="allMap{{ b.id }}" style="display:none; height:400px; border-radius:8px; border:1px solid #dee2e6;" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+</div>
+
+<!-- Modals -->
+{% for item in barangay_data %}
+{% with b=item.barangay coords=item.coords %}
+<!-- Add Reference Modal -->
+<div class="modal fade" id="addRef{{ b.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="transect_action" value="add_transect">
+                <input type="hidden" name="barangay_id" value="{{ b.id }}">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Add Reference Coordinates — {{ b.name }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Shallow Start</label>
+                            <div class="input-group">
+                                <input type="number" step="any" min="-90" max="90" required class="form-control" name="shallow_start_lat" placeholder="Latitude">
+                                <input type="number" step="any" min="-180" max="180" required class="form-control" name="shallow_start_lng" placeholder="Longitude">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Shallow End</label>
+                            <div class="input-group">
+                                <input type="number" step="any" min="-90" max="90" required class="form-control" name="shallow_end_lat" placeholder="Latitude">
+                                <input type="number" step="any" min="-180" max="180" required class="form-control" name="shallow_end_lng" placeholder="Longitude">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Deep Start</label>
+                            <div class="input-group">
+                                <input type="number" step="any" min="-90" max="90" required class="form-control" name="deep_start_lat" placeholder="Latitude">
+                                <input type="number" step="any" min="-180" max="180" required class="form-control" name="deep_start_lng" placeholder="Longitude">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Deep End</label>
+                            <div class="input-group">
+                                <input type="number" step="any" min="-90" max="90" required class="form-control" name="deep_end_lat" placeholder="Latitude">
+                                <input type="number" step="any" min="-180" max="180" required class="form-control" name="deep_end_lng" placeholder="Longitude">
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted">All 8 coordinate fields are required. Contributors will assign transect numbers when using this reference.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Reference</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit/Delete Reference Modals (only for manual) -->
+{% for t in coords %}
+{% if t.source != 'assessment' %}
+<div class="modal fade" id="editRef{{ t.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="transect_action" value="edit_transect">
+                <input type="hidden" name="transect_id" value="{{ t.id }}">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Edit Reference — {{ b.name }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Shallow Start</label>
+                            <div class="input-group">
+                                <input type="number" step="any" min="-90" max="90" required class="form-control" name="shallow_start_lat" value="{{ t.shallow_start_lat|default:'' }}" placeholder="Latitude">
+                                <input type="number" step="any" min="-180" max="180" required class="form-control" name="shallow_start_lng" value="{{ t.shallow_start_lng|default:'' }}" placeholder="Longitude">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Shallow End</label>
+                            <div class="input-group">
+                                <input type="number" step="any" min="-90" max="90" required class="form-control" name="shallow_end_lat" value="{{ t.shallow_end_lat|default:'' }}" placeholder="Latitude">
+                                <input type="number" step="any" min="-180" max="180" required class="form-control" name="shallow_end_lng" value="{{ t.shallow_end_lng|default:'' }}" placeholder="Longitude">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Deep Start</label>
+                            <div class="input-group">
+                                <input type="number" step="any" min="-90" max="90" required class="form-control" name="deep_start_lat" value="{{ t.deep_start_lat|default:'' }}" placeholder="Latitude">
+                                <input type="number" step="any" min="-180" max="180" required class="form-control" name="deep_start_lng" value="{{ t.deep_start_lng|default:'' }}" placeholder="Longitude">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Deep End</label>
+                            <div class="input-group">
+                                <input type="number" step="any" min="-90" max="90" required class="form-control" name="deep_end_lat" value="{{ t.deep_end_lat|default:'' }}" placeholder="Latitude">
+                                <input type="number" step="any" min="-180" max="180" required class="form-control" name="deep_end_lng" value="{{ t.deep_end_lng|default:'' }}" placeholder="Longitude">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteRef{{ t.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="transect_action" value="delete_transect">
+                <input type="hidden" name="transect_id" value="{{ t.id }}">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Delete Reference</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete these reference coordinates from <strong>{{ b.name }}</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Edit Barangay Modal -->
+<div class="modal fade" id="editBrgy{{ b.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_edit_barangay' b.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Barangay</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-bold">Name</label>
+                    <input type="text" class="form-control" name="name" value="{{ b.name }}" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Barangay Modal -->
+<div class="modal fade" id="deleteBrgy{{ b.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_delete_barangay' b.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Delete Barangay</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong>{{ b.name }}</strong>?</p>
+                    {% if b.assessments.count > 0 %}
+                    <div class="alert alert-danger py-2 mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        This barangay has {{ b.assessments.count }} assessment(s) and cannot be deleted.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    {% if b.assessments.count == 0 %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endwith %}
+{% endfor %}
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+var transectData = {{ transect_data_json|safe }};
+var mapInstances = {};
+
+function waitForVisible(el, cb) {
+    var check = setInterval(function() {
+        if (el.offsetHeight > 0) { clearInterval(check); cb(); }
+    }, 50);
+    setTimeout(function() { clearInterval(check); }, 3000);
+}
+
+function drawTransectsOnMap(map, transects, startNum) {
+    var sIcon = L.divIcon({className:'',html:'<div style="background:#0dcaf0;color:#000;font-weight:bold;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">S</div>',iconSize:[22,22],iconAnchor:[11,11]});
+    var dIcon = L.divIcon({className:'',html:'<div style="background:#0d6efd;color:#fff;font-weight:bold;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">D</div>',iconSize:[22,22],iconAnchor:[11,11]});
+    var bounds = [];
+    transects.forEach(function(t, i) {
+        var num = (startNum || 1) + i;
+        if (t.sLat && t.sLng) { L.marker([t.sLat,t.sLng],{icon:sIcon}).addTo(map).bindPopup('Ref '+num+' — Shallow Start'); bounds.push([t.sLat,t.sLng]); }
+        if (t.eLat && t.eLng) { L.marker([t.eLat,t.eLng],{icon:sIcon}).addTo(map).bindPopup('Ref '+num+' — Shallow End'); bounds.push([t.eLat,t.eLng]); if(t.sLat&&t.sLng) L.polyline([[t.sLat,t.sLng],[t.eLat,t.eLng]],{color:'#0dcaf0',weight:3}).addTo(map); }
+        if (t.dSLat && t.dSLng) { L.marker([t.dSLat,t.dSLng],{icon:dIcon}).addTo(map).bindPopup('Ref '+num+' — Deep Start'); bounds.push([t.dSLat,t.dSLng]); }
+        if (t.dELat && t.dELng) { L.marker([t.dELat,t.dELng],{icon:dIcon}).addTo(map).bindPopup('Ref '+num+' — Deep End'); bounds.push([t.dELat,t.dELng]); if(t.dSLat&&t.dSLng) L.polyline([[t.dSLat,t.dSLng],[t.dELat,t.dELng]],{color:'#0d6efd',weight:3}).addTo(map); }
+    });
+    if (bounds.length > 0) map.fitBounds(bounds, {padding:[30,30]});
+    else map.setView([6.0,125.0], 10);
+}
+
+function showSingleMap(brgyId, refId, refNum) {
+    var singleEl = document.getElementById('singleMap' + brgyId);
+    var allEl = document.getElementById('allMap' + brgyId);
+    allEl.style.display = 'none';
+    if (singleEl.style.display === 'none') {
+        singleEl.style.display = 'block';
+        if (!singleEl.dataset.init) {
+            singleEl.dataset.init = '1';
+            waitForVisible(singleEl, function() {
+                var map = L.map('singleMap' + brgyId);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'&copy; OpenStreetMap'}).addTo(map);
+                mapInstances['single_' + brgyId] = map;
+                var t = (transectData[brgyId] || []).filter(function(x) { return x.id === refId; });
+                drawTransectsOnMap(map, t, 1);
+            });
+        } else if (mapInstances['single_' + brgyId]) {
+            mapInstances['single_' + brgyId].invalidateSize();
+        }
+    } else {
+        singleEl.style.display = 'none';
+    }
+}
+
+function toggleAllMap(brgyId) {
+    var singleEl = document.getElementById('singleMap' + brgyId);
+    var allEl = document.getElementById('allMap' + brgyId);
+    singleEl.style.display = 'none';
+    if (allEl.style.display === 'none') {
+        allEl.style.display = 'block';
+        if (!allEl.dataset.init) {
+            allEl.dataset.init = '1';
+            waitForVisible(allEl, function() {
+                var map = L.map('allMap' + brgyId);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'&copy; OpenStreetMap'}).addTo(map);
+                mapInstances['all_' + brgyId] = map;
+                drawTransectsOnMap(map, transectData[brgyId] || [], 1);
+            });
+        } else if (mapInstances['all_' + brgyId]) {
+            mapInstances['all_' + brgyId].invalidateSize();
+        }
+    } else {
+        allEl.style.display = 'none';
+    }
+}
+</script>
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-map-pin fa-3x text-muted mb-3"></i>
+        <h5>No barangays</h5>
+        <p class="text-muted">Add a barangay to {{ municipality.name }}.</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add Barangay Modal -->
+<div class="modal fade" id="addBarangayModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_add_barangay' municipality.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Add Barangay to {{ municipality.name }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-bold">Barangay Name</label>
+                    <input type="text" class="form-control" name="name" required placeholder="e.g. Labangal">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Barangay</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('brgySearch').addEventListener('input', function() {
+    var q = this.value.toLowerCase();
+    var items = document.querySelectorAll('.brgy-item');
+    var visible = 0;
+    items.forEach(function(item) {
+        var name = item.getAttribute('data-name') || '';
+        var show = name.indexOf(q) !== -1;
+        item.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('brgyCount').textContent = visible + ' barangay' + (visible !== 1 ? 's' : '');
+});
+</script>
+{% endblock %}

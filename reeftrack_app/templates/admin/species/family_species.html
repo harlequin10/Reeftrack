@@ -1,0 +1,153 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+{% block title %}{{ family_name }} Species - Admin - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <a href="{% url 'admin_manage_species' %}" class="text-decoration-none" style="color:var(--rt-primary);">
+            <i class="fas fa-arrow-left"></i> Back to Families
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">
+            <i class="fas fa-fish"></i> {{ family_name }}
+            <span class="badge bg-info ms-2">{{ species_count }} species</span>
+        </h4>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSpeciesModal">
+            <i class="fas fa-plus"></i> Add Species
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Sub Category (Species)</th>
+                        <th>Code</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in species_list %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <strong style="color:var(--rt-primary);">{{ s.sub_category }}</strong>
+                        </td>
+                        <td><code>{{ s.code|default:"—" }}</code></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" title="Edit"
+                                    data-bs-toggle="modal" data-bs-target="#editSpecies{{ s.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" title="Delete"
+                                    data-bs-toggle="modal" data-bs-target="#deleteSpecies{{ s.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+
+                            <div class="modal fade" id="editSpecies{{ s.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content rt-card">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" style="color:var(--accent-coral);"><i class="fas fa-edit"></i> Edit Species</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="post" action="{% url 'admin_edit_species' s.id %}">
+                                            {% csrf_token %}
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Sub Category <span class="text-danger">*</span></label>
+                                                    <input type="text" name="sub_category" class="form-control rt-form-control"
+                                                           value="{{ s.sub_category }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Code</label>
+                                                    <input type="text" name="code" class="form-control rt-form-control"
+                                                           value="{{ s.code|default:'' }}">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal fade" id="deleteSpecies{{ s.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content rt-card">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" style="color:var(--accent-coral);">
+                                                <i class="fas fa-exclamation-triangle"></i> Delete Species
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Delete <strong>{{ s.sub_category }}</strong> from <strong>{{ family_name }}</strong>?</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form action="{% url 'admin_delete_species' s.id %}" method="post">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            <i class="fas fa-fish fa-2x mb-3 d-block" style="color:var(--rt-muted);"></i>
+                            No species in this family yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addSpeciesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content rt-card">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color:var(--accent-coral);"><i class="fas fa-plus-circle"></i> Add Species to {{ family_name }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'admin_add_species_in_family' family_name|urlencode %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Sub Category (Species Name) <span class="text-danger">*</span></label>
+                        <input type="text" name="sub_category" class="form-control rt-form-control" required
+                               placeholder="e.g. ACROPORA BRIDGESI">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Code</label>
+                        <input type="text" name="code" class="form-control rt-form-control"
+                               placeholder="e.g. ACRO-01">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add Species</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,433 @@
+{% extends 'curator/base_curator.html' %}
+{% load static %}
+{% block title %}Confirm Approval - Assessment #{{ assessment.id }} - ReefTrack{% endblock %}
+
+{% block content %}
+<style>
+    .review-section { border-left: 4px solid var(--rt-primary); padding-left: 1rem; margin-bottom: 1.5rem; }
+    .review-section h6 { color: var(--rt-primary); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+    .info-item { background: #f8f9fa; border-radius: 8px; padding: 0.75rem 1rem; }
+    .info-item .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; font-weight: 600; }
+    .info-item .value { font-size: 1rem; font-weight: 500; color: #212529; margin-top: 0.15rem; }
+    .transect-card { border: 1px solid #dee2e6; border-radius: 10px; overflow: hidden; margin-bottom: 1rem; }
+    .transect-card .card-header-tr { background: linear-gradient(135deg, var(--rt-primary), var(--rt-secondary)); color: #fff; padding: 0.6rem 1rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    .transect-card .card-body-tr { padding: 1rem; }
+    .gps-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #e3f2fd; color: #1565c0; border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.8rem; font-weight: 500; }
+    .file-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #e8f5e9; color: #2e7d32; border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.8rem; font-weight: 500; }
+    .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
+    .image-thumb { position: relative; border-radius: 8px; overflow: hidden; border: 2px solid #dee2e6; aspect-ratio: 4/3; cursor: pointer; transition: border-color 0.2s; }
+    .image-thumb:hover { border-color: var(--rt-primary); }
+    .image-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .image-thumb .caption { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: #fff; padding: 0.5rem; font-size: 0.75rem; }
+    .pdf-link { display: inline-flex; align-items: center; gap: 0.5rem; background: #fce4ec; color: #c62828; padding: 0.6rem 1.2rem; border-radius: 8px; text-decoration: none; font-weight: 500; transition: background 0.2s; }
+    .pdf-link:hover { background: #f8bbd0; color: #b71c1c; }
+</style>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <a href="{% url 'curator_assessment_detail' assessment.id %}" class="text-decoration-none" style="color:var(--rt-primary);">
+            <i class="fas fa-arrow-left"></i> Back to Assessment
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h4 class="mb-0">
+            <i class="fas fa-clipboard-check"></i> Review Before Approval — Assessment #{{ assessment.id }}
+        </h4>
+        <small class="text-muted">Please review all information below before approving this assessment.</small>
+    </div>
+</div>
+
+<!-- Assessment Info -->
+<div class="card mb-4 rt-card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-info-circle"></i> Assessment Information</h6>
+    </div>
+    <div class="card-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="label">Municipality</div>
+                <div class="value">{{ assessment.municipality.name }}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">Barangay</div>
+                <div class="value">{{ assessment.barangay.name }}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">Assessment Date</div>
+                <div class="value">{{ assessment.assessment_date }}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">Methodology</div>
+                <div class="value">{{ assessment.get_methodology_display_name }}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">Uploaded By</div>
+                <div class="value">{{ assessment.uploaded_by.profile.get_full_name|default:assessment.uploaded_by.email }}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">Transects</div>
+                <div class="value">{{ transects.count }}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">Status</div>
+                <div class="value"><span class="badge bg-warning text-dark">{{ assessment.get_status_display }}</span></div>
+            </div>
+            <div class="info-item">
+                <div class="label">Date Submitted</div>
+                <div class="value">{{ assessment.created_at|date:"M d, Y H:i" }}</div>
+            </div>
+        </div>
+        {% if assessment.description %}
+        <div class="mt-3 p-3" style="background:#f8f9fa; border-radius:8px;">
+            <div class="label" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:#6c757d; font-weight:600;">Description</div>
+            <div class="mt-1">{{ assessment.description }}</div>
+        </div>
+        {% endif %}
+        {% if assessment.contributors.all %}
+        <div class="mt-3">
+            <strong style="font-size:0.85rem; color:#6c757d;">CONTRIBUTORS:</strong>
+            <div class="d-flex flex-wrap gap-1 mt-1">
+                {% for c in assessment.contributors.all %}
+                <span class="badge bg-secondary">{{ c.get_full_name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Thesis PDF -->
+{% if assessment.thesis_pdf %}
+<div class="card mb-4 rt-card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-file-pdf"></i> Thesis / Reference PDF</h6>
+    </div>
+    <div class="card-body">
+        <a href="{{ assessment.thesis_pdf.url }}" target="_blank" class="pdf-link">
+            <i class="fas fa-file-pdf fa-lg"></i>
+            <div>
+                <div style="font-weight:600;">{{ assessment.thesis_pdf.name|cut:"assessments/thesis/" }}</div>
+                <small style="opacity:0.8;">Click to open in new tab</small>
+            </div>
+        </a>
+        <div class="mt-3">
+            <iframe src="{{ assessment.thesis_pdf.url }}" style="width:100%; height:500px; border:1px solid #dee2e6; border-radius:8px;" frameborder="0"></iframe>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Assessment Images -->
+{% if assessment.images.all %}
+<div class="card mb-4 rt-card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-images"></i> Assessment Images ({{ assessment.images.count }})</h6>
+    </div>
+    <div class="card-body">
+        <div id="imgCarousel" class="carousel slide" data-bs-ride="false">
+            <div class="carousel-inner" style="border-radius:8px; overflow:hidden; background:#000;">
+                {% for img in assessment.images.all %}
+                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    <img src="{{ img.image.url }}" class="d-block w-100" style="max-height:500px; object-fit:contain;" alt="{{ img.caption|default:'Assessment image' }}">
+                    {% if img.caption %}
+                    <div class="carousel-caption d-none d-md-block" style="background:rgba(0,0,0,0.5); border-radius:4px; padding:4px 12px;">
+                        <small>{{ img.caption }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% if assessment.images.count > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#imgCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.6));"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#imgCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.6));"></span>
+            </button>
+            {% endif %}
+        </div>
+        {% if assessment.images.count > 1 %}
+        <div class="text-center mt-2">
+            <small class="text-muted">Use arrows to navigate ({{ assessment.images.count }} images)</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Transect Details -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<div class="card mb-4 rt-card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-map-marked-alt"></i> Transect Details ({{ transects.count }})</h6>
+    </div>
+    <div class="card-body">
+        <div id="transectMap" style="height:350px; border-radius:8px; border:1px solid #dee2e6; margin-bottom:1rem;"></div>
+        <div class="d-flex gap-3 mb-3">
+            <small><span style="display:inline-block;width:14px;height:3px;background:#0dcaf0;vertical-align:middle;"></span> Shallow transect</small>
+            <small><span style="display:inline-block;width:14px;height:3px;background:#0d6efd;vertical-align:middle;"></span> Deep transect</small>
+        </div>
+        {% for transect in transects %}
+        <div class="transect-card">
+            <div class="card-header-tr">
+                <span><i class="fas fa-water"></i> Transect {{ transect.transect_number }}</span>
+                <span>
+                    {% if transect.shallow_excel %}<span class="file-badge"><i class="fas fa-file-excel"></i> Shallow Excel</span>{% endif %}
+                    {% if transect.deep_excel %}<span class="file-badge"><i class="fas fa-file-excel"></i> Deep Excel</span>{% endif %}
+                </span>
+            </div>
+            <div class="card-body-tr">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong class="text-info"><i class="fas fa-arrow-up"></i> Shallow</strong>
+                        <div class="d-flex flex-column gap-1 mt-1">
+                            {% if transect.shallow_start_lat and transect.shallow_start_lng %}
+                            <span class="gps-badge"><i class="fas fa-map-pin"></i> Start: {{ transect.shallow_start_lat }}, {{ transect.shallow_start_lng }}</span>
+                            {% endif %}
+                            {% if transect.shallow_end_lat and transect.shallow_end_lng %}
+                            <span class="gps-badge"><i class="fas fa-map-pin"></i> End: {{ transect.shallow_end_lat }}, {{ transect.shallow_end_lng }}</span>
+                            {% endif %}
+                            {% if not transect.shallow_start_lat and not transect.shallow_end_lat %}
+                            <span class="text-muted"><i class="fas fa-map-pin"></i> No coordinates</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong class="text-primary"><i class="fas fa-arrow-down"></i> Deep</strong>
+                        <div class="d-flex flex-column gap-1 mt-1">
+                            {% if transect.deep_start_lat and transect.deep_start_lng %}
+                            <span class="gps-badge"><i class="fas fa-map-pin"></i> Start: {{ transect.deep_start_lat }}, {{ transect.deep_start_lng }}</span>
+                            {% endif %}
+                            {% if transect.deep_end_lat and transect.deep_end_lng %}
+                            <span class="gps-badge"><i class="fas fa-map-pin"></i> End: {{ transect.deep_end_lat }}, {{ transect.deep_end_lng }}</span>
+                            {% endif %}
+                            {% if not transect.deep_start_lat and not transect.deep_end_lat %}
+                            <span class="text-muted"><i class="fas fa-map-pin"></i> No coordinates</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Duplicate Warnings -->
+{% if duplicate_warnings %}
+<div class="card mb-4 rt-card border-warning">
+    <div class="card-header bg-warning text-dark">
+        <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Duplicate Warnings ({{ duplicate_warnings|length }})</h6>
+    </div>
+    <div class="card-body">
+        {% for warn in duplicate_warnings %}
+        <div class="alert {% if warn.is_exact %}alert-danger{% else %}alert-warning{% endif %} mb-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>
+                        {% if warn.is_exact %}
+                        <i class="fas fa-exclamation-circle"></i> EXACT DUPLICATE
+                        {% else %}
+                        <i class="fas fa-exclamation-triangle"></i> {{ warn.match_pct }}% Similar
+                        {% endif %}
+                    </strong>
+                    <p class="mb-1 mt-1">
+                        Assessment #{{ warn.assessment.id }} — {{ warn.assessment.barangay.name }}, {{ warn.assessment.municipality.name }} ({{ warn.assessment.assessment_date }})
+                    </p>
+                    <small>{{ warn.match_count }} of {{ warn.total }} species match exactly</small>
+                </div>
+            </div>
+            {% if warn.overlap_species %}
+            <div class="mt-2">
+                <small class="fw-bold">Matching species:</small>
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                    {% for sp in warn.overlap_species %}
+                    <span class="badge bg-secondary">{{ sp.0 }} ({{ sp.1 }}) — {{ sp.2 }}%</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- New Species -->
+{% if new_species %}
+<div class="card mb-4 rt-card border-info">
+    <div class="card-header bg-info text-white">
+        <h6 class="mb-0"><i class="fas fa-plus-circle"></i> New Species ({{ new_species|length }})</h6>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle"></i> These species do not exist in the Species reference table yet and will be created upon approval.
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Sub Category</th>
+                        <th>Major Category</th>
+                        <th>Transect</th>
+                        <th>Depth</th>
+                        <th>Cover %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sp in new_species %}
+                    <tr>
+                        <td><strong>{{ sp.sub_category }}</strong></td>
+                        <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                        <td>T{{ sp.transect }}</td>
+                        <td>{{ sp.depth }}</td>
+                        <td>{{ sp.cover|floatformat:1 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Species Data -->
+<div class="card mb-4 rt-card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-table"></i> Species Data ({{ all_species|length }} records)</h6>
+    </div>
+    <div class="card-body">
+        {% regroup all_species by transect as transect_groups %}
+        {% for tg in transect_groups %}
+        <h6 class="mt-3 mb-2"><i class="fas fa-water"></i> Transect {{ tg.grouper }}</h6>
+        {% regroup tg.list by depth as depth_groups %}
+        {% for dg in depth_groups %}
+        <div class="ms-3 mb-3">
+            <h6 class="{% if dg.grouper == 'Shallow' %}text-info{% else %}text-primary{% endif %}">
+                <i class="fas fa-layer-group"></i> {{ dg.grouper }} ({{ dg.list|length }} species)
+            </h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Sub Category</th>
+                            <th>Major Category</th>
+                            <th>Cover %</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sp in dg.list %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ sp.sub_category }}</td>
+                            <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                            <td>{{ sp.cover|floatformat:1 }}%</td>
+                            <td>
+                                {% if sp.is_new %}
+                                <span class="badge bg-info">New</span>
+                                {% else %}
+                                <span class="badge bg-success">Existing</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="card rt-card mb-5">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <form method="POST" action="{% url 'curator_assessment_action' assessment.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    {% if has_warnings %}
+                    <button type="submit" class="btn btn-warning btn-lg w-100" onclick="return confirm('This assessment has warnings. Are you sure you want to approve it?');">
+                        <i class="fas fa-exclamation-triangle"></i> Approve Anyway
+                    </button>
+                    {% else %}
+                    <button type="submit" class="btn btn-success btn-lg w-100">
+                        <i class="fas fa-check-circle"></i> Approve Assessment
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="col-md-6">
+                <a href="{% url 'curator_assessment_detail' assessment.id %}" class="btn btn-secondary btn-lg w-100">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var transectData = [
+        {% for t in transects %}
+        {
+            num: {{ t.transect_number }},
+            sLat: {{ t.shallow_start_lat|default:"null" }},
+            sLng: {{ t.shallow_start_lng|default:"null" }},
+            eLat: {{ t.shallow_end_lat|default:"null" }},
+            eLng: {{ t.shallow_end_lng|default:"null" }},
+            dSLat: {{ t.deep_start_lat|default:"null" }},
+            dSLng: {{ t.deep_start_lng|default:"null" }},
+            dELat: {{ t.deep_end_lat|default:"null" }},
+            dELng: {{ t.deep_end_lng|default:"null" }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    var mapEl = document.getElementById('transectMap');
+    if (!mapEl) return;
+    var map = L.map(mapEl).setView([6.1164, 125.3125], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    function makeIcon(color, num) {
+        return L.divIcon({
+            className: '',
+            html: '<div style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:' + color + ';color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);line-height:1;">' + num + '</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+    }
+
+    var bounds = [];
+    transectData.forEach(function(t) {
+        if (t.sLat && t.sLng && t.eLat && t.eLng) {
+            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Shallow');
+            L.marker([t.sLat, t.sLng], {icon: makeIcon('#0dcaf0', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow Start');
+            L.marker([t.eLat, t.eLng], {icon: makeIcon('#0dcaf0', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow End');
+            bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
+        }
+        if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
+            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Deep');
+            L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#0d6efd', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep Start');
+            L.marker([t.dELat, t.dELng], {icon: makeIcon('#0d6efd', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep End');
+            bounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);
+        }
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, {padding: [40, 40], maxZoom: 15});
+    }
+});
+</script>
+{% endblock %}

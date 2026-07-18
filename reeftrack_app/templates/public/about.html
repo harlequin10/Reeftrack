@@ -1,0 +1,183 @@
+{% extends 'public/base.html' %}
+
+{% block title %}About - ReefTrack{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<section class="text-center py-5" style="margin-top: 1rem;">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="rt-animate fade-up">
+                <h1 class="display-5 fw-bold" style="color: var(--rt-navy);">
+                    <i class="fas fa-info-circle" style="color: var(--rt-teal);"></i> About ReefTrack
+                </h1>
+                <p class="lead mt-3" style="color: var(--rt-ink-soft);">
+                    Empowering coral reef conservation through technology and collaboration
+                </p>
+                <div class="rt-wave-divider"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Mission Section -->
+<section class="py-5" style="background-color: var(--rt-sand-light);">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0 rt-animate fade-left">
+                <h2 class="fw-bold" style="color: var(--rt-navy);">Our Mission</h2>
+                <p style="color: var(--rt-ink-soft);">
+                    ReefTrack is a web-based coral reef assessment and monitoring information system designed to 
+                    support researchers, conservationists, and communities in tracking the health of coral reef ecosystems.
+                </p>
+                <p style="color: var(--rt-ink-soft);">
+                    By providing a centralized platform for data collection, management, and analysis, we aim to 
+                    streamline the process of coral reef monitoring and enable data-driven decision-making for 
+                    reef conservation efforts.
+                </p>
+            </div>
+            <div class="col-lg-6 text-center rt-animate fade-right">
+                <i class="fas fa-water rt-icon-float" style="font-size: 6rem; color: var(--rt-teal); opacity: 0.6;"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- What We Offer Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5 rt-animate fade-up">
+            <h2 class="fw-bold" style="color: var(--rt-navy);">What We Offer</h2>
+            <p style="color: var(--rt-ink-soft);">Comprehensive tools for coral reef monitoring and assessment</p>
+        </div>
+        <div class="row g-4 rt-stagger">
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3">
+                                <i class="fas fa-map-marked-alt fa-2x rt-icon-float" style="color: var(--rt-teal);"></i>
+                            </div>
+                            <div>
+                                <h5 style="color: var(--rt-navy);">Geospatial Mapping</h5>
+                                <p style="color: var(--rt-ink-soft);">Visualize coral reef locations on interactive maps, enabling spatial analysis and geographic tracking of reef health across regions.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3">
+                                <i class="fas fa-chart-line fa-2x rt-icon-float" style="color: var(--rt-coral); animation-delay: 0.5s;"></i>
+                            </div>
+                            <div>
+                                <h5 style="color: var(--rt-navy);">Time-Series Analytics</h5>
+                                <p style="color: var(--rt-ink-soft);">Track changes in reef health over time with powerful analytics, identifying trends and patterns that inform conservation strategies.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3">
+                                <i class="fas fa-database fa-2x rt-icon-float" style="color: var(--rt-success-dark); animation-delay: 1s;"></i>
+                            </div>
+                            <div>
+                                <h5 style="color: var(--rt-navy);">Data Management</h5>
+                                <p style="color: var(--rt-ink-soft);">Store and organize reef monitoring data with standardized formats, ensuring consistency and reliability across all submissions.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3">
+                                <i class="fas fa-shield-alt fa-2x rt-icon-float" style="color: var(--rt-amber); animation-delay: 1.5s;"></i>
+                            </div>
+                            <div>
+                                <h5 style="color: var(--rt-navy);">Quality Assurance</h5>
+                                <p style="color: var(--rt-ink-soft);">Built-in approval workflows ensure that all data contributions are reviewed and verified before being added to the system.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="py-5" style="background-color: var(--rt-sand-light);">
+    <div class="container">
+        <div class="text-center mb-5 rt-animate fade-up">
+            <h2 class="fw-bold" style="color: var(--rt-navy);">How It Works</h2>
+            <p style="color: var(--rt-ink-soft);">A simple workflow for effective reef monitoring</p>
+        </div>
+        <div class="row text-center rt-stagger">
+            <div class="col-md-3 mb-4">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 rt-step-circle" 
+                     style="width: 80px; height: 80px; background-color: var(--rt-teal);">
+                    <span class="text-white fw-bold fs-4">1</span>
+                </div>
+                <h5 style="color: var(--rt-navy);">Register</h5>
+                <p style="color: var(--rt-ink-soft);">Sign up as a contributor and wait for admin approval.</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 rt-step-circle" 
+                     style="width: 80px; height: 80px; background-color: var(--rt-coral);">
+                    <span class="text-white fw-bold fs-4">2</span>
+                </div>
+                <h5 style="color: var(--rt-navy);">Submit Data</h5>
+                <p style="color: var(--rt-ink-soft);">Record your coral reef observations and field measurements.</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 rt-step-circle" 
+                     style="width: 80px; height: 80px; background-color: var(--rt-amber);">
+                    <span class="text-white fw-bold fs-4">3</span>
+                </div>
+                <h5 style="color: var(--rt-navy);">Review</h5>
+                <p style="color: var(--rt-ink-soft);">Curators review and verify your submitted data.</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 rt-step-circle" 
+                     style="width: 80px; height: 80px; background-color: var(--rt-success-dark);">
+                    <span class="text-white fw-bold fs-4">4</span>
+                </div>
+                <h5 style="color: var(--rt-navy);">Analyze</h5>
+                <p style="color: var(--rt-ink-soft);">View analytics and insights from verified reef data.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 rt-animate zoom-in" style="background: linear-gradient(135deg, var(--rt-navy) 0%, var(--rt-navy-light) 100%); color: var(--rt-white);">
+    <div class="container text-center">
+        <h2 class="fw-bold text-white">Join the Conservation Effort</h2>
+        <p class="mb-4" style="color: var(--rt-seafoam);">Be part of the solution. Register today and start contributing to coral reef monitoring.</p>
+        {% if not user.is_authenticated %}
+            <a href="{% url 'register' %}" class="btn btn-light btn-lg me-2">
+                <i class="fas fa-user-plus"></i> Register Now
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </a>
+        {% else %}
+            <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg">
+                <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+            </a>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,732 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Add Transect - ReefTrack{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-ruler-horizontal"></i> Add Transects</h4>
+                <span class="badge bg-light text-dark">{{ transects|length }} transect(s) added</span>
+            </div>
+            <div class="card-body">
+                <!-- Step Indicator -->
+                <div class="d-flex justify-content-center mb-4">
+                    <div class="step-indicator completed">
+                        <span class="step-number"><i class="fas fa-check"></i></span>
+                        <span class="step-label">Assessment Info</span>
+                    </div>
+                    <div class="step-connector active"></div>
+                    <div class="step-indicator active">
+                        <span class="step-number">2</span>
+                        <span class="step-label">Add Transects</span>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step-indicator">
+                        <span class="step-number">3</span>
+                        <span class="step-label">Preview</span>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step-indicator">
+                        <span class="step-number">4</span>
+                        <span class="step-label">Confirm</span>
+                    </div>
+                </div>
+
+                <!-- Assessment Summary -->
+                <div class="alert alert-light border mb-4">
+                    <i class="fas fa-info-circle text-success me-1"></i>
+                    <strong>Assessment:</strong>
+                    {{ pending.barangay_name|default:"-" }}, {{ pending.municipality_name|default:"-" }}
+                    | {{ pending.assessment_date }}
+                    | {{ pending.methodology|title }}
+                    {% if pending.thesis_tmp %} | Thesis PDF attached{% endif %}
+                    {% if pending.image_tmps|length %} | {{ pending.image_tmps|length }} image(s){% endif %}
+                </div>
+
+                <!-- Previous Transect Suggestions -->
+                <div id="suggestionsSection" class="mb-4" style="display:none;">
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white py-2 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-history"></i> Previous Transects for {{ pending.barangay_name|default:"this barangay" }}</h6>
+                            <button type="button" class="btn btn-sm btn-light" id="showAllSugMapBtn">
+                                <i class="fas fa-map"></i> Show All on Map
+                            </button>
+                        </div>
+                        <div class="card-body py-2">
+                            <p class="small text-muted mb-2">Select a previous transect to auto-fill coordinates, or create a new one below.</p>
+                            <div id="allSugMapContainer" style="display:none;" class="mb-3">
+                                <div id="allSugMap" style="height:350px; border-radius:8px; border:1px solid #dee2e6;"></div>
+                            </div>
+                            <div id="suggestionsList" class="row g-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Transect Form -->
+                <div class="card border-primary mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-plus-circle"></i> Transect {{ transects|length|add:1 }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data" id="addTransectForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add">
+
+                            <!-- Reference Match Alert -->
+                            <div id="refMatchAlert" class="alert alert-warning d-none mb-3" role="alert">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        <strong id="refMatchText">These coordinates match Reference #1.</strong>
+                                        <span id="refMatchSource" class="badge bg-info ms-1" style="display:none;"></span>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-warning" id="refMatchUseBtn">
+                                            <i class="fas fa-check"></i> Use This Reference
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="refMatchDismissBtn">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <!-- Shallow Section -->
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-info">
+                                        <div class="card-body">
+                                            <h6 class="text-info mb-3">
+                                                <i class="fas fa-water"></i> Shallow
+                                            </h6>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">Start Latitude</label>
+                                                    <input type="number" step="any" min="-90" max="90" required
+                                                           class="form-control form-control-sm coord-input"
+                                                           name="shallow_start_lat" id="shallow_start_lat" placeholder="e.g. 6.1234567">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">Start Longitude</label>
+                                                    <input type="number" step="any" min="-180" max="180" required
+                                                           class="form-control form-control-sm coord-input"
+                                                           name="shallow_start_lng" id="shallow_start_lng" placeholder="e.g. 125.1234567">
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">End Latitude</label>
+                                                    <input type="number" step="any" min="-90" max="90" required
+                                                           class="form-control form-control-sm coord-input"
+                                                           name="shallow_end_lat" id="shallow_end_lat" placeholder="e.g. 6.1245678">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">End Longitude</label>
+                                                    <input type="number" step="any" min="-180" max="180" required
+                                                           class="form-control form-control-sm coord-input"
+                                                           name="shallow_end_lng" id="shallow_end_lng" placeholder="e.g. 125.1245678">
+                                                </div>
+                                            </div>
+                                            <label class="form-label small fw-bold">
+                                                <i class="fas fa-file-excel text-success"></i> CPCe Excel File
+                                            </label>
+                                            <input type="file" class="form-control form-control-sm"
+                                                   name="shallow_excel" accept=".xlsx,.xls">
+                                            <div class="form-text">
+                                                Species cover data for shallow depth.
+                                                <a href="{% static 'files/sample_cpc_format.xlsx' %}" download class="text-success fw-bold">
+                                                    <i class="fas fa-download"></i> Download sample format
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Deep Section -->
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-primary">
+                                        <div class="card-body">
+                                            <h6 class="text-primary mb-3">
+                                                <i class="fas fa-water"></i> Deep
+                                            </h6>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">Start Latitude</label>
+                                                    <input type="number" step="any" min="-90" max="90" required
+                                                           class="form-control form-control-sm coord-input"
+                                                           name="deep_start_lat" id="deep_start_lat" placeholder="e.g. 6.1234567">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">Start Longitude</label>
+                                                    <input type="number" step="any" min="-180" max="180" required
+                                                           class="form-control form-control-sm coord-input"
+                                                           name="deep_start_lng" id="deep_start_lng" placeholder="e.g. 125.1234567">
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">End Latitude</label>
+                                                    <input type="number" step="any" min="-90" max="90" required
+                                                           class="form-control form-control-sm coord-input"
+                                                           name="deep_end_lat" id="deep_end_lat" placeholder="e.g. 6.1245678">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">End Longitude</label>
+                                                    <input type="number" step="any" min="-180" max="180" required
+                                                           class="form-control form-control-sm coord-input"
+                                                           name="deep_end_lng" id="deep_end_lng" placeholder="e.g. 125.1245678">
+                                                </div>
+                                            </div>
+                                            <label class="form-label small fw-bold">
+                                                <i class="fas fa-file-excel text-success"></i> CPCe Excel File
+                                            </label>
+                                            <input type="file" class="form-control form-control-sm"
+                                                   name="deep_excel" accept=".xlsx,.xls">
+                                            <div class="form-text">
+                                                Species cover data for deep depth.
+                                                <a href="{% static 'files/sample_cpc_format.xlsx' %}" download class="text-success fw-bold">
+                                                    <i class="fas fa-download"></i> Download sample format
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Map Preview -->
+                            <div class="mt-3">
+                                <label class="form-label small fw-bold"><i class="fas fa-map"></i> Map Preview</label>
+                                <div id="transectMap" style="height:350px; border-radius:8px; border:1px solid #dee2e6;"></div>
+                                <div class="d-flex gap-3 mt-2">
+                                    <small><span style="display:inline-block; width:14px; height:3px; background:#0dcaf0; vertical-align:middle;"></span> Shallow transect</small>
+                                    <small><span style="display:inline-block; width:14px; height:3px; background:#0d6efd; vertical-align:middle;"></span> Deep transect</small>
+                                    {% if transects %}
+                                    <small><span style="display:inline-block; width:14px; height:3px; background:#6c757d; vertical-align:middle;"></span> Previous transects</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mt-3 text-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Add This Transect
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Already Added Transects -->
+                {% if transects %}
+                <h6 class="mb-3"><i class="fas fa-list text-success"></i> Added Transects</h6>
+                {% for t in transects %}
+                <div class="card mb-3 border-secondary">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+                        <strong><i class="fas fa-ruler-horizontal"></i> Transect {{ t.transect_number }}</strong>
+                        <form method="POST" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="remove">
+                            <input type="hidden" name="index" value="{{ forloop.counter0 }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Remove Transect {{ t.transect_number }}?')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row text-small">
+                            <div class="col-md-6">
+                                <strong class="text-info"><i class="fas fa-water"></i> Shallow:</strong>
+                                {% if t.shallow_start_lat or t.shallow_end_lat %}
+                                    <br><small>Start: {{ t.shallow_start_lat|default:"-" }}, {{ t.shallow_start_lng|default:"-" }}</small>
+                                    <br><small>End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}</small>
+                                {% else %}
+                                    <span class="text-muted">No coordinates</span>
+                                {% endif %}
+                                {% if t.shallow_filename %}
+                                    <br><small class="text-success"><i class="fas fa-file-excel"></i> {{ t.shallow_filename }}
+                                    ({{ t.shallow_species|length }} species)</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <strong class="text-primary"><i class="fas fa-water"></i> Deep:</strong>
+                                {% if t.deep_start_lat or t.deep_end_lat %}
+                                    <br><small>Start: {{ t.deep_start_lat|default:"-" }}, {{ t.deep_start_lng|default:"-" }}</small>
+                                    <br><small>End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}</small>
+                                {% else %}
+                                    <span class="text-muted">No coordinates</span>
+                                {% endif %}
+                                {% if t.deep_filename %}
+                                    <br><small class="text-success"><i class="fas fa-file-excel"></i> {{ t.deep_filename }}
+                                    ({{ t.deep_species|length }} species)</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                <hr>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'upload_assessment' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Assessment Info
+                    </a>
+                    <form method="POST" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="preview">
+                        <button type="submit" class="btn btn-success btn-lg"
+                                {% if not transects %}disabled{% endif %}>
+                            <i class="fas fa-eye"></i> Preview Assessment
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ── Coordinate validation (no Leaflet dependency) ──
+    var coordFields = [
+        {id: 'shallow_start_lat', label: 'Shallow Start Latitude', min: -90, max: 90},
+        {id: 'shallow_start_lng', label: 'Shallow Start Longitude', min: -180, max: 180},
+        {id: 'shallow_end_lat', label: 'Shallow End Latitude', min: -90, max: 90},
+        {id: 'shallow_end_lng', label: 'Shallow End Longitude', min: -180, max: 180},
+        {id: 'deep_start_lat', label: 'Deep Start Latitude', min: -90, max: 90},
+        {id: 'deep_start_lng', label: 'Deep Start Longitude', min: -180, max: 180},
+        {id: 'deep_end_lat', label: 'Deep End Latitude', min: -90, max: 90},
+        {id: 'deep_end_lng', label: 'Deep End Longitude', min: -180, max: 180},
+    ];
+
+    document.getElementById('addTransectForm').addEventListener('submit', function(e) {
+        var errors = [];
+        coordFields.forEach(function(f) {
+            var el = document.getElementById(f.id);
+            var val = el.value.trim();
+            el.classList.remove('is-invalid');
+            if (val === '') {
+                errors.push(f.label + ' is required.');
+                el.classList.add('is-invalid');
+            } else {
+                var num = parseFloat(val);
+                if (isNaN(num)) {
+                    errors.push(f.label + ' must be a valid number.');
+                    el.classList.add('is-invalid');
+                } else if (num < f.min || num > f.max) {
+                    errors.push(f.label + ' must be between ' + f.min + ' and ' + f.max + '.');
+                    el.classList.add('is-invalid');
+                }
+            }
+        });
+        if (errors.length > 0) {
+            e.preventDefault();
+            var existingAlert = document.getElementById('coordValidationAlert');
+            if (existingAlert) existingAlert.remove();
+            var alertDiv = document.createElement('div');
+            alertDiv.id = 'coordValidationAlert';
+            alertDiv.className = 'alert alert-danger mt-3';
+            alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> <strong>Invalid coordinates:</strong><ul class="mb-0 mt-1">' +
+                errors.map(function(err) { return '<li>' + err + '</li>'; }).join('') + '</ul>';
+            var form = document.getElementById('addTransectForm');
+            form.parentNode.insertBefore(alertDiv, form.nextSibling);
+            alertDiv.scrollIntoView({behavior: 'smooth', block: 'center'});
+        }
+    });
+
+    // Clear invalid state on input
+    coordFields.forEach(function(f) {
+        var el = document.getElementById(f.id);
+        if (el) {
+            el.addEventListener('input', function() {
+                this.classList.remove('is-invalid');
+                var alertEl = document.getElementById('coordValidationAlert');
+                if (alertEl) alertEl.remove();
+            });
+        }
+    });
+
+    // ── Leaflet map (gracefully degrades if CDN fails) ──
+    var map = null;
+    try {
+        map = L.map('transectMap').setView([6.1164, 125.3125], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+    } catch(err) {
+        console.warn('Map not available:', err);
+        document.getElementById('transectMap').innerHTML = '<div class="alert alert-warning m-2"><i class="fas fa-exclamation-triangle me-1"></i> Map could not be loaded. Coordinates can still be entered manually.</div>';
+    }
+
+    var shallowLine = null;
+    var deepLine = null;
+    var shallowStartMarker = null;
+    var shallowEndMarker = null;
+    var deepStartMarker = null;
+    var deepEndMarker = null;
+
+    function makeIcon(color, label) {
+        return L.divIcon({
+            className: '',
+            html: '<div style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:' + color + ';color:#fff;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);line-height:1;">' + label + '</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+    }
+
+    function getVal(id) {
+        var v = document.getElementById(id).value;
+        return (v !== '' && !isNaN(v)) ? parseFloat(v) : null;
+    }
+
+    function updateMap() {
+        if (!map) return;
+        var sLat1 = getVal('shallow_start_lat'), sLng1 = getVal('shallow_start_lng');
+        var sLat2 = getVal('shallow_end_lat'),   sLng2 = getVal('shallow_end_lng');
+        var dLat1 = getVal('deep_start_lat'),     dLng1 = getVal('deep_start_lng');
+        var dLat2 = getVal('deep_end_lat'),       dLng2 = getVal('deep_end_lng');
+
+        if (shallowLine) { map.removeLayer(shallowLine); shallowLine = null; }
+        if (deepLine)    { map.removeLayer(deepLine);    deepLine = null; }
+        if (shallowStartMarker) { map.removeLayer(shallowStartMarker); shallowStartMarker = null; }
+        if (shallowEndMarker)   { map.removeLayer(shallowEndMarker);   shallowEndMarker = null; }
+        if (deepStartMarker)    { map.removeLayer(deepStartMarker);    deepStartMarker = null; }
+        if (deepEndMarker)      { map.removeLayer(deepEndMarker);      deepEndMarker = null; }
+
+        var bounds = [];
+
+        if (sLat1 !== null && sLng1 !== null) {
+            shallowStartMarker = L.marker([sLat1, sLng1], {icon: makeIcon('#0dcaf0', 'S')}).addTo(map).bindPopup('Shallow Start');
+            bounds.push([sLat1, sLng1]);
+        }
+        if (sLat2 !== null && sLng2 !== null) {
+            shallowEndMarker = L.marker([sLat2, sLng2], {icon: makeIcon('#0dcaf0', 'E')}).addTo(map).bindPopup('Shallow End');
+            bounds.push([sLat2, sLng2]);
+        }
+        if (sLat1 !== null && sLng1 !== null && sLat2 !== null && sLng2 !== null) {
+            shallowLine = L.polyline([[sLat1, sLng1], [sLat2, sLng2]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Shallow Transect');
+        }
+
+        if (dLat1 !== null && dLng1 !== null) {
+            deepStartMarker = L.marker([dLat1, dLng1], {icon: makeIcon('#0d6efd', 'S')}).addTo(map).bindPopup('Deep Start');
+            bounds.push([dLat1, dLng1]);
+        }
+        if (dLat2 !== null && dLng2 !== null) {
+            deepEndMarker = L.marker([dLat2, dLng2], {icon: makeIcon('#0d6efd', 'E')}).addTo(map).bindPopup('Deep End');
+            bounds.push([dLat2, dLng2]);
+        }
+        if (dLat1 !== null && dLng1 !== null && dLat2 !== null && dLng2 !== null) {
+            deepLine = L.polyline([[dLat1, dLng1], [dLat2, dLng2]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Deep Transect');
+        }
+
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, {padding: [40, 40], maxZoom: 15});
+        }
+    }
+
+    document.querySelectorAll('.coord-input').forEach(function(el) {
+        el.addEventListener('input', updateMap);
+    });
+
+    // ── Reference match detection ──
+    var refMatchTimer = null;
+    var refMatchAlert = document.getElementById('refMatchAlert');
+    var refMatchText = document.getElementById('refMatchText');
+    var refMatchSource = document.getElementById('refMatchSource');
+
+    function checkReferenceMatch() {
+        var sLat = document.getElementById('shallow_start_lat').value;
+        var sLng = document.getElementById('shallow_start_lng').value;
+        var sELat = document.getElementById('shallow_end_lat').value;
+        var sELng = document.getElementById('shallow_end_lng').value;
+        var dLat = document.getElementById('deep_start_lat').value;
+        var dLng = document.getElementById('deep_start_lng').value;
+        var dELat = document.getElementById('deep_end_lat').value;
+        var dELng = document.getElementById('deep_end_lng').value;
+
+        var filled = [sLat, sLng, sELat, sELng, dLat, dLng, dELat, dELng].filter(function(v) { return v !== ''; }).length;
+        if (filled < 2) {
+            refMatchAlert.classList.add('d-none');
+            return;
+        }
+
+        var params = new URLSearchParams({
+            barangay_id: barangayId,
+            shallow_start_lat: sLat, shallow_start_lng: sLng,
+            shallow_end_lat: sELat, shallow_end_lng: sELng,
+            deep_start_lat: dLat, deep_start_lng: dLng,
+            deep_end_lat: dELat, deep_end_lng: dELng,
+        });
+
+        fetch('/api/check-reference-match/?' + params.toString())
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.match) {
+                    lastMatchedRef = data;
+                    refMatchText.textContent = 'These coordinates match Reference #' + data.ref_number + ' for {{ pending.barangay_name|default:"this barangay" }}.';
+                    refMatchSource.textContent = data.source === 'assessment' ? 'Assessment-sourced' : 'Manually added';
+                    refMatchSource.style.display = 'inline';
+                    refMatchAlert.classList.remove('d-none');
+                    refMatchAlert.classList.remove('alert-success');
+                    refMatchAlert.classList.add('alert-warning');
+                    document.getElementById('refMatchUseBtn').style.display = '';
+                    document.getElementById('refMatchDismissBtn').style.display = '';
+                } else {
+                    lastMatchedRef = null;
+                    refMatchAlert.classList.add('d-none');
+                }
+            });
+    }
+
+    document.querySelectorAll('.coord-input').forEach(function(el) {
+        el.addEventListener('input', function() {
+            clearTimeout(refMatchTimer);
+            refMatchTimer = setTimeout(checkReferenceMatch, 600);
+        });
+    });
+
+    var lastMatchedRef = null;
+
+    document.getElementById('refMatchUseBtn').addEventListener('click', function() {
+        if (!lastMatchedRef) return;
+        var fields = ['shallow_start_lat','shallow_start_lng','shallow_end_lat','shallow_end_lng','deep_start_lat','deep_start_lng','deep_end_lat','deep_end_lng'];
+        fields.forEach(function(f) {
+            var el = document.getElementById(f);
+            if (lastMatchedRef[f]) el.value = lastMatchedRef[f];
+        });
+        updateMap();
+        refMatchAlert.classList.remove('alert-warning');
+        refMatchAlert.classList.add('alert-success');
+        refMatchText.textContent = 'Reference #' + lastMatchedRef.ref_number + ' coordinates applied. Will be linked upon approval.';
+        refMatchSource.style.display = 'none';
+        document.getElementById('refMatchUseBtn').style.display = 'none';
+        document.getElementById('refMatchDismissBtn').style.display = 'none';
+    });
+
+    document.getElementById('refMatchDismissBtn').addEventListener('click', function() {
+        refMatchAlert.classList.add('d-none');
+    });
+
+    // ── Draw previously added transects as grey lines ──
+    var prevTransects = [
+        {% for t in transects %}
+        {
+            sLat: {{ t.shallow_start_lat|default:"null" }},
+            sLng: {{ t.shallow_start_lng|default:"null" }},
+            eLat: {{ t.shallow_end_lat|default:"null" }},
+            eLng: {{ t.shallow_end_lng|default:"null" }},
+            dSLat: {{ t.deep_start_lat|default:"null" }},
+            dSLng: {{ t.deep_start_lng|default:"null" }},
+            dELat: {{ t.deep_end_lat|default:"null" }},
+            dELng: {{ t.deep_end_lng|default:"null" }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    if (map) {
+        var prevBounds = [];
+        prevTransects.forEach(function(t, i) {
+            var num = i + 1;
+            if (t.sLat && t.sLng && t.eLat && t.eLng) {
+                L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#6c757d', weight: 3, opacity: 0.7, dashArray: '6,4'}).addTo(map).bindPopup('Transect ' + num + ' Shallow');
+                L.marker([t.sLat, t.sLng], {icon: makeIcon('#6c757d', 'S' + num)}).addTo(map).bindPopup('T' + num + ' Shallow Start');
+                L.marker([t.eLat, t.eLng], {icon: makeIcon('#6c757d', 'E' + num)}).addTo(map).bindPopup('T' + num + ' Shallow End');
+                prevBounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
+            }
+            if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
+                L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#6c757d', weight: 3, opacity: 0.7, dashArray: '6,4'}).addTo(map).bindPopup('Transect ' + num + ' Deep');
+                L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#6c757d', 'S' + num)}).addTo(map).bindPopup('T' + num + ' Deep Start');
+                L.marker([t.dELat, t.dELng], {icon: makeIcon('#6c757d', 'E' + num)}).addTo(map).bindPopup('T' + num + ' Deep End');
+                prevBounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);
+            }
+        });
+        if (prevBounds.length > 0) {
+            map.fitBounds(prevBounds, {padding: [40, 40], maxZoom: 15});
+        }
+    }
+
+    // ── Suggestions panel ──
+    var barangayId = '{{ pending.barangay_id|default:"" }}';
+    var allSuggestions = [];
+    if (barangayId) {
+        fetch('/api/transect-suggestions/?barangay_id=' + barangayId)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.suggestions || data.suggestions.length === 0) return;
+                allSuggestions = data.suggestions;
+                var section = document.getElementById('suggestionsSection');
+                var list = document.getElementById('suggestionsList');
+                section.style.display = 'block';
+
+                allSuggestions.forEach(function(s, idx) {
+                    var col = document.createElement('div');
+                    col.className = 'col-12';
+
+                    var shallow = [];
+                    if (s.shallow_start_lat && s.shallow_start_lng) shallow.push(parseFloat(s.shallow_start_lat).toFixed(6) + ', ' + parseFloat(s.shallow_start_lng).toFixed(6));
+                    if (s.shallow_end_lat && s.shallow_end_lng) shallow.push(parseFloat(s.shallow_end_lat).toFixed(6) + ', ' + parseFloat(s.shallow_end_lng).toFixed(6));
+
+                    var deep = [];
+                    if (s.deep_start_lat && s.deep_start_lng) deep.push(parseFloat(s.deep_start_lat).toFixed(6) + ', ' + parseFloat(s.deep_start_lng).toFixed(6));
+                    if (s.deep_end_lat && s.deep_end_lng) deep.push(parseFloat(s.deep_end_lat).toFixed(6) + ', ' + parseFloat(s.deep_end_lng).toFixed(6));
+
+                    col.innerHTML =
+                        '<div class="card border-secondary mb-2">' +
+                            '<div class="card-body py-2 px-3">' +
+                                '<div class="d-flex justify-content-between align-items-center">' +
+                                    '<div>' +
+                                        '<strong class="text-secondary">Reference ' + s.ref_number + '</strong>' +
+                                        '<div class="small text-muted mt-1">' +
+                                            '<span class="text-info"><i class="fas fa-water"></i> Shallow:</span> ' + (shallow.length > 0 ? shallow.join(' &rarr; ') : '<em>—</em>') +
+                                            '<br><span class="text-primary"><i class="fas fa-water"></i> Deep:</span> ' + (deep.length > 0 ? deep.join(' &rarr; ') : '<em>—</em>') +
+                                        '</div>' +
+                                    '</div>' +
+                                    '<div class="d-flex gap-1">' +
+                                        '<button type="button" class="btn btn-sm btn-outline-info suggestion-map-btn" data-idx="' + idx + '" title="Show on map">' +
+                                            '<i class="fas fa-map"></i>' +
+                                        '</button>' +
+                                        '<button type="button" class="btn btn-sm btn-success suggestion-use-btn" data-transect=\'' + JSON.stringify(s) + '\' title="Use these coordinates">' +
+                                            '<i class="fas fa-check"></i> Use' +
+                                        '</button>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div id="sugMap' + idx + '" style="height:200px; border-radius:6px; border:1px solid #dee2e6; display:none;" class="mt-2"></div>' +
+                            '</div>' +
+                        '</div>';
+
+                    col.querySelector('.suggestion-use-btn').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        var t = JSON.parse(this.getAttribute('data-transect'));
+                        document.getElementById('shallow_start_lat').value = t.shallow_start_lat || '';
+                        document.getElementById('shallow_start_lng').value = t.shallow_start_lng || '';
+                        document.getElementById('shallow_end_lat').value = t.shallow_end_lat || '';
+                        document.getElementById('shallow_end_lng').value = t.shallow_end_lng || '';
+                        document.getElementById('deep_start_lat').value = t.deep_start_lat || '';
+                        document.getElementById('deep_start_lng').value = t.deep_start_lng || '';
+                        document.getElementById('deep_end_lat').value = t.deep_end_lat || '';
+                        document.getElementById('deep_end_lng').value = t.deep_end_lng || '';
+                        updateMap();
+                        document.getElementById('addTransectForm').scrollIntoView({behavior: 'smooth'});
+                    });
+
+                    col.querySelector('.suggestion-map-btn').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (!map) return;
+                        var mapEl = document.getElementById('sugMap' + idx);
+                        if (mapEl.style.display === 'none') {
+                            mapEl.style.display = 'block';
+                            if (!mapEl.dataset.init) {
+                                mapEl.dataset.init = '1';
+                                var sugMap = L.map('sugMap' + idx);
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; OpenStreetMap'}).addTo(sugMap);
+                                var sIcon = L.divIcon({className:'',html:'<div style="background:#0dcaf0;color:#000;font-weight:bold;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">S</div>',iconSize:[18,18],iconAnchor:[9,9]});
+                                var dIcon = L.divIcon({className:'',html:'<div style="background:#0d6efd;color:#fff;font-weight:bold;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">D</div>',iconSize:[18,18],iconAnchor:[9,9]});
+                                var b = [];
+                                if (s.shallow_start_lat && s.shallow_start_lng) { L.marker([s.shallow_start_lat,s.shallow_start_lng],{icon:sIcon}).addTo(sugMap); b.push([s.shallow_start_lat,s.shallow_start_lng]); }
+                                if (s.shallow_end_lat && s.shallow_end_lng) { L.marker([s.shallow_end_lat,s.shallow_end_lng],{icon:sIcon}).addTo(sugMap); b.push([s.shallow_end_lat,s.shallow_end_lng]); if(s.shallow_start_lat&&s.shallow_start_lng) L.polyline([[s.shallow_start_lat,s.shallow_start_lng],[s.shallow_end_lat,s.shallow_end_lng]],{color:'#0dcaf0',weight:3}).addTo(sugMap); }
+                                if (s.deep_start_lat && s.deep_start_lng) { L.marker([s.deep_start_lat,s.deep_start_lng],{icon:dIcon}).addTo(sugMap); b.push([s.deep_start_lat,s.deep_start_lng]); }
+                                if (s.deep_end_lat && s.deep_end_lng) { L.marker([s.deep_end_lat,s.deep_end_lng],{icon:dIcon}).addTo(sugMap); b.push([s.deep_end_lat,s.deep_end_lng]); if(s.deep_start_lat&&s.deep_start_lng) L.polyline([[s.deep_start_lat,s.deep_start_lng],[s.deep_end_lat,s.deep_end_lng]],{color:'#0d6efd',weight:3}).addTo(sugMap); }
+                                if(b.length>0) sugMap.fitBounds(b,{padding:[20,20]});
+                                else sugMap.setView([6.0,125.0],10);
+                            }
+                        } else {
+                            mapEl.style.display = 'none';
+                        }
+                    });
+
+                    list.appendChild(col);
+                });
+
+                document.getElementById('showAllSugMapBtn').addEventListener('click', function() {
+                    var container = document.getElementById('allSugMapContainer');
+                    if (container.style.display === 'none') {
+                        container.style.display = 'block';
+                        if (!container.dataset.init) {
+                            container.dataset.init = '1';
+                            var allMap = L.map('allSugMap');
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; OpenStreetMap'}).addTo(allMap);
+                            var colors = ['#0dcaf0','#0d6efd','#198754','#ffc107','#dc3545','#6f42c1'];
+                            var bds = [];
+                            allSuggestions.forEach(function(s, i) {
+                                var c = colors[i % colors.length];
+                                var tIcon = function(label) {
+                                    return L.divIcon({className:'',html:'<div style="background:'+c+';color:#fff;font-weight:bold;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">'+label+'</div>',iconSize:[20,20],iconAnchor:[10,10]});
+                                };
+                                var rn = s.ref_number;
+                                if(s.shallow_start_lat&&s.shallow_start_lng){L.marker([s.shallow_start_lat,s.shallow_start_lng],{icon:tIcon('R'+rn)}).addTo(allMap).bindPopup('Ref '+rn+' Shallow Start');bds.push([s.shallow_start_lat,s.shallow_start_lng]);}
+                                if(s.shallow_end_lat&&s.shallow_end_lng){L.marker([s.shallow_end_lat,s.shallow_end_lng],{icon:tIcon('R'+rn)}).addTo(allMap).bindPopup('Ref '+rn+' Shallow End');bds.push([s.shallow_end_lat,s.shallow_end_lng]);if(s.shallow_start_lat&&s.shallow_start_lng)L.polyline([[s.shallow_start_lat,s.shallow_start_lng],[s.shallow_end_lat,s.shallow_end_lng]],{color:c,weight:3}).addTo(allMap);}
+                                if(s.deep_start_lat&&s.deep_start_lng){L.marker([s.deep_start_lat,s.deep_start_lng],{icon:tIcon('R'+rn)}).addTo(allMap).bindPopup('Ref '+rn+' Deep Start');bds.push([s.deep_start_lat,s.deep_start_lng]);}
+                                if(s.deep_end_lat&&s.deep_end_lng){L.marker([s.deep_end_lat,s.deep_end_lng],{icon:tIcon('R'+rn)}).addTo(allMap).bindPopup('Ref '+rn+' Deep End');bds.push([s.deep_end_lat,s.deep_end_lng]);if(s.deep_start_lat&&s.deep_start_lng)L.polyline([[s.deep_start_lat,s.deep_start_lng],[s.deep_end_lat,s.deep_end_lng]],{color:c,weight:3,dashArray:'6,4'}).addTo(allMap);}
+                            });
+                            if(bds.length>0) allMap.fitBounds(bds,{padding:[30,30]});
+                            else allMap.setView([6.0,125.0],10);
+                        }
+                    } else {
+                        container.style.display = 'none';
+                    }
+                });
+            });
+    }
+});
+</script>
+
+<style>
+.step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 80px;
+}
+.step-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #dee2e6;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+.step-indicator.active .step-number {
+    background: #198754;
+    color: #fff;
+}
+.step-indicator.completed .step-number {
+    background: #198754;
+    color: #fff;
+}
+.step-label {
+    font-size: 11px;
+    color: #6c757d;
+}
+.step-indicator.active .step-label {
+    color: #198754;
+    font-weight: 600;
+}
+.step-indicator.completed .step-label {
+    color: #198754;
+}
+.step-connector {
+    width: 40px;
+    height: 2px;
+    background: #dee2e6;
+    margin-top: 17px;
+    margin-left: -10px;
+    margin-right: -10px;
+}
+.step-connector.active {
+    background: #198754;
+}
+</style>
+{% endblock %}

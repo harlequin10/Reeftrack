@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ReefTrack - Coral Reef Monitoring{% endblock %}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% load static %}
+    <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
+</head>
+<body>
+    <a href="#main-content" class="rt-skip-link">Skip to main content</a>
+
+    <nav class="navbar navbar-expand-lg navbar-dark rt-navbar">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="fas fa-water"></i> ReefTrack
+            </a>
+            <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'home' %}">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'home' %}#map-section">
+                            <i class="fas fa-map-marked-alt"></i> Map
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'about' %}">
+                            <i class="fas fa-info-circle"></i> About
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard' %}">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                {% if user.profile.profile_picture %}<img src="{{ user.profile.profile_picture.url }}" class="rounded-circle me-1" style="width:24px; height:24px; object-fit:cover;">{% else %}<i class="fas fa-user"></i>{% endif %} {{ user.first_name|default:user.email }}
+                                <span class="badge bg-info">{{ user.profile.get_role_display }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'profile_view' %}">
+                                        <i class="fas fa-id-card"></i> My Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'profile_edit' %}">
+                                        <i class="fas fa-edit"></i> Edit Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'profile_change_password' %}">
+                                        <i class="fas fa-key"></i> Change Password
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'logout' %}">
+                                        <i class="fas fa-sign-out-alt"></i> Logout
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">
+                                <i class="fas fa-sign-in-alt"></i> Login
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'register' %}">
+                                <i class="fas fa-user-plus"></i> Register
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    {% if messages %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var msgs = [
+            {% for message in messages %}
+            {text: "{{ message|escapejs }}", tag: "{{ message.tags }}"},
+            {% endfor %}
+        ];
+        var m = msgs[msgs.length - 1];
+        var titles = {error: 'Error', success: 'Success', warning: 'Warning', info: 'Info'};
+        var icons = {error: 'fa-exclamation-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle'};
+        var colors = {error: '#dc2626', success: '#059669', warning: '#d97706', info: '#2563eb'};
+        var iconBg = {error: '#fee2e2', success: '#d1fae5', warning: '#fef3c7', info: '#dbeafe'};
+        var backdrop = document.createElement('div');
+        backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);z-index:10500;';
+        document.body.appendChild(backdrop);
+        var card = document.createElement('div');
+        card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:440px;max-width:90vw;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;z-index:10501;border-top:4px solid '+colors[m.tag]+';';
+        card.innerHTML = '<div style="padding:2rem 2rem 0;text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;font-size:1.8rem;background:'+iconBg[m.tag]+';color:'+colors[m.tag]+';"><i class="fas '+icons[m.tag]+'"></i></span></div><div style="padding:1rem 2rem 0.5rem;text-align:center;"><p style="font-size:1.15rem;font-weight:700;margin-bottom:0.5rem;color:'+colors[m.tag]+';">'+titles[m.tag]+'</p><p style="font-size:0.9rem;line-height:1.6;color:#495057;margin:0;word-wrap:break-word;white-space:pre-line;text-align:left;">'+m.text+'</p></div><div style="padding:1.25rem 2rem 1.5rem;text-align:center;"><button style="min-width:100px;padding:0.45rem 2rem;border-radius:8px;font-weight:600;font-size:0.9rem;border:none;color:#fff;background:'+colors[m.tag]+';cursor:pointer;" onclick="this.closest(\'div[style*=fixed]\').remove();document.querySelector(\'div[style*=backdrop]\').remove();">OK</button></div>';
+        document.body.appendChild(card);
+        function dismiss() { if (card.parentNode) card.remove(); if (backdrop.parentNode) backdrop.remove(); }
+        backdrop.addEventListener('click', dismiss);
+    });
+    </script>
+    {% endif %}
+
+    <main id="main-content" class="container mt-4 rt-main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <a href="#" class="btn btn-primary rt-back-to-top" id="backToTop" 
+       style="display:none; position:fixed; bottom:30px; right:30px; z-index:999; width:48px; height:48px; border-radius:50%; padding:0; text-align:center; line-height:48px; box-shadow: var(--rt-shadow-lg);">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+
+    <footer class="footer mt-5 py-4 rt-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <h5><i class="fas fa-water"></i> ReefTrack</h5>
+                    <p class="small">A web-based coral reef assessment and monitoring information system with geospatial mapping and time-series analytics.</p>
+                </div>
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <h6>Quick Links</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="{% url 'home' %}" class="text-decoration-none">Home</a></li>
+                        <li><a href="{% url 'about' %}" class="text-decoration-none">About</a></li>
+                        <li><a href="{% url 'login' %}" class="text-decoration-none">Login</a></li>
+                        <li><a href="{% url 'register' %}" class="text-decoration-none">Register</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6>Contact</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="fas fa-envelope me-2"></i>info@reeftrack.org</li>
+                        <li><i class="fas fa-map-marker-alt me-2"></i>Coral Reef Research Center</li>
+                    </ul>
+                </div>
+            </div>
+            <hr style="border-color: rgba(255,255,255,0.15);">
+            <p class="text-center small mb-0">&copy; {% now "Y" %} ReefTrack. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>
