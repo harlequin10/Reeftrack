@@ -13,7 +13,7 @@
     <div class="rt-bubble"></div>
     <div class="rt-bubble"></div>
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-12 col-lg-8">
             <div class="rt-animate fade-up">
                 <h1 class="display-4 fw-bold" style="color: var(--rt-navy);">
                     <i class="fas fa-water" style="color: var(--rt-teal);"></i> ReefTrack
@@ -187,74 +187,33 @@
             <p style="color: var(--rt-ink-soft);">Explore coral reef monitoring sites across Sarangani Bay</p>
         </div>
         <div class="rt-animate fade-up">
-            <div class="card border-0 shadow-sm overflow-hidden">
-                <div class="card-body p-0">
-                    <div id="reef-map" style="width: 100%; height: 500px;"></div>
+            <div class="card border-0 shadow-sm overflow-hidden" style="cursor:pointer;" onclick="window.location='{% url 'public_dashboard' %}'">
+                <div class="card-body p-0 position-relative">
+                    <div id="reef-map" style="width:100%;height:400px;"></div>
+                    <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:1000;background:var(--rt-white);border-radius:20px;padding:0.4rem 1.2rem;box-shadow:var(--rt-shadow-lg);font-size:0.8rem;font-weight:600;color:var(--rt-navy);pointer-events:none;">
+                        <i class="fas fa-external-link-alt" style="color:var(--rt-teal);margin-right:0.3rem;"></i> Open Full Explorer
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-    .reef-popup .leaflet-popup-content-wrapper {
-        border-radius: 10px;
-        border: 2px solid #0E7C86;
-    }
-    .reef-popup .leaflet-popup-content {
-        margin: 10px 14px;
-        font-size: 14px;
-    }
-    .reef-popup .leaflet-popup-tip {
-        border-top-color: #0E7C86;
-    }
-    .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
-        background-color: rgba(14, 124, 134, 0.3);
-    }
-    .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
-        background-color: rgba(14, 124, 134, 0.7);
-        color: white;
-    }
-</style>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var map = L.map('reef-map').setView([6.10, 125.15], 10);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 18
-    }).addTo(map);
-
-    var reefIcon = L.divIcon({
-        className: '',
-        html: '<div style="background:#0E7C86;width:28px;height:28px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><i class="fas fa-water" style="color:white;font-size:12px;"></i></div>',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
-        popupAnchor: [0, -16]
-    });
-
-    var municipalities = [
-        { name: "Alabel", lat: 6.1021, lng: 125.2933, desc: "Municipality of Alabel, Sarangani" },
-        { name: "Glan", lat: 5.9914, lng: 125.2536, desc: "Municipality of Glan, Sarangani" },
-        { name: "Maasim", lat: 5.9417, lng: 125.0167, desc: "Municipality of Maasim, Sarangani" },
-        { name: "Malapatan", lat: 5.9719, lng: 125.2861, desc: "Municipality of Malapatan, Sarangani" },
-        { name: "Malungon", lat: 6.0500, lng: 125.2833, desc: "Municipality of Malungon, Sarangani" }
-    ];
-
-    municipalities.forEach(function(m) {
-        L.marker([m.lat, m.lng], {icon: reefIcon})
-            .addTo(map)
-            .bindPopup(
-                '<div style="text-align:center;">' +
-                '<strong style="color:#0E7C86;font-size:15px;">' + m.name + '</strong><br>' +
-                '<small style="color:#666;">' + m.desc + '</small><br>' +
-                '<span style="display:inline-block;margin-top:4px;background:#0E7C86;color:white;padding:2px 8px;border-radius:10px;font-size:11px;">Sarangani Bay</span>' +
-                '</div>',
-                {className: 'reef-popup'}
-            );
-    });
+document.addEventListener('DOMContentLoaded', function(){
+    var m=L.map('reef-map',{zoomControl:true,attributionControl:true}).setView([6.05,125.15],10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap',maxZoom:18}).addTo(m);
+    var HC={excellent:'#16a34a',good:'#2563eb',fair:'#d97706',poor:'#dc2626'};
+    fetch('{% url "public_dashboard_data" %}').then(function(r){return r.json();}).then(function(d){
+        d.m.forEach(function(mi){
+            if(!mi.lat||!mi.lng)return;
+            var ta=0;mi.b.forEach(function(b){ta+=b.ac;});
+            var ic=L.divIcon({className:'',html:'<div style="width:34px;height:34px;background:var(--rt-teal,#0E7C86);border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6rem;font-weight:700;"><span>'+ta+'</span></div>',iconSize:[34,34],iconAnchor:[17,17]});
+            L.marker([mi.lat,mi.lng],{icon:ic}).addTo(m).bindPopup('<div style="text-align:center;font-family:Inter,sans-serif;"><strong style="color:#062E3f;font-size:14px;">'+mi.name+'</strong><br><small style="color:#4D6269;">'+mi.b.length+' barangays &middot; '+ta+' assessments</small></div>');
+        });
+    }).catch(function(){});
 });
 </script>
 

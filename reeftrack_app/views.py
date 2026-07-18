@@ -26,6 +26,7 @@ def home(request):
 
     return render(request, 'public/index.html', {
         'recent_assessments': recent_assessments,
+        'active_page': 'home',
     })
 
 def public_assessment_detail(request, assessment_id):
@@ -67,7 +68,7 @@ def public_assessment_detail(request, assessment_id):
 
 def about(request):
     """Public about page"""
-    return render(request, 'public/about.html')
+    return render(request, 'public/about.html', {'active_page': 'about'})
 
 def register(request):
     """Registration page - Only allows contributor role"""
@@ -329,7 +330,7 @@ def admin_edit_user(request, user_id):
     if request.method == 'POST':
         first_name = request.POST.get('first_name', '')
         last_name = request.POST.get('last_name', '')
-        middle_initial = request.POST.get('middle_initial', '')
+        middle_initial = request.POST.get('middle_initial', '').strip()[:1].upper()
         suffix = request.POST.get('suffix', '')
         email = request.POST.get('email')
         role = request.POST.get('role')
@@ -565,7 +566,7 @@ def curator_edit_contributor(request, user_id):
     if request.method == 'POST':
         first_name = request.POST.get('first_name', '')
         last_name = request.POST.get('last_name', '')
-        middle_initial = request.POST.get('middle_initial', '')
+        middle_initial = request.POST.get('middle_initial', '').strip()[:1].upper()
         suffix = request.POST.get('suffix', '')
         email = request.POST.get('email')
         status = request.POST.get('status')
@@ -1640,7 +1641,7 @@ def create_contributor(request):
 
     first_name = data.get('first_name', '').strip()
     last_name = data.get('last_name', '').strip()
-    middle_initial = data.get('middle_initial', '').strip()
+    middle_initial = data.get('middle_initial', '').strip()[:1].upper()
     suffix = data.get('suffix', '').strip()
 
     if not first_name or not last_name:
@@ -2971,3 +2972,206 @@ def profile_change_password(request):
         form = CustomPasswordChangeForm(request.user)
     
     return render(request, 'profile/change_password.html', {'form': form})
+
+
+# ==================== PUBLIC MAP DASHBOARD ====================
+
+def public_dashboard(request):
+    """Public interactive map dashboard page (no login required)."""
+    return render(request, 'public/dashboard.html', {'active_page': 'explore'})
+
+
+def public_dashboard_data(request):
+    """Public API: Return all approved assessment data for the map dashboard."""
+    municipality_id = request.GET.get('municipality_id')
+    barangay_id = request.GET.get('barangay_id')
+    year_from = request.GET.get('year_from')
+    year_to = request.GET.get('year_to')
+    condition = request.GET.get('condition')
+
+    assessments = Assessment.objects.filter(
+        status='approved'
+    ).select_related(
+        'municipality', 'barangay', 'uploaded_by'
+    ).prefetch_related(
+        'transects__species_data__species'
+    )
+
+    if municipality_id:
+        assessments = assessments.filter(municipality_id=municipality_id)
+    if barangay_id:
+        assessments = assessments.filter(barangay_id=barangay_id)
+    if year_from:
+        assessments = assessments.filter(assessment_date__year__gte=year_from)
+    if year_to:
+        assessments = assessments.filter(assessment_date__year__lte=year_to)
+    if condition:
+        assessments = assessments.filter(condition=condition)
+
+    assessments = assessments.order_by('-assessment_date', '-approved_at')
+
+    municipalities = {}
+    total_transects = 0
+    species_set = set()
+    excellent = good = fair = poor = 0
+    cover_sum = 0.0
+    cover_count = 0
+    trend_years = {}
+
+    for a in assessments:
+        m_id = a.municipality_id
+        m_name = a.municipality.name
+        b_id = a.barangay_id
+        b_name = a.barangay.name
+
+        if m_id not in municipalities:
+            municipalities[m_id] = {
+                'id': m_id, 'name': m_name, 'barangays': {}
+            }
+        if b_id not in municipalities[m_id]['barangays']:
+            municipalities[m_id]['barangays'][b_id] = {
+                'id': b_id, 'name': b_name, 'assessments': []
+            }
+
+        uploader_name = ''
+        if a.uploaded_by:
+            profile = getattr(a.uploaded_by, 'profile', None)
+            if profile:
+                uploader_name = profile.get_full_name()
+            if not uploader_name:
+                uploader_name = a.uploaded_by.get_full_name() or a.uploaded_by.email
+
+        transects_list = []
+        for t in a.transects.all():
+            total_transects += 1
+            sp = []
+            for ts in t.species_data.all():
+                species_set.add(ts.species.id)
+                sp.append({
+                    'co': ts.species.code,
+                    'nm': ts.species.sub_category,
+                    'fm': ts.species.major_category,
+                    'cv': float(ts.cover),
+                    'dp': ts.depth,
+                })
+            transects_list.append({
+                'n': t.transect_number,
+                's': {
+                    's': [float(t.shallow_start_lat), float(t.shallow_start_lng)] if t.shallow_start_lat and t.shallow_start_lng else None,
+                    'e': [float(t.shallow_end_lat), float(t.shallow_end_lng)] if t.shallow_end_lat and t.shallow_end_lng else None,
+                },
+                'd': {
+                    's': [float(t.deep_start_lat), float(t.deep_start_lng)] if t.deep_start_lat and t.deep_start_lng else None,
+                    'e': [float(t.deep_end_lat), float(t.deep_end_lng)] if t.deep_end_lat and t.deep_end_lng else None,
+                },
+                'sc': len(sp),
+                'sp': sp,
+            })
+
+        cover = float(a.overall_coral_cover) if a.overall_coral_cover is not None else None
+
+        municipalities[m_id]['barangays'][b_id]['assessments'].append({
+            'id': a.id,
+            'd': str(a.assessment_date),
+            'c': a.condition or '',
+            'cc': cover,
+            'mt': a.get_methodology_display_name(),
+            'up': uploader_name,
+            'tr': transects_list,
+        })
+
+        if a.condition == 'excellent':
+            excellent += 1
+        elif a.condition == 'good':
+            good += 1
+        elif a.condition == 'fair':
+            fair += 1
+        elif a.condition == 'poor':
+            poor += 1
+
+        if cover is not None:
+            cover_sum += cover
+            cover_count += 1
+
+        year = a.assessment_date.year
+        if year not in trend_years:
+            trend_years[year] = {'sum': 0.0, 'count': 0}
+        if cover is not None:
+            trend_years[year]['sum'] += cover
+            trend_years[year]['count'] += 1
+
+    result_m = []
+    for m_id, m_data in municipalities.items():
+        b_list = []
+        for b_id, b_data in m_data['barangays'].items():
+            b_as = b_data['assessments']
+            lcv = None
+            lc = ''
+            for ba in b_as:
+                if ba['cc'] is not None:
+                    lcv = ba['cc']
+                    lc = ba['c']
+                    break
+
+            all_lngs = []
+            all_lats = []
+            for ba in b_as:
+                for bt in ba['tr']:
+                    for depth_data in [bt['s'], bt['d']]:
+                        if depth_data['s']:
+                            all_lats.append(depth_data['s'][0])
+                            all_lngs.append(depth_data['s'][1])
+                        if depth_data['e']:
+                            all_lats.append(depth_data['e'][0])
+                            all_lngs.append(depth_data['e'][1])
+
+            b_lat = round(sum(all_lats) / len(all_lats), 6) if all_lats else None
+            b_lng = round(sum(all_lngs) / len(all_lngs), 6) if all_lngs else None
+
+            b_list.append({
+                'id': b_id,
+                'name': b_data['name'],
+                'lat': b_lat,
+                'lng': b_lng,
+                'lcv': lcv,
+                'lc': lc,
+                'ac': len(b_as),
+                'a': b_as,
+            })
+
+        m_lngs = [b['lng'] for b in b_list if b['lng']]
+        m_lats = [b['lat'] for b in b_list if b['lat']]
+        m_lat = round(sum(m_lats) / len(m_lats), 6) if m_lats else None
+        m_lng = round(sum(m_lngs) / len(m_lngs), 6) if m_lngs else None
+
+        result_m.append({
+            'id': m_id,
+            'name': m_data['name'],
+            'lat': m_lat,
+            'lng': m_lng,
+            'b': b_list,
+        })
+
+    result_t = []
+    for year in sorted(trend_years.keys()):
+        td = trend_years[year]
+        result_t.append({
+            'year': year,
+            'avg_cover': round(td['sum'] / td['count'], 1) if td['count'] > 0 else None,
+            'count': td['count'],
+        })
+
+    return JsonResponse({
+        'm': result_m,
+        's': {
+            'total_assessments': len(assessments),
+            'total_transects': total_transects,
+            'avg_cover': round(cover_sum / cover_count, 1) if cover_count > 0 else 0,
+            'total_species': len(species_set),
+            'excellent': excellent,
+            'good': good,
+            'fair': fair,
+            'poor': poor,
+        },
+        't': result_t,
+    })

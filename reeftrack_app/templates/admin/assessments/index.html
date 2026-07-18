@@ -60,11 +60,11 @@
 <div class="card mb-4">
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-3">
+            <div class="col-sm-6 col-md-3">
                 <input type="text" class="form-control form-control-sm" name="search"
                        placeholder="Search location or user..." value="{{ search_query }}">
             </div>
-            <div class="col-md-2">
+            <div class="col-sm-6 col-md-2">
                 <select class="form-select form-select-sm" name="status">
                     <option value="">All Status</option>
                     <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Pending Review</option>
@@ -73,7 +73,7 @@
                     <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-sm-6 col-md-2">
                 <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i> Filter</button>
                 <a href="{% url 'admin_assessments' %}" class="btn btn-sm btn-outline-secondary">Clear</a>
             </div>
@@ -91,7 +91,7 @@
                         <th>#</th>
                         <th>Location</th>
                         <th>Date</th>
-                        <th>Contributor</th>
+                        <th>Uploaded By</th>
                         <th>Reviewed By</th>
                         <th>Transects</th>
                         <th>Coral Cover</th>

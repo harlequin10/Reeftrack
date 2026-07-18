@@ -210,7 +210,7 @@ class AssessmentImage(models.Model):
 
 class Contributor(models.Model):
     first_name = models.CharField(max_length=150)
-    middle_initial = models.CharField(max_length=5, blank=True, default='')
+    middle_initial = models.CharField(max_length=1, blank=True, default='')
     last_name = models.CharField(max_length=150)
     suffix = models.CharField(max_length=20, blank=True, default='')
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='contributor_profile')
@@ -266,7 +266,7 @@ class UserProfile(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='contributor')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
-    middle_initial = models.CharField(max_length=5, blank=True, default='')
+    middle_initial = models.CharField(max_length=1, blank=True, default='')
     suffix = models.CharField(max_length=20, blank=True, default='')
     bio = models.TextField(blank=True, null=True)
     approved_by = models.ForeignKey(

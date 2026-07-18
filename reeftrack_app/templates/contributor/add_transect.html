@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <div class="row justify-content-center">
-    <div class="col-lg-10">
+    <div class="col-12 col-lg-10">
         <div class="card shadow-sm">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <h4 class="mb-0"><i class="fas fa-ruler-horizontal"></i> Add Transects</h4>
@@ -15,7 +15,7 @@
             </div>
             <div class="card-body">
                 <!-- Step Indicator -->
-                <div class="d-flex justify-content-center mb-4">
+                <div class="d-flex justify-content-center flex-wrap gap-1 mb-4">
                     <div class="step-indicator completed">
                         <span class="step-number"><i class="fas fa-check"></i></span>
                         <span class="step-label">Assessment Info</span>
@@ -727,6 +727,11 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 .step-connector.active {
     background: #198754;
+}
+@media (max-width: 575.98px) {
+    .step-connector { display: none; }
+    .step-indicator { min-width: 60px; }
+    .step-label { font-size: 10px; }
 }
 </style>
 {% endblock %}

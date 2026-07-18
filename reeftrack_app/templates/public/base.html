@@ -10,6 +10,7 @@
     {% load static %}
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <a href="#main-content" class="rt-skip-link">Skip to main content</a>
@@ -24,21 +25,23 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
+                    {% block nav_links %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'home' %}">
+                        <a class="nav-link{% if active_page == 'home' %} active{% endif %}" href="{% url 'home' %}">
                             <i class="fas fa-home"></i> Home
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'home' %}#map-section">
-                            <i class="fas fa-map-marked-alt"></i> Map
+                        <a class="nav-link{% if active_page == 'explore' %} active{% endif %}" href="{% url 'public_dashboard' %}">
+                            <i class="fas fa-globe-americas"></i> Explore
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'about' %}">
+                        <a class="nav-link{% if active_page == 'about' %} active{% endif %}" href="{% url 'about' %}">
                             <i class="fas fa-info-circle"></i> About
                         </a>
                     </li>
+                    {% endblock %}
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
@@ -120,15 +123,20 @@
     </script>
     {% endif %}
 
+    {% block main_content %}
     <main id="main-content" class="container mt-4 rt-main-content">
         {% block content %}{% endblock %}
     </main>
+    {% endblock %}
 
+    {% block back_to_top %}
     <a href="#" class="btn btn-primary rt-back-to-top" id="backToTop" 
        style="display:none; position:fixed; bottom:30px; right:30px; z-index:999; width:48px; height:48px; border-radius:50%; padding:0; text-align:center; line-height:48px; box-shadow: var(--rt-shadow-lg);">
         <i class="fas fa-arrow-up"></i>
     </a>
+    {% endblock %}
 
+    {% block footer %}
     <footer class="footer mt-5 py-4 rt-footer">
         <div class="container">
             <div class="row">
@@ -157,8 +165,10 @@
             <p class="text-center small mb-0">&copy; {% now "Y" %} ReefTrack. All rights reserved.</p>
         </div>
     </footer>
+    {% endblock %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

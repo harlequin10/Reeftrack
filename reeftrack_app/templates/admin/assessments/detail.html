@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-10">
+    <div class="col-12 col-lg-10">
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
@@ -31,31 +31,31 @@
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Municipality</small><br>
                         <strong>{{ assessment.municipality }}</strong>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Barangay</small><br>
                         <strong>{{ assessment.barangay }}</strong>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Date</small><br>
                         <strong>{{ assessment.assessment_date|date:"M d, Y" }}</strong>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Methodology</small><br>
                         <strong>{{ assessment.get_methodology_display }}</strong>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Uploaded By</small><br>
                         <strong>{{ assessment.uploaded_by.profile.get_full_name|default:assessment.uploaded_by.email }}</strong>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Coral Cover</small><br>
                         <strong>{% if assessment.overall_coral_cover %}{{ assessment.overall_coral_cover }}%{% else %}-{% endif %}</strong>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Condition</small><br>
                         {% if assessment.condition %}
                             <span class="badge
@@ -67,7 +67,7 @@
                             </span>
                         {% else %}-{% endif %}
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Reviewed By</small><br>
                         <strong>{% if assessment.reviewed_by %}{{ assessment.reviewed_by.profile.get_full_name|default:assessment.reviewed_by.email }}{% else %}-{% endif %}</strong>
                     </div>

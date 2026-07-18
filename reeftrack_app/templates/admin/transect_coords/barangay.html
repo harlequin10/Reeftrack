@@ -26,6 +26,19 @@
     </div>
     <div class="card-body">
         {% if transect_coords %}
+        <div class="mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="refSearch" class="form-control" placeholder="Search by coordinates or source...">
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted" id="refCount">{{ transect_coords.count }} reference{{ transect_coords.count|pluralize }}</small>
+                </div>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -41,7 +54,7 @@
                 </thead>
                 <tbody>
                     {% for tc in transect_coords %}
-                    <tr>
+                    <tr class="ref-row" data-search="{{ tc.shallow_start_lat }} {{ tc.shallow_start_lng }} {{ tc.shallow_end_lat }} {{ tc.shallow_end_lng }} {{ tc.deep_start_lat }} {{ tc.deep_start_lng }} {{ tc.deep_end_lat }} {{ tc.deep_end_lng }} {{ tc.source }}">
                         <td><strong>{{ forloop.counter }}</strong></td>
                         <td><small>{{ tc.shallow_start_lat|default:"-" }}, {{ tc.shallow_start_lng|default:"-" }}</small></td>
                         <td><small>{{ tc.shallow_end_lat|default:"-" }}, {{ tc.shallow_end_lng|default:"-" }}</small></td>
@@ -215,6 +228,21 @@
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('refSearch').addEventListener('input', function() {
+    var q = this.value.toLowerCase();
+    var rows = document.querySelectorAll('.ref-row');
+    var visible = 0;
+    rows.forEach(function(row) {
+        var text = (row.getAttribute('data-search') || '').toLowerCase();
+        var show = text.indexOf(q) !== -1;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('refCount').textContent = visible + ' reference' + (visible !== 1 ? 's' : '');
+});
+</script>
 
 {% if transect_coords %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />

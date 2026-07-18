@@ -93,8 +93,14 @@
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
+<script>
+document.getElementById('id_middle_initial').addEventListener('input', function() {
+    this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
+});
+</script>
 {% endblock %}

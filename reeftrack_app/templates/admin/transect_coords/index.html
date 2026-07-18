@@ -12,6 +12,21 @@
 
 <div class="card">
     <div class="card-body">
+        {% if barangays %}
+        <div class="mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="coordSearch" class="form-control" placeholder="Search barangay or municipality...">
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted" id="coordCount">{{ barangays|length }} barangay{{ barangays|length|pluralize }}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -25,7 +40,7 @@
                 </thead>
                 <tbody>
                     {% for b in barangays %}
-                    <tr>
+                    <tr class="coord-row" data-search="{{ b.name|lower }} {{ b.municipality.name|lower }}">
                         <td>{{ forloop.counter }}</td>
                         <td><strong>{{ b.name }}</strong></td>
                         <td>{{ b.municipality.name }}</td>
@@ -53,6 +68,23 @@
         </div>
     </div>
 </div>
+
+{% if barangays %}
+<script>
+document.getElementById('coordSearch').addEventListener('input', function() {
+    var q = this.value.toLowerCase();
+    var rows = document.querySelectorAll('.coord-row');
+    var visible = 0;
+    rows.forEach(function(row) {
+        var text = (row.getAttribute('data-search') || '');
+        var show = text.indexOf(q) !== -1;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('coordCount').textContent = visible + ' barangay' + (visible !== 1 ? 's' : '');
+});
+</script>
+{% endif %}
 
 <div class="card mt-4">
     <div class="card-header">

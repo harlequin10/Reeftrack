@@ -7,7 +7,7 @@ from .models import UserProfile
 class RegisterForm(UserCreationForm):
     first_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    middle_initial = forms.CharField(max_length=5, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
     SUFFIX_CHOICES = (
         ('', 'None'),
         ('Jr.', 'Jr.'),
@@ -38,6 +38,12 @@ class RegisterForm(UserCreationForm):
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError('An account with this email already exists.')
         return email
+
+    def clean_middle_initial(self):
+        mi = self.cleaned_data.get('middle_initial', '')
+        if mi:
+            mi = mi.strip()[0].upper()
+        return mi
 
     def save(self, commit=True):
         user = super(RegisterForm, self).save(commit=False)
@@ -79,7 +85,7 @@ class LoginForm(forms.Form):
 class AdminCreateUserForm(forms.ModelForm):
     first_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    middle_initial = forms.CharField(max_length=5, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
     suffix = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
@@ -97,6 +103,12 @@ class AdminCreateUserForm(forms.ModelForm):
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError('Email already exists')
         return email
+
+    def clean_middle_initial(self):
+        mi = self.cleaned_data.get('middle_initial', '')
+        if mi:
+            mi = mi.strip()[0].upper()
+        return mi
 
     def save(self, commit=True):
         user = super(AdminCreateUserForm, self).save(commit=False)
@@ -128,7 +140,7 @@ class UserProfileForm(forms.ModelForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
     first_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    middle_initial = forms.CharField(max_length=5, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
     suffix = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     bio = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}), required=False)
     profile_picture = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
@@ -150,6 +162,12 @@ class UserProfileForm(forms.ModelForm):
         if User.objects.filter(email=email).exclude(id=self.instance.id).exists():
             raise forms.ValidationError('Email already exists')
         return email
+
+    def clean_middle_initial(self):
+        mi = self.cleaned_data.get('middle_initial', '')
+        if mi:
+            mi = mi.strip()[0].upper()
+        return mi
 
     def save(self, commit=True):
         user = super(UserProfileForm, self).save(commit=False)

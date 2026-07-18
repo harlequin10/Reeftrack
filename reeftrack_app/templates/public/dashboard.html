@@ -1,0 +1,480 @@
+{% extends "public/base.html" %}
+{% load static %}
+
+{% block title %}Explore - ReefTrack{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+<style>
+body{overflow:hidden!important;height:100vh!important;display:block!important;flex-direction:unset!important;}
+.rt-back-to-top{display:none!important;}
+.rt-footer{display:none!important;}
+.rt-dash-subbar{background:linear-gradient(135deg,var(--rt-navy),var(--rt-teal));color:#fff;padding:.65rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;position:relative;z-index:1000;}
+.rt-dash-subbar h6{margin:0;font-size:.85rem;font-weight:700;white-space:nowrap;color:#fff !important;}
+.rt-dash-subbar small{color:rgba(255,255,255,.9);font-size:.72rem;flex:1;min-width:120px;}
+.rt-dash-root{display:flex;flex:1;overflow:hidden;height:calc(100vh - 90px);}
+.rt-dash-mapcol{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;}
+.rt-dash-sidecol{width:380px;overflow-y:auto;border-left:1px solid var(--rt-border);background:var(--rt-sand-light);display:flex;flex-direction:column;gap:1px;}
+.rt-dash-filters{display:flex;gap:.5rem;padding:.5rem .75rem;background:var(--rt-white);border-bottom:1px solid var(--rt-border);flex-wrap:wrap;align-items:flex-end;z-index:999;}
+.rt-dash-fg{display:flex;flex-direction:column;gap:2px;min-width:110px;}
+.rt-dash-fg label{font-size:.65rem;font-weight:600;color:var(--rt-ink-soft);text-transform:uppercase;letter-spacing:.04em;margin:0;}
+.rt-dash-fg select,.rt-dash-fg input{font-size:.78rem;padding:.3rem .5rem;border:1px solid var(--rt-border);border-radius:var(--rt-radius-sm);background:var(--rt-white);color:var(--rt-ink);font-family:var(--rt-font-body);}
+.rt-dash-fg select:focus,.rt-dash-fg input:focus{border-color:var(--rt-teal);outline:none;box-shadow:0 0 0 2px rgba(14,124,134,.15);}
+.rt-dash-yr{display:flex;align-items:center;gap:.35rem;}
+.rt-dash-yr span{color:var(--rt-ink-soft);font-size:.75rem;}
+.rt-dash-yr input{width:70px;}
+#dashMap{flex:1;min-height:0;z-index:998;}
+.rt-dash-legendbar{display:flex;gap:.6rem;padding:.35rem .75rem;background:var(--rt-white);border-top:1px solid var(--rt-border);flex-wrap:wrap;align-items:center;}
+.rt-dash-leg-t{font-size:.7rem;color:var(--rt-ink-soft);font-weight:600;}
+.rt-dash-leg{display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--rt-ink-soft);}
+.rt-dash-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.rt-dash-tbtn{padding:.3rem .65rem;border-radius:var(--rt-radius-sm);font-size:.72rem;font-weight:600;cursor:pointer;border:1px solid var(--rt-border);background:var(--rt-white);color:var(--rt-ink);font-family:var(--rt-font-body);transition:all .15s;white-space:nowrap;}
+.rt-dash-tbtn:hover{background:var(--rt-teal);color:#fff;border-color:var(--rt-teal);}
+.rt-dash-tbtn.rt-dash-active{background:var(--rt-teal);color:#fff;border-color:var(--rt-teal);}
+.rt-dash-tbtn-green.rt-dash-active{background:var(--rt-success-dark);border-color:var(--rt-success-dark);}
+.rt-dash-card{background:var(--rt-white);border-bottom:1px solid var(--rt-border);}
+.rt-dash-card-h{padding:.6rem .85rem;font-size:.78rem;font-weight:700;color:var(--rt-navy);display:flex;align-items:center;gap:.4rem;border-bottom:1px solid var(--rt-border);background:var(--rt-sand-light);}
+.rt-dash-card-b{padding:.75rem .85rem;}
+.rt-dash-chartbox{height:160px;position:relative;}
+.rt-dash-trendnote{margin-top:.5rem;font-size:.68rem;color:var(--rt-ink-soft);display:flex;align-items:center;gap:.3rem;}
+.rt-dash-hgrid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+.rt-dash-hs{text-align:center;padding:.4rem;border-radius:var(--rt-radius-sm);background:var(--rt-sand-light);}
+.rt-dash-hc{font-size:1.3rem;font-weight:800;line-height:1.2;}
+.rt-dash-hl{font-size:.6rem;color:var(--rt-ink-soft);text-transform:uppercase;letter-spacing:.03em;font-weight:600;}
+.rt-dash-sitesbox{margin-top:.6rem;font-size:.7rem;line-height:1.7;}
+.rt-dash-sitesbox strong{font-size:.68rem;color:var(--rt-ink-soft);text-transform:uppercase;letter-spacing:.03em;}
+.rt-dash-stag{display:inline-block;padding:.15rem .45rem;border-radius:10px;font-size:.65rem;cursor:pointer;margin:.15rem .1rem 0 0;transition:transform .15s;}
+.rt-dash-stag:hover{transform:scale(1.05);}
+.rt-dash-stag-e{background:#d1fae5;color:#065f46;}
+.rt-dash-stag-p{background:#fee2e2;color:#991b1b;}
+.rt-dash-empty{text-align:center;padding:2rem 1rem;color:var(--rt-ink-soft);}
+.rt-dash-empty i{font-size:2rem;margin-bottom:.5rem;display:block;opacity:.4;}
+.rt-dash-empty p{font-size:.78rem;margin:0;}
+.rt-dash-bh{margin-bottom:.75rem;}
+.rt-dash-bn{font-size:1.05rem;font-weight:800;color:var(--rt-navy);}
+.rt-dash-bmname{font-size:.72rem;color:var(--rt-ink-soft);}
+.rt-dash-dr{display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--rt-border);font-size:.78rem;}
+.rt-dash-dr:last-child{border-bottom:none;}
+.rt-dash-cbar{height:6px;background:var(--rt-sand);border-radius:3px;margin-top:.25rem;overflow:hidden;}
+.rt-dash-cfill{height:100%;border-radius:3px;transition:width .4s ease;}
+.rt-dash-badge{display:inline-block;padding:.15rem .5rem;border-radius:10px;font-size:.68rem;font-weight:600;}
+.rt-dash-ddh{display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;cursor:pointer;font-size:.75rem;font-weight:600;color:var(--rt-navy);}
+.rt-dash-ddh i{font-size:.6rem;transition:transform .2s;}
+.rt-dash-ddh i.rt-dash-ddi{transform:rotate(180deg);}
+.rt-dash-ddc{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+.rt-dash-ddc.rt-dash-ddo{max-height:600px;}
+.rt-dash-ab{display:flex;justify-content:space-between;align-items:center;padding:.4rem .5rem;border-radius:var(--rt-radius-sm);cursor:pointer;font-size:.72rem;transition:background .15s;margin-bottom:2px;}
+.rt-dash-ab:hover{background:var(--rt-sand-light);}
+.rt-dash-pop{font-size:.78rem;line-height:1.5;min-width:140px;}
+.rt-dash-pop b{color:var(--rt-navy);}
+.rt-dash-pop small{color:var(--rt-ink-soft);}
+.rt-dash-pop button{margin-top:.4rem;padding:.25rem .6rem;border-radius:var(--rt-radius-sm);background:var(--rt-teal);color:#fff;border:none;font-size:.7rem;font-weight:600;cursor:pointer;font-family:var(--rt-font-body);}
+.rt-dash-pop button:hover{background:var(--rt-navy-light);}
+.rt-dash-mm{width:36px;height:36px;border-radius:50%;background:var(--rt-teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;box-shadow:0 2px 8px rgba(14,124,134,.4);border:2px solid rgba(255,255,255,.6);}
+.rt-dash-bm{width:26px;height:26px;border-radius:50%;background:var(--rt-white);border:3px solid;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:var(--rt-navy);box-shadow:0 1px 4px rgba(0,0,0,.15);}
+.rt-dash-ttl{background:transparent!important;border:none!important;box-shadow:none!important;font-size:.6rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);pointer-events:none;}
+.rt-dash-ttl-s{color:#0891b2;}
+.rt-dash-ttl-d{color:#2563eb;}
+.rt-dash-tc{margin-bottom:.5rem;}
+.rt-dash-tch{display:flex;justify-content:space-between;align-items:center;padding:.4rem .5rem;border-radius:var(--rt-radius-sm);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--rt-navy);transition:background .15s;}
+.rt-dash-tch:hover{background:var(--rt-sand-light);}
+.rt-dash-tch i{font-size:.6rem;transition:transform .2s;}
+.rt-dash-tch i.rt-dash-ddi{transform:rotate(180deg);}
+.rt-dash-ds{margin-top:.35rem;}
+.rt-dash-dst{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding-bottom:.2rem;border-bottom:2px solid;margin-bottom:.25rem;}
+.rt-dash-sr{display:flex;justify-content:space-between;font-size:.7rem;padding:.2rem .4rem;border-radius:3px;}
+.rt-dash-sr:nth-child(odd){background:var(--rt-sand-light);}
+.rt-dash-sr b{color:var(--rt-navy);}
+.rt-dash-es{font-size:.68rem;color:var(--rt-ink-soft);padding:.3rem;font-style:italic;}
+.rt-dash-minfo{margin-bottom:.5rem;}
+.rt-dash-modal{display:none;position:fixed;inset:0;z-index:12000;background:rgba(6,46,63,.55);backdrop-filter:blur(4px);justify-content:center;align-items:center;}
+.rt-dash-modal-show{display:flex;}
+.rt-dash-modal-inner{background:var(--rt-white);border-radius:var(--rt-radius);width:560px;max-width:92vw;max-height:85vh;overflow-y:auto;position:relative;box-shadow:var(--rt-shadow-lg);padding:1.25rem;}
+.rt-dash-modal-x{position:absolute;top:.75rem;right:.75rem;background:none;border:none;font-size:1.3rem;color:var(--rt-ink-soft);cursor:pointer;line-height:1;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all .15s;}
+.rt-dash-modal-x:hover{background:var(--rt-sand-light);color:var(--rt-navy);}
+.rt-dash-modal-inner h3{font-size:1rem;font-weight:700;color:var(--rt-navy);margin:0 0 1rem;padding-right:2rem;}
+.rt-tour-overlay{position:fixed;inset:0;z-index:20000;pointer-events:none;}
+.rt-tour-backdrop{position:fixed;inset:0;background:rgba(6,46,63,.65);z-index:20000;pointer-events:auto;transition:opacity .3s;}
+.rt-tour-spotlight{position:fixed;z-index:20001;border-radius:8px;box-shadow:0 0 0 9999px rgba(6,46,63,.65);pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);}
+.rt-tour-tooltip{position:fixed;z-index:20002;background:var(--rt-white);border-radius:var(--rt-radius);box-shadow:var(--rt-shadow-lg);padding:0;width:340px;pointer-events:auto;transition:all .4s cubic-bezier(.4,0,.2,1);overflow:hidden;}
+.rt-tour-tooltip-arrow{position:absolute;width:12px;height:12px;background:var(--rt-white);transform:rotate(45deg);z-index:-1;}
+.rt-tour-tooltip-arrow.arrow-bottom{bottom:-6px;left:50%;margin-left:-6px;}
+.rt-tour-tooltip-arrow.arrow-top{top:-6px;left:50%;margin-left:-6px;}
+.rt-tour-tooltip-arrow.arrow-right{right:-6px;top:50%;margin-top:-6px;}
+.rt-tour-tooltip-arrow.arrow-left{left:-6px;top:50%;margin-top:-6px;}
+.rt-tour-head{display:flex;align-items:center;gap:.6rem;padding:.75rem 1rem;background:linear-gradient(135deg,var(--rt-navy),var(--rt-navy-light));color:#fff;}
+.rt-tour-head i{font-size:1.1rem;color:var(--rt-teal-light);}
+.rt-tour-head span{font-weight:600;font-size:.9rem;}
+.rt-tour-body{padding:1rem;}
+.rt-tour-body p{margin:0 0 .75rem;font-size:.8rem;line-height:1.6;color:var(--rt-ink);}
+.rt-tour-step{display:inline-block;background:var(--rt-sand-light);color:var(--rt-ink-soft);font-size:.65rem;padding:.15rem .5rem;border-radius:10px;margin-bottom:.5rem;font-weight:600;}
+.rt-tour-foot{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1rem;border-top:1px solid var(--rt-border);background:var(--rt-sand-light);}
+.rt-tour-dots{display:flex;gap:4px;}
+.rt-tour-dot{width:6px;height:6px;border-radius:50%;background:var(--rt-border);transition:background .2s;}
+.rt-tour-dot.active{background:var(--rt-teal);width:16px;border-radius:3px;}
+.rt-tour-btns{display:flex;gap:.4rem;}
+.rt-tour-btn{padding:.3rem .7rem;border-radius:var(--rt-radius-sm);font-size:.7rem;font-weight:600;cursor:pointer;border:none;font-family:var(--rt-font-body);transition:all .2s;}
+.rt-tour-btn-skip{background:transparent;color:var(--rt-ink-soft);}
+.rt-tour-btn-skip:hover{color:var(--rt-navy);}
+.rt-tour-btn-next{background:var(--rt-teal);color:#fff;}
+.rt-tour-btn-next:hover{background:var(--rt-navy-light);}
+.rt-tour-btn-done{background:var(--rt-success-dark);color:#fff;}
+.rt-tour-btn-done:hover{background:#15704a;}
+.rt-tour-replay{margin-left:auto;padding:.25rem .7rem;border-radius:16px;background:var(--rt-white);border:1px solid var(--rt-border);box-shadow:var(--rt-shadow);display:inline-flex;align-items:center;gap:.35rem;cursor:pointer;color:var(--rt-teal);font-size:.7rem;font-weight:500;font-family:var(--rt-font-body);transition:all .2s;flex-shrink:0;white-space:nowrap;}
+.rt-tour-replay:hover{background:var(--rt-teal);color:#fff;border-color:var(--rt-teal);}
+@media(max-width:1024px){.rt-dash-root{flex-direction:column;}.rt-dash-sidecol{width:100%;max-height:45vh;border-left:none;border-top:1px solid var(--rt-border);}}
+@media(max-width:576px){.rt-dash-filters{flex-direction:column;gap:.35rem;}.rt-dash-fg{min-width:100%;}.rt-dash-yr input{width:60px;}.rt-dash-subbar{flex-direction:column;align-items:flex-start;gap:.35rem;}.rt-tour-replay span{display:none;}.rt-tour-replay{padding:.35rem;}}
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="rt-dash-subbar">
+  <h6><i class="fas fa-globe-americas"></i> Interactive Reef Explorer</h6>
+  <small>Click a municipality marker to zoom in, then click a barangay to view assessment details</small>
+  <button class="rt-tour-replay" id="tourReplay" title="Show Guide" onclick="startTour()"><i class="fas fa-question-circle"></i> <span>Need help? Click here</span></button>
+</div>
+
+<div class="rt-dash-root">
+  <div class="rt-dash-mapcol">
+    <div class="rt-dash-filters">
+      <div class="rt-dash-fg"><label><i class="fas fa-city"></i> Municipality</label><select id="fMuni"><option value="all">All</option></select></div>
+      <div class="rt-dash-fg"><label><i class="fas fa-search"></i> Barangay</label><input type="text" id="fBrgy" placeholder="Search..."></div>
+      <div class="rt-dash-fg"><label><i class="fas fa-calendar"></i> Year</label><div class="rt-dash-yr"><input type="number" id="fYearFrom" placeholder="From" min="2015" max="2030"><span>—</span><input type="number" id="fYearTo" placeholder="To" min="2015" max="2030"></div></div>
+      <div class="rt-dash-fg"><label><i class="fas fa-heartbeat"></i> Health</label><select id="fHealth"><option value="all">All</option><option value="excellent">Excellent &gt;65%</option><option value="good">Good 45-65%</option><option value="fair">Fair 25-45%</option><option value="poor">Poor &lt;25%</option></select></div>
+      <button id="btnMapFilter" class="rt-dash-tbtn"><i class="fas fa-crosshairs"></i> Map Filter</button>
+      <button id="btnTransects" class="rt-dash-tbtn rt-dash-tbtn-green"><i class="fas fa-draw-polygon"></i> Transects</button>
+    </div>
+    <div id="dashMap"></div>
+    <div class="rt-dash-legendbar">
+      <span class="rt-dash-leg-t"><i class="fas fa-palette"></i></span>
+      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#16a34a"></span>Excellent</span>
+      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#2563eb"></span>Good</span>
+      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#d97706"></span>Fair</span>
+      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#dc2626"></span>Poor</span>
+      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#0891b2"></span>Shallow</span>
+      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#2563eb;border:1px solid #1d4ed8"></span>Deep</span>
+    </div>
+  </div>
+  <div class="rt-dash-sidecol">
+    <div class="rt-dash-card">
+      <div class="rt-dash-card-h"><i class="fas fa-map-marked-alt"></i> Barangay Details</div>
+      <div class="rt-dash-card-b" id="pDetails">
+        <div class="rt-dash-empty"><i class="fas fa-map-marker-alt"></i><p>Click a marker on the map to view barangay details</p></div>
+      </div>
+    </div>
+    <div class="rt-dash-card">
+      <div class="rt-dash-card-h"><i class="fas fa-chart-line"></i> Coral Cover Trends</div>
+      <div class="rt-dash-card-b">
+        <div class="rt-dash-chartbox"><canvas id="trendChart"></canvas></div>
+        <div class="rt-dash-trendnote" id="trendInfo"><i class="fas fa-chart-line"></i> Loading...</div>
+      </div>
+    </div>
+    <div class="rt-dash-card">
+      <div class="rt-dash-card-h"><i class="fas fa-heartbeat"></i> Reef Health Summary</div>
+      <div class="rt-dash-card-b">
+        <div class="rt-dash-hgrid">
+          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#16a34a" id="hExc">0</div><div class="rt-dash-hl">Excellent</div></div>
+          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#2563eb" id="hGood">0</div><div class="rt-dash-hl">Good</div></div>
+          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#d97706" id="hFair">0</div><div class="rt-dash-hl">Fair</div></div>
+          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#dc2626" id="hPoor">0</div><div class="rt-dash-hl">Poor</div></div>
+        </div>
+        <div class="rt-dash-sitesbox" id="topExc"></div>
+        <div class="rt-dash-sitesbox" id="topPoor"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rt-dash-modal" id="detailModal">
+  <div class="rt-dash-modal-inner">
+    <button class="rt-dash-modal-x" onclick="document.getElementById('detailModal').classList.remove('rt-dash-modal-show')">&times;</button>
+    <h3 id="modalTitle">Details</h3>
+    <div id="modalBody"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block back_to_top %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+var map,chart,mCluster,tLayer,bLayer;
+var D={m:[],s:{},t:[]};
+var showT=false,mapF=false;
+var selMuni=null,selBrgy=null;
+var HC={excellent:'#16a34a',good:'#2563eb',fair:'#d97706',poor:'#dc2626'};
+
+document.addEventListener('DOMContentLoaded',function(){
+  init();
+  load({});
+});
+
+function init(){
+  map=L.map('dashMap',{zoomControl:true}).setView([6.05,125.25],10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap',maxZoom:18}).addTo(map);
+  mCluster=L.markerClusterGroup({maxClusterRadius:40});
+  map.addLayer(mCluster);
+  tLayer=L.layerGroup();
+  bLayer=L.layerGroup();
+
+  map.on('moveend',function(){if(mapF)load(gf());});
+  document.getElementById('btnMapFilter').onclick=function(){mapF=!mapF;this.classList.toggle('rt-dash-active');load(gf());};
+  document.getElementById('btnTransects').onclick=function(){
+    showT=!showT;
+    if(showT){this.classList.add('rt-dash-active');this.innerHTML='<i class="fas fa-eye-slash"></i> Hide Transects';showLines();}
+    else{this.classList.remove('rt-dash-active');this.innerHTML='<i class="fas fa-draw-polygon"></i> Transects';tLayer.clearLayers();map.removeLayer(tLayer);}
+  };
+  document.getElementById('fMuni').onchange=function(){load(gf());};
+  document.getElementById('fHealth').onchange=function(){load(gf());};
+  document.getElementById('fYearFrom').onchange=function(){load(gf());};
+  document.getElementById('fYearTo').onchange=function(){load(gf());};
+  var st;document.getElementById('fBrgy').oninput=function(){clearTimeout(st);st.setTimeout(fB,300);};
+}
+
+function gf(){
+  var f={};
+  var m=document.getElementById('fMuni').value;
+  var yf=document.getElementById('fYearFrom').value;
+  var yt=document.getElementById('fYearTo').value;
+  var h=document.getElementById('fHealth').value;
+  if(m!=='all')f.municipality_id=m;
+  if(yf)f.year_from=yf;
+  if(yt)f.year_to=yt;
+  if(h!=='all')f.condition=h;
+  return f;
+}
+
+function load(f){
+  var p=new URLSearchParams();
+  if(f.municipality_id)p.set('municipality_id',f.municipality_id);
+  if(f.year_from)p.set('year_from',f.year_from);
+  if(f.year_to)p.set('year_to',f.year_to);
+  if(f.condition)p.set('condition',f.condition);
+  fetch('{% url "public_dashboard_data" %}?'+p).then(function(r){return r.json();}).then(function(d){
+    D=d;
+    popMuniSel(d.m);
+    dispMarkers(d);
+    updStats(d.s);
+    updChart(d.t);
+    updHealth(d.s,d.m);
+  }).catch(function(e){console.error(e);});
+}
+
+function popMuniSel(ms){
+  var s=document.getElementById('fMuni'),c=s.value,h='<option value="all">All</option>';
+  ms.forEach(function(m){h+='<option value="'+m.id+'"'+(c==m.id?' selected':'')+'>'+m.name+'</option>';});
+  s.innerHTML=h;
+}
+
+function dispMarkers(d){
+  mCluster.clearLayers();bLayer.clearLayers();tLayer.clearLayers();
+  map.removeLayer(bLayer);map.removeLayer(tLayer);
+  d.m.forEach(function(m){
+    if(!m.lat||!m.lng)return;
+    var ta=0;m.b.forEach(function(b){ta+=b.ac;});
+    var ic=L.divIcon({className:'',html:'<div class="rt-dash-mm"><span>'+ta+'</span></div>',iconSize:[36,36],iconAnchor:[18,18]});
+    var mk=L.marker([m.lat,m.lng],{icon:ic});
+    mk.bindPopup('<div class="rt-dash-pop"><b>'+m.name+'</b><br><small>'+m.b.length+' barangays &middot; '+ta+' assessments</small><br><button onclick="window.ZM('+m.id+')">Zoom In &rarr;</button></div>');
+    mCluster.addLayer(mk);
+  });
+}
+
+window.ZM=function(mid){
+  var m=null;D.m.forEach(function(x){if(x.id===mid)m=x;});
+  if(!m)return;
+  selMuni=m;map.closePopup();
+  var vb=m.b.filter(function(b){return b.lat&&b.lng;});
+  if(!vb.length)return;
+  map.fitBounds(L.latLngBounds(vb.map(function(b){return[b.lat,b.lng];})),{padding:[40,40],maxZoom:14});
+  mCluster.clearLayers();bLayer.clearLayers();map.addLayer(bLayer);
+  vb.forEach(function(b){
+    var c=HC[b.lc]||'#6b7280';
+    var ic=L.divIcon({className:'',html:'<div class="rt-dash-bm" style="border-color:'+c+'"><i class="fas fa-water"></i></div>',iconSize:[26,26],iconAnchor:[13,13]});
+    var mk=L.marker([b.lat,b.lng],{icon:ic});
+    var ct=b.lc!==null?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A';
+    mk.bindPopup('<div class="rt-dash-pop"><b>'+b.name+'</b><br><small>'+m.name+'</small><br><span style="color:'+c+';font-weight:700">'+(b.lcv!==null?b.lcv+'%':'No data')+'</span> '+ct+'<br><small>'+b.ac+' assessment(s)</small></div>');
+    mk.on('click',function(){selBrgy=b;showBDetails(b,m);if(showT)showBLines(b);});
+    bLayer.addLayer(mk);
+  });
+  updChartM(m);
+};
+
+function showBDetails(b,m){
+  var el=document.getElementById('pDetails');
+  var c=HC[b.lc]||'#6b7280';
+  var ah='';b.a.forEach(function(a){
+    var ac=HC[a.c]||'#6b7280';
+    ah+='<div class="rt-dash-ab" onclick="window.SA('+a.id+')"><span><i class="fas fa-calendar-alt"></i> '+a.d+'</span><span class="rt-dash-badge" style="background:'+ac+'">'+(a.cc!==null?a.cc+'%':'N/A')+'</span></div>';
+  });
+  el.innerHTML='<div class="rt-dash-bh"><div class="rt-dash-bn">'+b.name+'</div><div class="rt-dash-bmname">'+m.name+'</div></div>'+
+    '<div class="rt-dash-dr"><span>Assessments</span><span>'+b.ac+'</span></div>'+
+    (b.lcv!==null?'<div class="rt-dash-dr"><span>Coral Cover</span><span style="color:'+c+';font-weight:700">'+b.lcv+'%</span></div><div class="rt-dash-cbar"><div class="rt-dash-cfill" style="width:'+Math.min(b.lcv,100)+'%;background:'+c+'"></div></div>':'')+
+    '<div class="rt-dash-dr"><span>Condition</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(b.lc?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A')+'</span></div>'+
+    '<div style="margin-top:.75rem"><div class="rt-dash-ddh" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span>Assessment History</span><i class="fas fa-chevron-down"></i></div><div class="rt-dash-ddc">'+ah+'</div></div>';
+}
+
+window.SA=function(aid){
+  var f=null;
+  D.m.forEach(function(m){m.b.forEach(function(b){b.a.forEach(function(a){if(a.id===aid)f={a:a,b:b,m:m};});});});
+  if(!f)return;
+  var a=f.a,c=HC[a.c]||'#6b7280';
+  var th='';a.tr.forEach(function(t){
+    var sh=t.sp.filter(function(s){return s.dp==='shallow';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
+    var dp=t.sp.filter(function(s){return s.dp==='deep';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
+    th+='<div class="rt-dash-tc"><div class="rt-dash-tch" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span>Transect '+t.n+' <small>('+t.sc+' species)</small></span><i class="fas fa-chevron-down"></i></div><div class="rt-dash-ddc"><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0891b2">Shallow</div>'+(sh||'<div class="rt-dash-es">No shallow species data</div>')+'</div><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0e7490">Deep</div>'+(dp||'<div class="rt-dash-es">No deep species data</div>')+'</div></div></div>';
+  });
+  document.getElementById('modalTitle').textContent=f.m.name+' - '+f.b.name+' ('+a.d+')';
+  document.getElementById('modalBody').innerHTML='<div class="rt-dash-minfo"><div class="rt-dash-dr"><span>Date</span><span>'+a.d+'</span></div><div class="rt-dash-dr"><span>Condition</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(a.c?a.c.charAt(0).toUpperCase()+a.c.slice(1):'N/A')+'</span></div><div class="rt-dash-dr"><span>Coral Cover</span><span style="font-weight:700">'+(a.cc!==null?a.cc+'%':'N/A')+'</span></div><div class="rt-dash-dr"><span>Methodology</span><span>'+a.mt+'</span></div><div class="rt-dash-dr"><span>Uploaded By</span><span>'+a.up+'</span></div></div><h4 style="margin:1rem 0 .5rem;color:#062E3f;font-size:.95rem"><i class="fas fa-draw-polygon"></i> Transects ('+a.tr.length+')</h4>'+th;
+  document.getElementById('detailModal').classList.add('rt-dash-modal-show');
+};
+
+function showBLines(b){
+  tLayer.clearLayers();map.addLayer(tLayer);
+  b.a.forEach(function(a){a.tr.forEach(function(t){drawLine(t,a,b.name);});});
+}
+
+function showLines(){
+  tLayer.clearLayers();if(!showT)return;map.addLayer(tLayer);
+  D.m.forEach(function(m){m.b.forEach(function(b){b.a.forEach(function(a){a.tr.forEach(function(t){drawLine(t,a,b.name);});});});});
+}
+
+function drawLine(t,a,bn){
+  if(t.s.s&&t.s.e){
+    var sl=L.polyline([t.s.s,t.s.e],{color:'#0891b2',weight:3,opacity:.85});
+    sl.bindTooltip('T'+t.n+' (S)',{permanent:true,direction:'center',className:'rt-dash-ttl rt-dash-ttl-s'});
+    sl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Shallow</b><br><small>'+bn+' · '+a.d+'</small><br><small>'+t.sc+' species</small><br><button onclick="window.SA('+a.id+')">View Full Assessment</button></div>');
+    tLayer.addLayer(sl);
+  }
+  if(t.d.s&&t.d.e){
+    var dl=L.polyline([t.d.s,t.d.e],{color:'#2563eb',weight:3,opacity:.85});
+    dl.bindTooltip('T'+t.n+' (D)',{permanent:true,direction:'center',className:'rt-dash-ttl rt-dash-ttl-d'});
+    dl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Deep</b><br><small>'+bn+' · '+a.d+'</small><br><small>'+t.sc+' species</small><br><button onclick="window.SA('+a.id+')">View Full Assessment</button></div>');
+    tLayer.addLayer(dl);
+  }
+}
+
+function fB(){
+  var q=document.getElementById('fBrgy').value.trim().toLowerCase();
+  if(!q){bLayer.eachLayer(function(l){l.setOpacity(1);});return;}
+  bLayer.eachLayer(function(l){var p=l.getPopup();if(p){l.setOpacity(p.getContent().toLowerCase().indexOf(q)>-1?1:.12);}});
+}
+
+function updStats(s){
+  document.getElementById('hExc').textContent=s.excellent;
+  document.getElementById('hGood').textContent=s.good;
+  document.getElementById('hFair').textContent=s.fair;
+  document.getElementById('hPoor').textContent=s.poor;
+}
+
+function updChart(td){
+  var lb=td.map(function(d){return d.year.toString();});
+  var vl=td.map(function(d){return d.avg_cover;});
+  var ct=td.map(function(d){return d.count;});
+  if(chart){
+    chart.data.labels=lb;chart.data.datasets[0].data=vl;
+    chart.options.plugins.tooltip.callbacks={label:function(c){return'Avg: '+c.raw+'% ('+ct[c.dataIndex]+' assessments)';}};
+    chart.update();
+  }else{
+    chart=new Chart(document.getElementById('trendChart'),{
+      type:'line',data:{labels:lb,datasets:[{label:'Avg Cover %',data:vl,borderColor:'#0E7C86',backgroundColor:'rgba(14,124,134,.1)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#0E7C86'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return'Avg: '+c.raw+'% ('+ct[c.dataIndex]+' assessments)';}}}},scales:{y:{beginAtZero:true,max:100,title:{display:true,text:'Cover %'}},x:{title:{display:true,text:'Year'}}}}
+    });
+  }
+  var tot=ct.reduce(function(a,b){return a+b;},0);
+  document.getElementById('trendInfo').innerHTML='<i class="fas fa-chart-line"></i> '+tot+' assessment(s) across '+lb.length+' year(s)';
+}
+
+function updChartM(m){
+  var ym={};m.b.forEach(function(b){b.a.forEach(function(a){
+    var y=parseInt(a.d.split('-')[0]);if(!ym[y])ym[y]={s:0,c:0};if(a.cc!==null){ym[y].s+=a.cc;ym[y].c++;}
+  });});
+  var td=Object.keys(ym).sort().map(function(y){return{year:parseInt(y),avg_cover:ym[y].c>0?Math.round(ym[y].s/ym[y].c*10)/10:null,count:ym[y].c};});
+  updChart(td);
+}
+
+function updHealth(s,ms){
+  var all=[];
+  ms.forEach(function(m){m.b.forEach(function(b){if(b.lcv!==null)all.push({name:b.name+', '+m.name,cover:b.lcv,mid:m.id,bid:b.id});});});
+  var ex=all.filter(function(s){return s.cover>=65;}).sort(function(a,b){return b.cover-a.cover;}).slice(0,3);
+  var po=all.filter(function(s){return s.cover<25;}).sort(function(a,b){return a.cover-b.cover;}).slice(0,3);
+  var eh='<strong>Top Excellent Sites:</strong><br>';if(!ex.length)eh+='<small>None found</small>';
+  ex.forEach(function(s){eh+='<span class="rt-dash-stag rt-dash-stag-e" onclick="window.ZB('+s.mid+','+s.bid+')">'+s.name+' ('+s.cover+'%)</span>';});
+  document.getElementById('topExc').innerHTML=eh;
+  var ph='<strong>Most Vulnerable Sites:</strong><br>';if(!po.length)ph+='<small>None found</small>';
+  po.forEach(function(s){ph+='<span class="rt-dash-stag rt-dash-stag-p" onclick="window.ZB('+s.mid+','+s.bid+')">'+s.name+' ('+s.cover+'%)</span>';});
+  document.getElementById('topPoor').innerHTML=ph;
+}
+
+window.ZB=function(mid,bid){window.ZM(mid);};
+})();
+</script>
+<script>
+var tourSteps=[
+  {el:null,title:'Welcome to Reef Explorer',text:'This interactive map lets you browse approved coral reef assessments across Sarangani Bay. Here\'s a quick tour to get you started.',pos:'center'},
+  {el:'.rt-dash-filters',title:'Filter & Search',text:'Use these controls to filter by <b>municipality</b>, search a <b>barangay</b>, set a <b>year range</b>, or filter by <b>health condition</b>.',pos:'bottom'},
+  {el:'#dashMap',title:'Interactive Map',text:'The map shows <b>municipality markers</b> (teal circles with assessment counts). Click a marker, then hit <b>Zoom In</b> to see individual <b>barangay markers</b> colored by health.',pos:'right'},
+  {el:'#btnTransects',title:'Transect Lines',text:'Toggle this button to show <b>shallow</b> (cyan) and <b>deep</b> (blue) transect lines on the map. Click any line to see species data.',pos:'bottom'},
+  {el:'.rt-dash-sidecol',title:'Sidebar Panel',text:'The sidebar shows <b>barangay details</b>, <b>coral cover trends</b> chart, and a <b>reef health summary</b>. Click a barangay marker to populate it.',pos:'left'},
+  {el:null,title:'You\'re All Set!',text:'Start by clicking a municipality marker on the map, or use the filters above to narrow down what you see. Enjoy exploring!',pos:'center'}
+];
+var tourIdx=0,tourOverlay,tourBackdrop,tourSpot,tourTooltip;
+function startTour(){
+  tourIdx=0;
+  if(!document.getElementById('tourOverlay')){
+    tourOverlay=document.createElement('div');tourOverlay.id='tourOverlay';tourOverlay.className='rt-tour-overlay';
+    tourOverlay.innerHTML='<div class="rt-tour-backdrop" id="tourBackdrop"></div><div class="rt-tour-spotlight" id="tourSpot"></div><div class="rt-tour-tooltip" id="tourTooltip"><div class="rt-tour-tooltip-arrow" id="tourArrow"></div><div class="rt-tour-head"><i class="fas fa-compass"></i><span id="tourTitle"></span></div><div class="rt-tour-body"><p id="tourText"></p></div><div class="rt-tour-foot"><div class="rt-tour-dots" id="tourDots"></div><div class="rt-tour-btns"><button class="rt-tour-btn rt-tour-btn-skip" id="tourSkip">Skip</button><button class="rt-tour-btn rt-tour-btn-next" id="tourNext">Next</button></div></div></div>';
+    document.body.appendChild(tourOverlay);
+    document.getElementById('tourBackdrop').onclick=function(){closeTour();};
+    document.getElementById('tourSkip').onclick=function(){closeTour();};
+    document.getElementById('tourNext').onclick=function(){tourIdx++;showTourStep();};
+  }
+  document.getElementById('tourOverlay').style.display='block';
+  buildDots();
+  showTourStep();
+}
+function closeTour(){document.getElementById('tourOverlay').style.display='none';localStorage.setItem('rt_tour_done','1');}
+function buildDots(){var h='';for(var i=0;i<tourSteps.length;i++)h+='<div class="rt-tour-dot'+(i===0?' active':'')+'" id="tourDot'+i+'"></div>';document.getElementById('tourDots').innerHTML=h;}
+function showTourStep(){
+  if(tourIdx>=tourSteps.length){closeTour();return;}
+  var s=tourSteps[tourIdx],sp=document.getElementById('tourSpot'),tt=document.getElementById('tourTooltip'),ar=document.getElementById('tourArrow'),bd=document.getElementById('tourBackdrop');
+  document.getElementById('tourTitle').innerHTML=s.title;
+  document.getElementById('tourText').innerHTML=s.text;
+  document.getElementById('tourNext').textContent=tourIdx===tourSteps.length-1?'Done':'Next';
+  document.getElementById('tourNext').className='rt-tour-btn '+(tourIdx===tourSteps.length-1?'rt-tour-btn-done':'rt-tour-btn-next');
+  for(var i=0;i<tourSteps.length;i++){var dot=document.getElementById('tourDot'+i);if(dot)dot.className='rt-tour-dot'+(i===tourIdx?' active':'');}
+  if(!s.el||!document.querySelector(s.el)){
+    sp.style.display='none';ar.style.display='none';
+    tt.style.left='50%';tt.style.top='50%';tt.style.transform='translate(-50%,-50%)';
+  }else{
+    var e=document.querySelector(s.el),r=e.getBoundingClientRect(),pad=8;
+    sp.style.display='block';ar.style.display='block';
+    sp.style.left=(r.left-pad)+'px';sp.style.top=(r.top-pad)+'px';sp.style.width=(r.width+pad*2)+'px';sp.style.height=(r.height+pad*2)+'px';
+    tt.style.transform='none';
+    if(s.pos==='bottom'){
+      tt.style.left=(r.left+r.width/2)+'px';tt.style.top=(r.bottom+pad+14)+'px';tt.style.transform='translateX(-50%)';
+      ar.className='rt-tour-tooltip-arrow arrow-top';
+    }else if(s.pos==='top'){
+      tt.style.left=(r.left+r.width/2)+'px';tt.style.top=(r.top-pad-14)+'px';tt.style.transform='translate(-50%,-100%)';
+      ar.className='rt-tour-tooltip-arrow arrow-bottom';
+    }else if(s.pos==='left'){
+      tt.style.left=(r.left-pad-14)+'px';tt.style.top=(r.top+r.height/2)+'px';tt.style.transform='translate(-100%,-50%)';
+      ar.className='rt-tour-tooltip-arrow arrow-right';
+    }else if(s.pos==='right'){
+      tt.style.left=(r.right+pad+14)+'px';tt.style.top=(r.top+r.height/2)+'px';tt.style.transform='translateY(-50%)';
+      ar.className='rt-tour-tooltip-arrow arrow-left';
+    }else{
+      tt.style.left='50%';tt.style.top='50%';tt.style.transform='translate(-50%,-50%)';ar.style.display='none';
+    }
+  }
+}
+document.addEventListener('keydown',function(e){if(!document.getElementById('tourOverlay')||document.getElementById('tourOverlay').style.display==='none')return;if(e.key==='Escape')closeTour();if(e.key==='Enter'||e.key===' '){e.preventDefault();tourIdx++;showTourStep();}});
+document.addEventListener('DOMContentLoaded',function(){if(!localStorage.getItem('rt_tour_done'))setTimeout(startTour,600);});
+</script>
+{% endblock %}

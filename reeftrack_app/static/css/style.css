@@ -1,5 +1,5 @@
 /* =========================================================
-   ReefTrack Theme — "Coral Reef"
+   ReefTrack Theme â€” "Coral Reef"
    A Web-Based Coral Reef Assessment Information System
    with Geospatial Mapping and Time-Series Analytics
    ========================================================= */
@@ -7,13 +7,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root {
-  /* Existing variable names used across templates — remapped to the new palette
+  /* Existing variable names used across templates â€” remapped to the new palette
      so index.html's inline var(--lagoon) etc. pick up the theme automatically */
   --lagoon: #0E7C86;
   --ocean-blue: #062E3F;
   --sunset-sand: #F5EDE0;
 
-  /* Core palette — coral reef */
+  /* Core palette â€” coral reef */
   --rt-navy: #062E3F;
   --rt-navy-light: #0A4A61;
   --rt-teal: #0E7C86;
@@ -40,6 +40,9 @@
 }
 
 /* ---------- Base ---------- */
+html {
+  overflow-x: hidden;
+}
 body {
   background-color: var(--rt-sand);
   color: var(--rt-ink);
@@ -49,6 +52,7 @@ body {
   display: flex !important;
   flex-direction: column !important;
   margin: 0;
+  overflow-x: hidden;
 }
 
 .rt-main-content { flex: 1 0 auto !important; }
@@ -354,6 +358,38 @@ form textarea:focus {
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
+/* ---------- Step Indicator Wrapping ---------- */
+.rt-step-indicator {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+/* ---------- Action Button Touch Targets ---------- */
+.table .btn-sm {
+  min-height: 36px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.table-responsive td .btn + .btn {
+  margin-left: 0.25rem;
+}
+
+/* ---------- Admin Stats Responsive ---------- */
+.rt-stat-card {
+  transition: transform 0.2s ease;
+}
+.rt-stat-card:hover {
+  transform: translateY(-3px);
+}
+@media (max-width: 575.98px) {
+  .rt-stat-card {
+    margin-bottom: 0.75rem;
+  }
+}
+
 /* ---------- Mobile & Responsive ---------- */
 
 /* Touch devices: disable hover transforms, use tap instead */
@@ -361,6 +397,7 @@ form textarea:focus {
   .card:hover { transform: none; box-shadow: var(--rt-shadow) !important; }
   .card.h-100:hover { transform: none; }
   .rt-step-circle:hover { transform: none; box-shadow: none; }
+  .rt-stat-card:hover { transform: none; }
 }
 
 /* Small screens (phones) */
@@ -421,6 +458,21 @@ form textarea:focus {
 
   /* Table scroll hint */
   .table-responsive { font-size: 0.85rem; }
+
+  /* Smaller font in tables on mobile */
+  .table td, .table th { padding: 0.4rem 0.3rem; font-size: 0.82rem; }
+
+  /* Dropdowns don't overflow */
+  .dropdown-menu { min-width: auto !important; max-width: 90vw; }
+
+  /* Accordion reference coords tighter on mobile */
+  .accordion-body { padding: 0.75rem; }
+  .accordion-body .table td,
+  .accordion-body .table th { font-size: 0.75rem; padding: 0.3rem 0.25rem; }
+
+  /* Admin stat cards */
+  .rt-stat-card { padding: 1rem !important; }
+  .rt-stat-card .card-body { padding: 0.75rem !important; }
 
   /* Bigger spacing for stacked cards */
   .row.g-4 > [class*="col-"] { margin-bottom: 0.75rem; }
