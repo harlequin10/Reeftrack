@@ -2204,7 +2204,10 @@ def admin_barangay_transect_coords(request, barangay_id):
 @admin_required
 def admin_manage_locations(request):
     """Admin: List all municipalities with barangay counts."""
-    municipalities = Municipality.objects.annotate(barangay_count=Count('barangays')).order_by('name')
+    municipalities = Municipality.objects.annotate(
+        barangay_count=Count('barangays'),
+        approved_assessment_count=Count('barangays__assessments', filter=Q(barangays__assessments__status='approved')),
+    ).order_by('name')
     return render(request, 'admin/locations/index.html', {
         'municipalities': municipalities,
     })
