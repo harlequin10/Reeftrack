@@ -47,6 +47,7 @@ urlpatterns = [
 
     # ==================== ADMIN ASSESSMENT REVIEW ====================
     path('manage/assessments/', views.admin_assessments, name='admin_assessments'),
+    path('manage/assessments/bulk-delete/', views.admin_bulk_delete_assessments, name='admin_bulk_delete_assessments'),
     path('manage/assessments/<int:assessment_id>/', views.admin_assessment_detail, name='admin_assessment_detail'),
     path('manage/assessments/<int:assessment_id>/confirm-approval/', views.admin_confirm_approval, name='admin_confirm_approval'),
     path('manage/assessments/<int:assessment_id>/action/', views.admin_assessment_action, name='admin_assessment_action'),

@@ -1809,6 +1809,34 @@ def admin_assessments(request):
 
 @login_required
 @admin_required
+def admin_bulk_delete_assessments(request):
+    """Admin: Bulk delete selected assessments. Only rejected and draft can be deleted."""
+    if request.method == 'POST':
+        ids = request.POST.getlist('ids')
+        if not ids:
+            messages.warning(request, 'No assessments selected.')
+            return redirect('admin_assessments')
+        deleted = []
+        skipped = []
+        for aid in ids:
+            try:
+                a = Assessment.objects.get(id=aid)
+            except Assessment.DoesNotExist:
+                continue
+            if a.status in ('submitted', 'approved'):
+                skipped.append(f'#{a.id} ({a.get_status_display()})')
+            else:
+                deleted.append(f'#{a.id} ({a.get_status_display()})')
+                a.delete()
+        if deleted:
+            messages.success(request, f'Deleted {len(deleted)} assessment(s): {", ".join(deleted)}.')
+        if skipped:
+            messages.warning(request, f'Skipped {len(skipped)} (pending or approved): {", ".join(skipped)}.')
+    return redirect('admin_assessments')
+
+
+@login_required
+@admin_required
 def admin_assessment_detail(request, assessment_id):
     """Admin: View assessment details with duplicate detection."""
     assessment = get_object_or_404(

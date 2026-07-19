@@ -84,10 +84,18 @@
 <!-- Assessments Table -->
 <div class="card">
     <div class="card-body">
+        <div class="d-flex justify-content-end mb-2">
+            <button class="btn btn-sm btn-danger d-none" id="bulkDeleteAssessmentBtn" onclick="confirmBulkDeleteAssessment()">
+                <i class="fas fa-trash"></i> Delete Selected (<span id="selectedAssessmentCount">0</span>)
+            </button>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <th style="width:40px;">
+                            <input type="checkbox" id="selectAllAssessments" class="form-check-input" title="Select all">
+                        </th>
                         <th>#</th>
                         <th>Location</th>
                         <th>Date</th>
@@ -101,7 +109,12 @@
                 </thead>
                 <tbody>
                     {% for a in assessments %}
-                    <tr>
+                    <tr class="assess-row" data-id="{{ a.id }}" data-status="{{ a.status }}">
+                        <td>
+                            {% if a.status == 'rejected' or a.status == 'draft' %}
+                            <input type="checkbox" class="form-check-input assess-check" value="{{ a.id }}">
+                            {% endif %}
+                        </td>
                         <td><strong>{{ a.id }}</strong></td>
                         <td>
                             <strong>{{ a.barangay }}</strong>
@@ -111,7 +124,7 @@
                         <td>{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</td>
                         <td>
                             {% if a.reviewed_by %}
-                                <small>{% if a.reviewed_by %}{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}{% else %}-{% endif %}</small>
+                                <small>{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}</small>
                             {% else %}
                                 <small class="text-muted">-</small>
                             {% endif %}
@@ -149,7 +162,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center py-4">
+                        <td colspan="10" class="text-center py-4">
                             <i class="fas fa-clipboard fa-3x text-muted mb-3 d-block"></i>
                             <h5>No assessments found</h5>
                             <p class="text-muted">No assessments match your filters.</p>
@@ -161,4 +174,95 @@
         </div>
     </div>
 </div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal fade" id="bulkDeleteAssessmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="bulkDeleteAssessmentForm" method="POST" action="{% url 'admin_bulk_delete_assessments' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Delete Selected Assessments</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to delete <strong id="bulkDeleteAssessmentCount">0</strong> assessment(s).</p>
+                    <div id="bulkDeleteAssessmentList" class="mb-2"></div>
+                    <div id="bulkSkipAssessmentAlert" class="alert alert-warning py-2 mb-0 d-none">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="bulkSkipAssessmentText"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+var selectAllA = document.getElementById('selectAllAssessments');
+var aChecks = document.querySelectorAll('.assess-check');
+var bulkABtn = document.getElementById('bulkDeleteAssessmentBtn');
+var countASpan = document.getElementById('selectedAssessmentCount');
+
+selectAllA.addEventListener('change', function() {
+    var checked = this.checked;
+    aChecks.forEach(function(c) { c.checked = checked; });
+    updateBulkABtn();
+});
+
+aChecks.forEach(function(c) {
+    c.addEventListener('change', updateBulkABtn);
+});
+
+function updateBulkABtn() {
+    var sel = document.querySelectorAll('.assess-check:checked').length;
+    countASpan.textContent = sel;
+    bulkABtn.classList.toggle('d-none', sel === 0);
+}
+
+function confirmBulkDeleteAssessment() {
+    var selected = [];
+    var skippable = [];
+    var form = document.getElementById('bulkDeleteAssessmentForm');
+    form.querySelectorAll('input[name="ids"]').forEach(function(e) { e.remove(); });
+
+    document.querySelectorAll('.assess-check:checked').forEach(function(c) {
+        var row = c.closest('.assess-row');
+        var id = c.value;
+        var status = row.getAttribute('data-status');
+        var loc = row.querySelector('strong').textContent;
+        if (status === 'submitted' || status === 'approved') {
+            skippable.push('#' + id + ' ' + loc + ' (' + status + ')');
+        } else {
+            selected.push('#' + id + ' ' + loc + ' (' + status + ')');
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids';
+            input.value = id;
+            form.appendChild(input);
+        }
+    });
+
+    if (selected.length === 0 && skippable.length === 0) return;
+
+    document.getElementById('bulkDeleteAssessmentCount').textContent = selected.length;
+    document.getElementById('bulkDeleteAssessmentList').innerHTML = selected.map(function(n) {
+        return '<span class="badge bg-danger me-1 mb-1">' + n + '</span>';
+    }).join('');
+
+    var skipAlert = document.getElementById('bulkSkipAssessmentAlert');
+    if (skippable.length > 0) {
+        skipAlert.classList.remove('d-none');
+        document.getElementById('bulkSkipAssessmentText').textContent = skippable.length + ' will be skipped (pending or approved): ' + skippable.join(', ');
+    } else {
+        skipAlert.classList.add('d-none');
+    }
+
+    new bootstrap.Modal(document.getElementById('bulkDeleteAssessmentModal')).show();
+}
+</script>
 {% endblock %}
