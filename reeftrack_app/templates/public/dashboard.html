@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
 <style>
-body{overflow:hidden!important;height:100vh!important;display:flex!important;flex-direction:column!important;}
+body{overflow:hidden!important;height:100vh!important;display:grid!important;grid-template-rows:auto 1fr auto!important;}
 .rt-back-to-top{display:none!important;}
 .rt-dash-subbar{background:linear-gradient(135deg,var(--rt-navy),var(--rt-teal));color:#fff;padding:.65rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;position:relative;z-index:1000;flex-shrink:0;}
 .rt-dash-subbar h6{margin:0;font-size:.85rem;font-weight:700;white-space:nowrap;color:#fff !important;}
@@ -129,7 +129,7 @@ body{overflow:hidden!important;height:100vh!important;display:flex!important;fle
 {% endblock %}
 
 {% block main_content %}
-<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+<div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
 <div class="rt-dash-subbar">
   <h6><i class="fas fa-globe-americas"></i> Interactive Reef Explorer</h6>
   <small>Click a municipality marker to zoom in, then click a barangay to view assessment details</small>
