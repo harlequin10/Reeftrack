@@ -1952,13 +1952,19 @@ def admin_assessment_detail(request, assessment_id):
 @admin_required
 def admin_confirm_approval(request, assessment_id):
     """Admin: Show approval warnings before confirming."""
-    assessment = get_object_or_404(
-        Assessment.objects.select_related(
+    try:
+        assessment = Assessment.objects.select_related(
             'municipality', 'barangay', 'uploaded_by'
-        ),
-        id=assessment_id,
-        status='submitted',
-    )
+        ).get(id=assessment_id)
+    except Assessment.DoesNotExist:
+        messages.error(request, f'Assessment #{assessment_id} does not exist anymore. It may have been deleted by another user.')
+        return redirect('admin_assessments')
+
+    if assessment.status != 'submitted':
+        status_display = assessment.get_status_display()
+        messages.warning(request, f'Assessment #{assessment.id} is no longer pending review. It was already {status_display} by another user.')
+        return redirect('admin_assessments')
+
     transects = assessment.transects.all()
 
     # Parse Excel files to get species data
@@ -2045,12 +2051,24 @@ def admin_confirm_approval(request, assessment_id):
 def admin_assessment_action(request, assessment_id):
     """Admin: Approve, reject, or return assessment to pending."""
     with transaction.atomic():
-        assessment = get_object_or_404(
-            Assessment.objects.select_for_update(), id=assessment_id
-        )
+        try:
+            assessment = Assessment.objects.select_for_update().get(id=assessment_id)
+        except Assessment.DoesNotExist:
+            messages.error(request, f'Assessment #{assessment_id} does not exist anymore. It may have been deleted by another user.')
+            return redirect('admin_assessments')
 
         action = request.POST.get('action')
         built_in = {val for val, label in Assessment.METHODOLOGY_CHOICES}
+
+        if action in ('approve', 'reject') and assessment.status != 'submitted':
+            status_display = assessment.get_status_display()
+            messages.warning(request, f'Assessment #{assessment.id} is no longer pending review. It was already {status_display} by another user. Please refresh the page.')
+            return redirect('admin_assessments')
+
+        if action == 'return_to_pending' and assessment.status not in ('approved', 'rejected'):
+            status_display = assessment.get_status_display()
+            messages.warning(request, f'Assessment #{assessment.id} cannot be returned to pending. Current status: {status_display}. Please refresh the page.')
+            return redirect('admin_assessments')
 
         if action == 'approve':
             assessment.status = 'approved'
@@ -2876,13 +2894,19 @@ def curator_assessment_detail(request, assessment_id):
 @curator_required
 def curator_confirm_approval(request, assessment_id):
     """Curator: Show approval warnings before confirming."""
-    assessment = get_object_or_404(
-        Assessment.objects.select_related(
+    try:
+        assessment = Assessment.objects.select_related(
             'municipality', 'barangay', 'uploaded_by'
-        ),
-        id=assessment_id,
-        status='submitted',
-    )
+        ).get(id=assessment_id)
+    except Assessment.DoesNotExist:
+        messages.error(request, f'Assessment #{assessment_id} does not exist anymore. It may have been deleted by another user.')
+        return redirect('curator_assessments')
+
+    if assessment.status != 'submitted':
+        status_display = assessment.get_status_display()
+        messages.warning(request, f'Assessment #{assessment.id} is no longer pending review. It was already {status_display} by another user.')
+        return redirect('curator_assessments')
+
     transects = assessment.transects.all()
 
     all_species = []
@@ -2963,12 +2987,24 @@ def curator_confirm_approval(request, assessment_id):
 def curator_assessment_action(request, assessment_id):
     """Curator: Approve, reject, or return assessment to pending."""
     with transaction.atomic():
-        assessment = get_object_or_404(
-            Assessment.objects.select_for_update(), id=assessment_id
-        )
+        try:
+            assessment = Assessment.objects.select_for_update().get(id=assessment_id)
+        except Assessment.DoesNotExist:
+            messages.error(request, f'Assessment #{assessment_id} does not exist anymore. It may have been deleted by another user.')
+            return redirect('curator_assessments')
 
         action = request.POST.get('action')
         built_in = {val for val, label in Assessment.METHODOLOGY_CHOICES}
+
+        if action in ('approve', 'reject') and assessment.status != 'submitted':
+            status_display = assessment.get_status_display()
+            messages.warning(request, f'Assessment #{assessment.id} is no longer pending review. It was already {status_display} by another user. Please refresh the page.')
+            return redirect('curator_assessments')
+
+        if action == 'return_to_pending' and assessment.status not in ('approved', 'rejected'):
+            status_display = assessment.get_status_display()
+            messages.warning(request, f'Assessment #{assessment.id} cannot be returned to pending. Current status: {status_display}. Please refresh the page.')
+            return redirect('curator_assessments')
 
         if action == 'approve':
             assessment.status = 'approved'
