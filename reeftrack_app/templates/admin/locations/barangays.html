@@ -28,17 +28,25 @@
                 <input type="text" id="brgySearch" class="form-control" placeholder="Search barangay...">
             </div>
         </div>
-        <div class="col-md-6 text-end">
+        <div class="col-md-6 text-end d-flex justify-content-end align-items-center gap-2">
+            <button class="btn btn-sm btn-danger d-none" id="bulkDeleteBrgyBtn" onclick="confirmBulkDeleteBrgy()">
+                <i class="fas fa-trash"></i> Delete Selected (<span id="selectedBrgyCount">0</span>)
+            </button>
             <small class="text-muted" id="brgyCount">{{ barangay_data|length }} barangay{{ barangay_data|length|pluralize }}</small>
         </div>
     </div>
 </div>
+<div class="mb-2">
+    <input type="checkbox" id="selectAllBrgy" class="form-check-input me-1" title="Select all">
+    <label for="selectAllBrgy" class="text-muted small">Select all</label>
+</div>
 <div class="accordion" id="barangayAccordion">
     {% for item in barangay_data %}
     {% with b=item.barangay coords=item.coords %}
-    <div class="accordion-item brgy-item" data-name="{{ b.name|lower }}">
-        <h2 class="accordion-header">
-            <button class="accordion-button collapsed" type="button"
+    <div class="accordion-item brgy-item" data-name="{{ b.name|lower }}" data-id="{{ b.id }}" data-assessments="{{ b.approved_assessment_count }}">
+        <h2 class="accordion-header d-flex align-items-center">
+            <input type="checkbox" class="form-check-input brgy-check mx-2" value="{{ b.id }}">
+            <button class="accordion-button collapsed flex-grow-1" type="button"
                     data-bs-toggle="collapse" data-bs-target="#brgy{{ b.id }}">
                 <strong>{{ b.name }}</strong>
                 <span class="badge bg-secondary ms-2">{{ coords|length }} ref{{ coords|length|pluralize }}</span>
@@ -457,5 +465,97 @@ document.getElementById('brgySearch').addEventListener('input', function() {
     });
     document.getElementById('brgyCount').textContent = visible + ' barangay' + (visible !== 1 ? 's' : '');
 });
+
+var selectAllBrgy = document.getElementById('selectAllBrgy');
+var brgyChecks = document.querySelectorAll('.brgy-check');
+var bulkBrgyBtn = document.getElementById('bulkDeleteBrgyBtn');
+var countBrgySpan = document.getElementById('selectedBrgyCount');
+
+selectAllBrgy.addEventListener('change', function() {
+    var checked = this.checked;
+    brgyChecks.forEach(function(c) {
+        var item = c.closest('.brgy-item');
+        if (item && item.style.display !== 'none') c.checked = checked;
+    });
+    updateBulkBrgyBtn();
+});
+
+brgyChecks.forEach(function(c) {
+    c.addEventListener('change', updateBulkBrgyBtn);
+});
+
+function updateBulkBrgyBtn() {
+    var sel = document.querySelectorAll('.brgy-check:checked').length;
+    countBrgySpan.textContent = sel;
+    bulkBrgyBtn.classList.toggle('d-none', sel === 0);
+}
+
+function confirmBulkDeleteBrgy() {
+    var selected = [];
+    var skippable = [];
+    var form = document.getElementById('bulkDeleteBrgyForm');
+    var existing = form.querySelectorAll('input[name="ids"]');
+    existing.forEach(function(e) { e.remove(); });
+
+    document.querySelectorAll('.brgy-check:checked').forEach(function(c) {
+        var item = c.closest('.brgy-item');
+        var name = item.querySelector('strong').textContent;
+        var assessments = parseInt(item.getAttribute('data-assessments')) || 0;
+        if (assessments > 0) {
+            skippable.push(name + ' (' + assessments + ' approved)');
+        } else {
+            selected.push(name);
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids';
+            input.value = c.value;
+            form.appendChild(input);
+        }
+    });
+
+    if (selected.length === 0 && skippable.length === 0) return;
+
+    document.getElementById('bulkDeleteBrgyCount').textContent = selected.length;
+    document.getElementById('bulkDeleteBrgyList').innerHTML = selected.map(function(n) {
+        return '<span class="badge bg-danger me-1 mb-1">' + n + '</span>';
+    }).join('');
+
+    var skipAlert = document.getElementById('bulkSkipBrgyAlert');
+    if (skippable.length > 0) {
+        skipAlert.classList.remove('d-none');
+        document.getElementById('bulkSkipBrgyText').textContent = skippable.length + ' will be skipped (has approved assessments): ' + skippable.join(', ');
+    } else {
+        skipAlert.classList.add('d-none');
+    }
+
+    new bootstrap.Modal(document.getElementById('bulkDeleteBrgyModal')).show();
+}
 </script>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal fade" id="bulkDeleteBrgyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="bulkDeleteBrgyForm" method="POST" action="{% url 'admin_bulk_delete_barangays' municipality.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Delete Selected Barangays</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to delete <strong id="bulkDeleteBrgyCount">0</strong> barangay(s).</p>
+                    <div id="bulkDeleteBrgyList" class="mb-2"></div>
+                    <div id="bulkSkipBrgyAlert" class="alert alert-warning py-2 mb-0 d-none">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="bulkSkipBrgyText"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

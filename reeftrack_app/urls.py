@@ -53,10 +53,12 @@ urlpatterns = [
 
     # ==================== ADMIN LOCATION MANAGEMENT ====================
     path('manage/locations/', views.admin_manage_locations, name='admin_manage_locations'),
+    path('manage/locations/bulk-delete/', views.admin_bulk_delete_municipalities, name='admin_bulk_delete_municipalities'),
     path('manage/locations/add-municipality/', views.admin_add_municipality, name='admin_add_municipality'),
     path('manage/locations/<int:municipality_id>/edit/', views.admin_edit_municipality, name='admin_edit_municipality'),
     path('manage/locations/<int:municipality_id>/delete/', views.admin_delete_municipality, name='admin_delete_municipality'),
     path('manage/locations/<int:municipality_id>/barangays/', views.admin_manage_barangays, name='admin_manage_barangays'),
+    path('manage/locations/<int:municipality_id>/barangays/bulk-delete/', views.admin_bulk_delete_barangays, name='admin_bulk_delete_barangays'),
     path('manage/locations/<int:municipality_id>/barangays/add/', views.admin_add_barangay, name='admin_add_barangay'),
     path('manage/locations/barangays/<int:barangay_id>/edit/', views.admin_edit_barangay, name='admin_edit_barangay'),
     path('manage/locations/barangays/<int:barangay_id>/delete/', views.admin_delete_barangay, name='admin_delete_barangay'),

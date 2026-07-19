@@ -21,7 +21,10 @@
                     <input type="text" id="muniSearch" class="form-control" placeholder="Search municipality...">
                 </div>
             </div>
-            <div class="col-md-6 text-end">
+            <div class="col-md-6 text-end d-flex justify-content-end align-items-center gap-2">
+                <button class="btn btn-sm btn-danger d-none" id="bulkDeleteBtn" onclick="confirmBulkDelete()">
+                    <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+                </button>
                 <small class="text-muted" id="muniCount">{{ municipalities|length }} municipality{{ municipalities|length|pluralize }}</small>
             </div>
         </div>
@@ -29,6 +32,9 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <th style="width:40px;">
+                            <input type="checkbox" id="selectAll" class="form-check-input" title="Select all">
+                        </th>
                         <th>#</th>
                         <th>Municipality</th>
                         <th>Barangays</th>
@@ -38,7 +44,10 @@
                 </thead>
                 <tbody id="muniTableBody">
                     {% for m in municipalities %}
-                    <tr class="muni-row">
+                    <tr class="muni-row" data-id="{{ m.id }}" data-assessments="{{ m.approved_assessment_count }}">
+                        <td>
+                            <input type="checkbox" class="form-check-input muni-check" value="{{ m.id }}">
+                        </td>
                         <td>{{ forloop.counter }}</td>
                         <td><strong>{{ m.name }}</strong></td>
                         <td>
@@ -63,7 +72,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-4">
+                        <td colspan="6" class="text-center py-4">
                             <i class="fas fa-map-marker-alt fa-3x text-muted mb-3 d-block"></i>
                             <h5>No municipalities</h5>
                             <p class="text-muted">Add a municipality to get started.</p>
@@ -72,6 +81,33 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="bulkDeleteForm" method="POST" action="{% url 'admin_bulk_delete_municipalities' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Delete Selected Municipalities</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to delete <strong id="bulkDeleteCount">0</strong> municipality(s).</p>
+                    <div id="bulkDeleteList" class="mb-2"></div>
+                    <div id="bulkSkipAlert" class="alert alert-warning py-2 mb-0 d-none">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="bulkSkipText"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -168,5 +204,66 @@ document.getElementById('muniSearch').addEventListener('input', function() {
     });
     document.getElementById('muniCount').textContent = visible + ' municipality' + (visible !== 1 ? 's' : '');
 });
+
+var selectAll = document.getElementById('selectAll');
+var checks = document.querySelectorAll('.muni-check');
+var bulkBtn = document.getElementById('bulkDeleteBtn');
+var countSpan = document.getElementById('selectedCount');
+
+selectAll.addEventListener('change', function() {
+    var checked = this.checked;
+    checks.forEach(function(c) {
+        var row = c.closest('.muni-row');
+        if (row.style.display !== 'none') c.checked = checked;
+    });
+    updateBulkBtn();
+});
+
+checks.forEach(function(c) {
+    c.addEventListener('change', updateBulkBtn);
+});
+
+function updateBulkBtn() {
+    var sel = document.querySelectorAll('.muni-check:checked').length;
+    countSpan.textContent = sel;
+    bulkBtn.classList.toggle('d-none', sel === 0);
+}
+
+function confirmBulkDelete() {
+    var selected = [];
+    var skippable = [];
+    document.querySelectorAll('.muni-check:checked').forEach(function(c) {
+        var row = c.closest('.muni-row');
+        var name = row.querySelector('strong').textContent;
+        var assessments = parseInt(row.getAttribute('data-assessments')) || 0;
+        if (assessments > 0) {
+            skippable.push(name + ' (' + assessments + ' approved)');
+        } else {
+            selected.push(name);
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids';
+            input.value = c.value;
+            document.getElementById('bulkDeleteForm').appendChild(input);
+        }
+    });
+
+    if (selected.length === 0 && skippable.length === 0) return;
+
+    document.getElementById('bulkDeleteCount').textContent = selected.length;
+    document.getElementById('bulkDeleteList').innerHTML = selected.map(function(n) {
+        return '<span class="badge bg-danger me-1 mb-1">' + n + '</span>';
+    }).join('');
+
+    var skipAlert = document.getElementById('bulkSkipAlert');
+    if (skippable.length > 0) {
+        skipAlert.classList.remove('d-none');
+        document.getElementById('bulkSkipText').textContent = skippable.length + ' will be skipped (has approved assessments): ' + skippable.join(', ');
+    } else {
+        skipAlert.classList.add('d-none');
+    }
+
+    new bootstrap.Modal(document.getElementById('bulkDeleteModal')).show();
+}
 </script>
 {% endblock %}
