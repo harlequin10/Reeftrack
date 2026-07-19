@@ -368,13 +368,17 @@ form textarea:focus {
 
 /* ---------- Action Button Touch Targets ---------- */
 .table .btn-sm {
-  min-height: 36px;
-  padding: 0.25rem 0.6rem;
-  font-size: 0.8rem;
+  min-height: 32px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
   white-space: nowrap;
+  line-height: 1.2;
 }
 .table-responsive td .btn + .btn {
   margin-left: 0.25rem;
+}
+.table .btn-sm i {
+  font-size: 0.75rem;
 }
 
 /* ---------- Admin Stats Responsive ---------- */
@@ -417,7 +421,8 @@ form textarea:focus {
   section.text-center .col-lg-8 { padding: 0 0.5rem; }
 
   /* Buttons: larger tap targets */
-  .btn { min-height: 44px; font-size: 1rem; }
+  .btn:not(.btn-sm):not(.btn-close) { min-height: 44px; font-size: 1rem; }
+  .btn-sm { min-height: 34px; font-size: 0.82rem; padding: 0.25rem 0.6rem; }
   .btn-lg { min-height: 50px; font-size: 1.05rem; padding: 0.6rem 1.2rem; }
 
   /* Forms: larger inputs */
@@ -486,7 +491,7 @@ form textarea:focus {
   .display-4 { font-size: 2.2rem; }
   .display-5 { font-size: 1.9rem; }
 
-  .btn { min-height: 44px; }
+  .btn:not(.btn-sm):not(.btn-close) { min-height: 44px; }
 
   .form-control,
   form input[type="text"],
