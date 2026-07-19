@@ -29,12 +29,14 @@ CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins_raw.split(',')
 
 # Application definition
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'reeftrack_app',
 ]
 
@@ -68,6 +70,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'reeftrack.wsgi.application'
+ASGI_APPLICATION = 'reeftrack.asgi.application'
+
+# Channel Layers - InMemory for dev (no Redis needed).
+# For production, switch to InMemoryChannelLayer -> channels.layers.InMemoryChannelLayer
+# or use Redis: CHANNEL_LAYERS = { 'default': { 'BACKEND': 'channels_redis.core.RedisChannelLayer', ... } }
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 # Database
 DATABASES = {

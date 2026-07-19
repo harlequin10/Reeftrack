@@ -1,18 +1,24 @@
 /**
- * Assessment sync polling module.
- * Polls /api/assessments/sync/ and updates the table + stats when data changes.
- * Usage: include this script, then call RTAssessmentSync.init({ role, csrfToken }).
+ * Assessment sync module — WebSocket with polling fallback.
+ *
+ * Connects to ws://host/ws/assessments/. When server pushes a 'refresh'
+ * signal, fetches fresh data from /api/assessments/sync/ and re-renders.
+ * Falls back to polling every 10s if WebSocket is unavailable.
+ *
+ * Usage: RTAssessmentSync.init({ role, csrfToken, filters });
  */
 (function() {
     'use strict';
 
+    var _ws = null;
     var _lastHash = null;
     var _pollTimer = null;
-    var _interval = 10000;
     var _role = 'contributor';
     var _csrfToken = '';
     var _syncUrl = '/api/assessments/sync/';
     var _currentFilters = '';
+    var _reconnectTimer = null;
+    var _usePolling = false;
 
     function getCookie(name) {
         var v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
@@ -25,29 +31,83 @@
         _syncUrl = opts.syncUrl || '/api/assessments/sync/';
         _currentFilters = opts.filters || '';
         _lastHash = null;
-        startPolling();
+
+        connectWebSocket();
     }
 
-    function startPolling() {
-        if (_pollTimer) clearInterval(_pollTimer);
-        _pollTimer = setInterval(poll, _interval);
-        poll();
+    /* ── WebSocket ─────────────────────────────────────────── */
+
+    function getWsUrl() {
+        var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return proto + '//' + location.host + '/ws/assessments/';
+    }
+
+    function connectWebSocket() {
+        if (_ws) { try { _ws.close(); } catch(e) {} }
+
+        try {
+            _ws = new WebSocket(getWsUrl());
+        } catch(e) {
+            fallbackToPolling();
+            return;
+        }
+
+        _ws.onopen = function() {
+            _usePolling = false;
+            stopPolling();
+            fetchAndRender();
+        };
+
+        _ws.onmessage = function(evt) {
+            try {
+                var msg = JSON.parse(evt.data);
+                if (msg.type === 'refresh') {
+                    fetchAndRender();
+                }
+            } catch(e) {}
+        };
+
+        _ws.onclose = function() {
+            _ws = null;
+            if (!_usePolling) scheduleReconnect();
+        };
+
+        _ws.onerror = function() {
+            _usePolling = true;
+            _ws = null;
+            fallbackToPolling();
+        };
+    }
+
+    function scheduleReconnect() {
+        if (_reconnectTimer) clearTimeout(_reconnectTimer);
+        _reconnectTimer = setTimeout(function() {
+            if (!_usePolling) connectWebSocket();
+        }, 3000);
+    }
+
+    /* ── Polling fallback ──────────────────────────────────── */
+
+    function fallbackToPolling() {
+        if (_pollTimer) return;
+        _pollTimer = setInterval(fetchAndRender, 10000);
     }
 
     function stopPolling() {
         if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
     }
 
-    function poll() {
+    /* ── Data fetch + render ───────────────────────────────── */
+
+    function fetchAndRender() {
         var url = _syncUrl + (_currentFilters ? ('?' + _currentFilters) : '');
         fetch(url, { credentials: 'same-origin' })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.hash !== _lastHash) {
                     _lastHash = data.hash;
-                    if (_lastHash !== null) renderTable(data);
+                    renderTable(data);
                     updateStats(data.stats);
-                    showSyncIndicator();
                 }
             })
             .catch(function() {});
@@ -137,7 +197,6 @@
     }
 
     function updateStats(stats) {
-        var map = { 'total': 0, 'submitted': 1, 'approved': 2, 'rejected': 3, 'draft': 4 };
         var cards = document.querySelectorAll('#statsRow .card-body h5');
         if (cards.length >= 5) {
             cards[0].textContent = stats.total;
@@ -146,19 +205,6 @@
             cards[3].textContent = stats.rejected;
             cards[4].textContent = stats.draft;
         }
-    }
-
-    function showSyncIndicator() {
-        var el = document.getElementById('syncIndicator');
-        if (!el) {
-            el = document.createElement('span');
-            el.id = 'syncIndicator';
-            el.style.cssText = 'position:fixed;top:12px;right:12px;background:rgba(0,188,180,0.92);color:#fff;padding:6px 16px;border-radius:20px;font-size:13px;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;';
-            el.innerHTML = '<i class="fas fa-sync-alt"></i> Updated';
-            document.body.appendChild(el);
-        }
-        el.style.opacity = '1';
-        setTimeout(function() { el.style.opacity = '0'; }, 2000);
     }
 
     function rebindCheckboxes() {
@@ -239,10 +285,5 @@
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    window.RTAssessmentSync = {
-        init: init,
-        startPolling: startPolling,
-        stopPolling: stopPolling,
-        poll: poll
-    };
+    window.RTAssessmentSync = { init: init };
 })();

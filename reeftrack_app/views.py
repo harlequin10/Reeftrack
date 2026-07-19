@@ -9,6 +9,8 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from django.db import transaction
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from django.utils import timezone
 from django.http import JsonResponse
 from .forms import RegisterForm, LoginForm, AdminCreateUserForm, UserProfileForm, CustomPasswordChangeForm
@@ -18,6 +20,22 @@ from .models import (
     Transect, Species, TransectSpecies, AssessmentImage, Contributor, CustomMethodology,
     BarangayTransect
 )
+
+
+def notify_assessment_refresh(action=''):
+    """Push a refresh signal to all connected assessment sync clients."""
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'assessments',
+            {
+                'type': 'assessment.refresh',
+                'action': action,
+            }
+        )
+    except Exception:
+        pass
+
 
 def home(request):
     """Public home page"""
@@ -1457,6 +1475,8 @@ def confirm_assessment(request):
     else:
         messages.success(request, f'Assessment submitted for review with {len(pending["transects"])} transect(s). Species will be recorded upon approval.')
 
+    notify_assessment_refresh('submit')
+
     # Redirect to appropriate dashboard based on role
     if user_role == 'admin':
         return redirect('admin_dashboard')
@@ -1768,6 +1788,7 @@ def delete_assessment(request, assessment_id):
 
         assessment.delete()
         messages.success(request, f'Assessment #{assessment_id} has been deleted.')
+        notify_assessment_refresh('delete')
     if user_role == 'admin':
         return redirect('admin_assessments')
     return redirect('my_assessments')
@@ -1835,6 +1856,7 @@ def admin_bulk_delete_assessments(request):
                 a.delete()
         if deleted:
             messages.success(request, f'Deleted {len(deleted)} assessment(s): {", ".join(deleted)}.')
+            notify_assessment_refresh('bulk_delete')
         if skipped:
             messages.warning(request, f'Skipped {len(skipped)} (pending or approved): {", ".join(skipped)}.')
     return redirect('admin_assessments')
@@ -2076,6 +2098,8 @@ def admin_assessment_action(request, assessment_id):
             messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} species record(s) removed.')
         else:
             messages.error(request, 'Invalid action.')
+
+        notify_assessment_refresh(action)
 
     return redirect('admin_assessments')
 
@@ -2992,6 +3016,8 @@ def curator_assessment_action(request, assessment_id):
             messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} species record(s) removed.')
         else:
             messages.error(request, 'Invalid action.')
+
+        notify_assessment_refresh(action)
 
     return redirect('curator_assessments')
 
