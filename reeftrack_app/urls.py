@@ -44,6 +44,7 @@ urlpatterns = [
     path('api/barangays/', views.get_barangays, name='get_barangays'),
     path('api/contributors/search/', views.search_contributors, name='search_contributors'),
     path('api/contributors/create/', views.create_contributor, name='create_contributor'),
+    path('api/assessments/sync/', views.assessments_sync, name='assessments_sync'),
 
     # ==================== ADMIN ASSESSMENT REVIEW ====================
     path('manage/assessments/', views.admin_assessments, name='admin_assessments'),

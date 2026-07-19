@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
+from django.db import transaction
 from django.utils import timezone
 from django.http import JsonResponse
 from .forms import RegisterForm, LoginForm, AdminCreateUserForm, UserProfileForm, CustomPasswordChangeForm
@@ -1727,42 +1728,46 @@ def delete_assessment(request, assessment_id):
         messages.error(request, 'Curators do not have permission to delete assessments.')
         return redirect('curator_assessments')
 
-    if user_role == 'admin':
-        assessment = get_object_or_404(Assessment, id=assessment_id)
-    else:
-        assessment = get_object_or_404(Assessment, id=assessment_id, uploaded_by=request.user)
+    with transaction.atomic():
+        if user_role == 'admin':
+            assessment = get_object_or_404(
+                Assessment.objects.select_for_update(), id=assessment_id
+            )
+        else:
+            assessment = get_object_or_404(
+                Assessment.objects.select_for_update(), id=assessment_id, uploaded_by=request.user
+            )
 
-    # Admin can only delete rejected; contributors can delete submitted or rejected
-    if user_role == 'admin' and assessment.status != 'rejected':
-        messages.error(request, 'Admin can only delete rejected assessments.')
-        return redirect('admin_assessments')
+        # Admin can only delete rejected; contributors can delete submitted or rejected
+        if user_role == 'admin' and assessment.status != 'rejected':
+            messages.error(request, 'Admin can only delete rejected assessments.')
+            return redirect('admin_assessments')
 
-    if user_role == 'contributor' and assessment.status not in ('submitted', 'rejected'):
-        messages.error(request, 'You can only delete assessments that are pending or rejected.')
-        return redirect('my_assessments')
+        if user_role == 'contributor' and assessment.status not in ('submitted', 'rejected'):
+            messages.error(request, 'You can only delete assessments that are pending or rejected.')
+            return redirect('my_assessments')
 
-    # Delete associated files
-    import os
-    if assessment.thesis_pdf:
-        thesis_path = assessment.thesis_pdf.path if hasattr(assessment.thesis_pdf, 'path') else None
-        if thesis_path and os.path.exists(thesis_path):
-            os.remove(thesis_path)
-    for img in assessment.images.all():
-        img_path = img.image.path if hasattr(img.image, 'path') else None
-        if img_path and os.path.exists(img_path):
-            os.remove(img_path)
-    for transect in assessment.transects.all():
-        if transect.shallow_excel:
-            path = transect.shallow_excel.path if hasattr(transect.shallow_excel, 'path') else None
-            if path and os.path.exists(path):
-                os.remove(path)
-        if transect.deep_excel:
-            path = transect.deep_excel.path if hasattr(transect.deep_excel, 'path') else None
-            if path and os.path.exists(path):
-                os.remove(path)
+        # Delete associated files
+        if assessment.thesis_pdf:
+            thesis_path = assessment.thesis_pdf.path if hasattr(assessment.thesis_pdf, 'path') else None
+            if thesis_path and os.path.exists(thesis_path):
+                os.remove(thesis_path)
+        for img in assessment.images.all():
+            img_path = img.image.path if hasattr(img.image, 'path') else None
+            if img_path and os.path.exists(img_path):
+                os.remove(img_path)
+        for transect in assessment.transects.all():
+            if transect.shallow_excel:
+                path = transect.shallow_excel.path if hasattr(transect.shallow_excel, 'path') else None
+                if path and os.path.exists(path):
+                    os.remove(path)
+            if transect.deep_excel:
+                path = transect.deep_excel.path if hasattr(transect.deep_excel, 'path') else None
+                if path and os.path.exists(path):
+                    os.remove(path)
 
-    assessment.delete()
-    messages.success(request, f'Assessment #{assessment_id} has been deleted.')
+        assessment.delete()
+        messages.success(request, f'Assessment #{assessment_id} has been deleted.')
     if user_role == 'admin':
         return redirect('admin_assessments')
     return redirect('my_assessments')
@@ -2017,61 +2022,60 @@ def admin_confirm_approval(request, assessment_id):
 @admin_required
 def admin_assessment_action(request, assessment_id):
     """Admin: Approve, reject, or return assessment to pending."""
-    assessment = get_object_or_404(Assessment, id=assessment_id)
+    with transaction.atomic():
+        assessment = get_object_or_404(
+            Assessment.objects.select_for_update(), id=assessment_id
+        )
 
-    action = request.POST.get('action')
-    built_in = {val for val, label in Assessment.METHODOLOGY_CHOICES}
+        action = request.POST.get('action')
+        built_in = {val for val, label in Assessment.METHODOLOGY_CHOICES}
 
-    if action == 'approve':
-        assessment.status = 'approved'
-        assessment.reviewed_by = request.user
-        assessment.approved_at = timezone.now()
-        assessment.save()
-        species_count = populate_species_from_excel(assessment)
-        save_barangay_transect_coords(assessment)
-        if assessment.methodology not in built_in:
-            CustomMethodology.objects.get_or_create(name=assessment.methodology)
-        messages.success(request, f'Assessment #{assessment.id} approved. {species_count} species record(s) created.')
-    elif action == 'reject':
-        rejection_reason = request.POST.get('rejection_reason', '')
-        assessment.status = 'rejected'
-        assessment.reviewed_by = request.user
-        assessment.approved_at = None
-        assessment.notes = rejection_reason
-        assessment.save()
-        messages.info(request, f'Assessment #{assessment.id} has been rejected.')
-    elif action == 'return_to_pending':
-        assessment.status = 'submitted'
-        assessment.reviewed_by = None
-        assessment.approved_at = None
-        assessment.notes = ''
-        assessment.save()
-        # Clean up custom methodology if no other approved assessments use it
-        if assessment.methodology not in built_in:
-            other_approved = Assessment.objects.filter(
-                status='approved', methodology=assessment.methodology
-            ).exclude(id=assessment.id).exists()
-            if not other_approved:
-                CustomMethodology.objects.filter(name=assessment.methodology).delete()
-        cleanup_barangay_transect_coords(assessment)
-        transects = assessment.transects.all()
-        # Get species IDs used by this assessment (evaluate before delete)
-        species_ids = list(TransectSpecies.objects.filter(
-            transect__in=transects
-        ).values_list('species_id', flat=True).distinct())
-        # Delete TransectSpecies first
-        deleted, _ = TransectSpecies.objects.filter(transect__in=transects).delete()
-        # Delete species not used by any other approved assessment
-        if species_ids:
-            other_approved_species = set(TransectSpecies.objects.filter(
-                transect__assessment__status='approved'
-            ).exclude(transect__assessment=assessment).values_list('species_id', flat=True).distinct())
-            orphan_ids = set(species_ids) - other_approved_species
-            if orphan_ids:
-                Species.objects.filter(id__in=orphan_ids, source=Species.SOURCE_ASSESSMENT).delete()
-        messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} species record(s) removed.')
-    else:
-        messages.error(request, 'Invalid action.')
+        if action == 'approve':
+            assessment.status = 'approved'
+            assessment.reviewed_by = request.user
+            assessment.approved_at = timezone.now()
+            assessment.save()
+            species_count = populate_species_from_excel(assessment)
+            save_barangay_transect_coords(assessment)
+            if assessment.methodology not in built_in:
+                CustomMethodology.objects.get_or_create(name=assessment.methodology)
+            messages.success(request, f'Assessment #{assessment.id} approved. {species_count} species record(s) created.')
+        elif action == 'reject':
+            rejection_reason = request.POST.get('rejection_reason', '')
+            assessment.status = 'rejected'
+            assessment.reviewed_by = request.user
+            assessment.approved_at = None
+            assessment.notes = rejection_reason
+            assessment.save()
+            messages.info(request, f'Assessment #{assessment.id} has been rejected.')
+        elif action == 'return_to_pending':
+            assessment.status = 'submitted'
+            assessment.reviewed_by = None
+            assessment.approved_at = None
+            assessment.notes = ''
+            assessment.save()
+            if assessment.methodology not in built_in:
+                other_approved = Assessment.objects.filter(
+                    status='approved', methodology=assessment.methodology
+                ).exclude(id=assessment.id).exists()
+                if not other_approved:
+                    CustomMethodology.objects.filter(name=assessment.methodology).delete()
+            cleanup_barangay_transect_coords(assessment)
+            transects = assessment.transects.all()
+            species_ids = list(TransectSpecies.objects.filter(
+                transect__in=transects
+            ).values_list('species_id', flat=True).distinct())
+            deleted, _ = TransectSpecies.objects.filter(transect__in=transects).delete()
+            if species_ids:
+                other_approved_species = set(TransectSpecies.objects.filter(
+                    transect__assessment__status='approved'
+                ).exclude(transect__assessment=assessment).values_list('species_id', flat=True).distinct())
+                orphan_ids = set(species_ids) - other_approved_species
+                if orphan_ids:
+                    Species.objects.filter(id__in=orphan_ids, source=Species.SOURCE_ASSESSMENT).delete()
+            messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} species record(s) removed.')
+        else:
+            messages.error(request, 'Invalid action.')
 
     return redirect('admin_assessments')
 
@@ -2934,58 +2938,60 @@ def curator_confirm_approval(request, assessment_id):
 @curator_required
 def curator_assessment_action(request, assessment_id):
     """Curator: Approve, reject, or return assessment to pending."""
-    assessment = get_object_or_404(Assessment, id=assessment_id)
+    with transaction.atomic():
+        assessment = get_object_or_404(
+            Assessment.objects.select_for_update(), id=assessment_id
+        )
 
-    action = request.POST.get('action')
-    built_in = {val for val, label in Assessment.METHODOLOGY_CHOICES}
+        action = request.POST.get('action')
+        built_in = {val for val, label in Assessment.METHODOLOGY_CHOICES}
 
-    if action == 'approve':
-        assessment.status = 'approved'
-        assessment.reviewed_by = request.user
-        assessment.approved_at = timezone.now()
-        assessment.save()
-        species_count = populate_species_from_excel(assessment)
-        save_barangay_transect_coords(assessment)
-        if assessment.methodology not in built_in:
-            CustomMethodology.objects.get_or_create(name=assessment.methodology)
-        messages.success(request, f'Assessment #{assessment.id} approved. {species_count} species record(s) created.')
-    elif action == 'reject':
-        rejection_reason = request.POST.get('rejection_reason', '')
-        assessment.status = 'rejected'
-        assessment.reviewed_by = request.user
-        assessment.approved_at = None
-        assessment.notes = rejection_reason
-        assessment.save()
-        messages.info(request, f'Assessment #{assessment.id} has been rejected.')
-    elif action == 'return_to_pending':
-        assessment.status = 'submitted'
-        assessment.reviewed_by = None
-        assessment.approved_at = None
-        assessment.notes = ''
-        assessment.save()
-        # Clean up custom methodology if no other approved assessments use it
-        if assessment.methodology not in built_in:
-            other_approved = Assessment.objects.filter(
-                status='approved', methodology=assessment.methodology
-            ).exclude(id=assessment.id).exists()
-            if not other_approved:
-                CustomMethodology.objects.filter(name=assessment.methodology).delete()
-        cleanup_barangay_transect_coords(assessment)
-        transects = assessment.transects.all()
-        species_ids = list(TransectSpecies.objects.filter(
-            transect__in=transects
-        ).values_list('species_id', flat=True).distinct())
-        deleted, _ = TransectSpecies.objects.filter(transect__in=transects).delete()
-        if species_ids:
-            other_approved_species = set(TransectSpecies.objects.filter(
-                transect__assessment__status='approved'
-            ).exclude(transect__assessment=assessment).values_list('species_id', flat=True).distinct())
-            orphan_ids = set(species_ids) - other_approved_species
-            if orphan_ids:
-                Species.objects.filter(id__in=orphan_ids, source=Species.SOURCE_ASSESSMENT).delete()
-        messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} species record(s) removed.')
-    else:
-        messages.error(request, 'Invalid action.')
+        if action == 'approve':
+            assessment.status = 'approved'
+            assessment.reviewed_by = request.user
+            assessment.approved_at = timezone.now()
+            assessment.save()
+            species_count = populate_species_from_excel(assessment)
+            save_barangay_transect_coords(assessment)
+            if assessment.methodology not in built_in:
+                CustomMethodology.objects.get_or_create(name=assessment.methodology)
+            messages.success(request, f'Assessment #{assessment.id} approved. {species_count} species record(s) created.')
+        elif action == 'reject':
+            rejection_reason = request.POST.get('rejection_reason', '')
+            assessment.status = 'rejected'
+            assessment.reviewed_by = request.user
+            assessment.approved_at = None
+            assessment.notes = rejection_reason
+            assessment.save()
+            messages.info(request, f'Assessment #{assessment.id} has been rejected.')
+        elif action == 'return_to_pending':
+            assessment.status = 'submitted'
+            assessment.reviewed_by = None
+            assessment.approved_at = None
+            assessment.notes = ''
+            assessment.save()
+            if assessment.methodology not in built_in:
+                other_approved = Assessment.objects.filter(
+                    status='approved', methodology=assessment.methodology
+                ).exclude(id=assessment.id).exists()
+                if not other_approved:
+                    CustomMethodology.objects.filter(name=assessment.methodology).delete()
+            cleanup_barangay_transect_coords(assessment)
+            transects = assessment.transects.all()
+            species_ids = list(TransectSpecies.objects.filter(
+                transect__in=transects
+            ).values_list('species_id', flat=True).distinct())
+            deleted, _ = TransectSpecies.objects.filter(transect__in=transects).delete()
+            if species_ids:
+                other_approved_species = set(TransectSpecies.objects.filter(
+                    transect__assessment__status='approved'
+                ).exclude(transect__assessment=assessment).values_list('species_id', flat=True).distinct())
+                orphan_ids = set(species_ids) - other_approved_species
+                if orphan_ids:
+                    Species.objects.filter(id__in=orphan_ids, source=Species.SOURCE_ASSESSMENT).delete()
+            messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} species record(s) removed.')
+        else:
+            messages.error(request, 'Invalid action.')
 
     return redirect('curator_assessments')
 
@@ -3257,13 +3263,78 @@ def public_dashboard_data(request):
         'm': result_m,
         's': {
             'total_assessments': len(assessments),
-            'total_transects': total_transects,
-            'avg_cover': round(cover_sum / cover_count, 1) if cover_count > 0 else 0,
-            'total_species': len(species_set),
-            'excellent': excellent,
-            'good': good,
-            'fair': fair,
-            'poor': poor,
-        },
-        't': result_t,
+        'total_transects': total_transects,
+        'avg_cover': round(cover_sum / cover_count, 1) if cover_count > 0 else 0,
+        'total_species': len(species_set),
+        'excellent': excellent,
+        'good': good,
+        'fair': fair,
+        'poor': poor,
+    },
+    't': result_t,
+})
+
+
+@login_required
+def assessments_sync(request):
+    """Lightweight API: Return assessment IDs, statuses, and stats for polling.
+    Returns a hash that changes when data changes, so clients only
+    refetch the full table when something actually moved."""
+    user_role = request.user.profile.role if hasattr(request.user, 'profile') else 'contributor'
+
+    if user_role == 'contributor':
+        assessments = Assessment.objects.filter(
+            uploaded_by=request.user
+        ).select_related(
+            'municipality', 'barangay', 'uploaded_by', 'reviewed_by'
+        ).prefetch_related('transects')
+    else:
+        assessments = Assessment.objects.select_related(
+            'municipality', 'barangay', 'uploaded_by', 'reviewed_by'
+        ).prefetch_related('transects').all()
+
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('search', '')
+
+    if status_filter:
+        assessments = assessments.filter(status=status_filter)
+    if search_query:
+        assessments = assessments.filter(
+            Q(barangay__name__icontains=search_query) |
+            Q(municipality__name__icontains=search_query) |
+            Q(uploaded_by__username__icontains=search_query)
+        )
+
+    rows = []
+    for a in assessments:
+        rows.append({
+            'id': a.id,
+            'status': a.status,
+            'status_display': a.get_status_display(),
+            'barangay': a.barangay.name if a.barangay else '',
+            'municipality': a.municipality.name if a.municipality else '',
+            'date': a.assessment_date.strftime('%b %d, %Y') if a.assessment_date else '',
+            'uploaded_by': a.uploaded_by.profile.get_full_name() if hasattr(a.uploaded_by, 'profile') and a.uploaded_by.profile.get_full_name() else (a.uploaded_by.email if a.uploaded_by else ''),
+            'reviewed_by': (a.reviewed_by.profile.get_full_name() if hasattr(a.reviewed_by, 'profile') and a.reviewed_by.profile.get_full_name() else a.reviewed_by.email) if a.reviewed_by else None,
+            'transect_count': a.transects.count(),
+            'coral_cover': float(a.overall_coral_cover) if a.overall_coral_cover else None,
+        })
+
+    stats = {
+        'total': Assessment.objects.count(),
+        'submitted': Assessment.objects.filter(status='submitted').count(),
+        'approved': Assessment.objects.filter(status='approved').count(),
+        'rejected': Assessment.objects.filter(status='rejected').count(),
+        'draft': Assessment.objects.filter(status='draft').count(),
+    }
+
+    import hashlib
+    hash_input = json.dumps(rows, sort_keys=True, default=str)
+    data_hash = hashlib.md5(hash_input.encode()).hexdigest()
+
+    return JsonResponse({
+        'hash': data_hash,
+        'assessments': rows,
+        'stats': stats,
+        'role': user_role,
     })

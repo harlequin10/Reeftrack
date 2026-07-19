@@ -1,4 +1,5 @@
 {% extends 'admin/base_admin.html' %}
+{% load static %}
 
 {% block title %}Assessments - Admin - ReefTrack{% endblock %}
 
@@ -13,7 +14,7 @@
 </div>
 
 <!-- Stats Cards -->
-<div class="row mb-4">
+<div class="row mb-4" id="statsRow">
     <div class="col-md-2">
         <div class="card text-center border-secondary">
             <div class="card-body py-2">
@@ -90,7 +91,7 @@
             </button>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover" id="assessmentsTable">
                 <thead>
                     <tr>
                         <th style="width:40px;">
@@ -202,26 +203,29 @@
     </div>
 </div>
 
+<script src="{% static 'js/assessment_sync.js' %}"></script>
 <script>
 var selectAllA = document.getElementById('selectAllAssessments');
 var aChecks = document.querySelectorAll('.assess-check');
 var bulkABtn = document.getElementById('bulkDeleteAssessmentBtn');
 var countASpan = document.getElementById('selectedAssessmentCount');
 
-selectAllA.addEventListener('change', function() {
-    var checked = this.checked;
-    aChecks.forEach(function(c) { c.checked = checked; });
-    updateBulkABtn();
-});
+if (selectAllA) {
+    selectAllA.addEventListener('change', function() {
+        var checked = this.checked;
+        document.querySelectorAll('.assess-check').forEach(function(c) { c.checked = checked; });
+        updateBulkABtn();
+    });
+}
 
-aChecks.forEach(function(c) {
+document.querySelectorAll('.assess-check').forEach(function(c) {
     c.addEventListener('change', updateBulkABtn);
 });
 
 function updateBulkABtn() {
     var sel = document.querySelectorAll('.assess-check:checked').length;
-    countASpan.textContent = sel;
-    bulkABtn.classList.toggle('d-none', sel === 0);
+    if (countASpan) countASpan.textContent = sel;
+    if (bulkABtn) bulkABtn.classList.toggle('d-none', sel === 0);
 }
 
 function confirmBulkDeleteAssessment() {
@@ -264,5 +268,7 @@ function confirmBulkDeleteAssessment() {
 
     new bootstrap.Modal(document.getElementById('bulkDeleteAssessmentModal')).show();
 }
+
+RTAssessmentSync.init({ role: 'admin', csrfToken: '{{ csrf_token }}', filters: 'status={{ status_filter }}&search={{ search_query }}' });
 </script>
 {% endblock %}
