@@ -43,7 +43,7 @@
 <div class="accordion" id="barangayAccordion">
     {% for item in barangay_data %}
     {% with b=item.barangay coords=item.coords %}
-    <div class="accordion-item brgy-item" data-name="{{ b.name|lower }}" data-id="{{ b.id }}" data-assessments="{{ b.approved_assessment_count }}">
+    <div class="accordion-item brgy-item" data-name="{{ b.name|lower }}" data-id="{{ b.id }}" data-assessments="{{ b.total_assessment_count }}">
         <h2 class="accordion-header d-flex align-items-center">
             <input type="checkbox" class="form-check-input brgy-check mx-2" value="{{ b.id }}">
             <button class="accordion-button collapsed flex-grow-1" type="button"
@@ -502,7 +502,7 @@ function confirmBulkDeleteBrgy() {
         var name = item.querySelector('strong').textContent;
         var assessments = parseInt(item.getAttribute('data-assessments')) || 0;
         if (assessments > 0) {
-            skippable.push(name + ' (' + assessments + ' approved)');
+            skippable.push(name + ' (' + assessments + ' assessment(s))');
         } else {
             selected.push(name);
             var input = document.createElement('input');
@@ -523,7 +523,7 @@ function confirmBulkDeleteBrgy() {
     var skipAlert = document.getElementById('bulkSkipBrgyAlert');
     if (skippable.length > 0) {
         skipAlert.classList.remove('d-none');
-        document.getElementById('bulkSkipBrgyText').textContent = skippable.length + ' will be skipped (has approved assessments): ' + skippable.join(', ');
+        document.getElementById('bulkSkipBrgyText').textContent = skippable.length + ' will be skipped (used in assessments): ' + skippable.join(', ');
     } else {
         skipAlert.classList.add('d-none');
     }

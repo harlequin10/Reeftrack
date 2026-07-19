@@ -2207,6 +2207,7 @@ def admin_manage_locations(request):
     municipalities = Municipality.objects.annotate(
         barangay_count=Count('barangays'),
         approved_assessment_count=Count('barangays__assessments', filter=Q(barangays__assessments__status='approved')),
+        total_assessment_count=Count('barangays__assessments'),
     ).order_by('name')
     return render(request, 'admin/locations/index.html', {
         'municipalities': municipalities,
@@ -2258,8 +2259,8 @@ def admin_delete_municipality(request, municipality_id):
     municipality = get_object_or_404(Municipality, id=municipality_id)
     if request.method == 'POST':
         name = municipality.name
-        if municipality.assessments.filter(status='approved').exists():
-            messages.error(request, f'Cannot delete "{name}" — it has approved assessments.')
+        if municipality.assessments.exists():
+            messages.error(request, f'Cannot delete "{name}" — it is used in existing assessments.')
             return redirect('admin_manage_locations')
         municipality.delete()
         messages.success(request, f'Municipality "{name}" deleted.')
@@ -2269,7 +2270,7 @@ def admin_delete_municipality(request, municipality_id):
 @login_required
 @admin_required
 def admin_bulk_delete_municipalities(request):
-    """Admin: Bulk delete selected municipalities (skips those with approved assessments)."""
+    """Admin: Bulk delete selected municipalities (skips those with any assessments)."""
     if request.method == 'POST':
         ids = request.POST.getlist('ids')
         if not ids:
@@ -2282,7 +2283,7 @@ def admin_bulk_delete_municipalities(request):
                 m = Municipality.objects.get(id=mid)
             except Municipality.DoesNotExist:
                 continue
-            if m.assessments.filter(status='approved').exists():
+            if m.assessments.exists():
                 skipped.append(m.name)
             else:
                 deleted.append(m.name)
@@ -2290,7 +2291,7 @@ def admin_bulk_delete_municipalities(request):
         if deleted:
             messages.success(request, f'Deleted {len(deleted)} municipality: {", ".join(deleted)}.')
         if skipped:
-            messages.warning(request, f'Skipped {len(skipped)} (has approved assessments): {", ".join(skipped)}.')
+            messages.warning(request, f'Skipped {len(skipped)} (used in assessments): {", ".join(skipped)}.')
     return redirect('admin_manage_locations')
 
 
@@ -2302,6 +2303,7 @@ def admin_manage_barangays(request, municipality_id):
     barangays = municipality.barangays.annotate(
         coord_count=Count('barangay_transects'),
         approved_assessment_count=Count('assessments', filter=Q(assessments__status='approved')),
+        total_assessment_count=Count('assessments'),
     ).order_by('name')
 
     # Pre-fetch transect coords for each barangay
@@ -2521,8 +2523,8 @@ def admin_delete_barangay(request, barangay_id):
     municipality_id = barangay.municipality_id
     if request.method == 'POST':
         name = barangay.name
-        if barangay.assessments.filter(status='approved').exists():
-            messages.error(request, f'Cannot delete "{name}" — it has approved assessments.')
+        if barangay.assessments.exists():
+            messages.error(request, f'Cannot delete "{name}" — it is used in existing assessments.')
             return redirect('admin_manage_barangays', municipality_id=municipality_id)
         barangay.delete()
         messages.success(request, f'Barangay "{name}" deleted.')
@@ -2532,7 +2534,7 @@ def admin_delete_barangay(request, barangay_id):
 @login_required
 @admin_required
 def admin_bulk_delete_barangays(request, municipality_id):
-    """Admin: Bulk delete selected barangays (skips those with approved assessments)."""
+    """Admin: Bulk delete selected barangays (skips those with any assessments)."""
     if request.method == 'POST':
         ids = request.POST.getlist('ids')
         if not ids:
@@ -2545,7 +2547,7 @@ def admin_bulk_delete_barangays(request, municipality_id):
                 b = Barangay.objects.get(id=bid, municipality_id=municipality_id)
             except Barangay.DoesNotExist:
                 continue
-            if b.assessments.filter(status='approved').exists():
+            if b.assessments.exists():
                 skipped.append(b.name)
             else:
                 deleted.append(b.name)
@@ -2553,7 +2555,7 @@ def admin_bulk_delete_barangays(request, municipality_id):
         if deleted:
             messages.success(request, f'Deleted {len(deleted)} barangay(s): {", ".join(deleted)}.')
         if skipped:
-            messages.warning(request, f'Skipped {len(skipped)} (has approved assessments): {", ".join(skipped)}.')
+            messages.warning(request, f'Skipped {len(skipped)} (used in assessments): {", ".join(skipped)}.')
     return redirect('admin_manage_barangays', municipality_id=municipality_id)
 
 

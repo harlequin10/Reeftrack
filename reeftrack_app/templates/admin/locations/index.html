@@ -44,7 +44,7 @@
                 </thead>
                 <tbody id="muniTableBody">
                     {% for m in municipalities %}
-                    <tr class="muni-row" data-id="{{ m.id }}" data-assessments="{{ m.approved_assessment_count }}">
+                    <tr class="muni-row" data-id="{{ m.id }}" data-assessments="{{ m.total_assessment_count }}">
                         <td>
                             <input type="checkbox" class="form-check-input muni-check" value="{{ m.id }}">
                         </td>
@@ -152,7 +152,7 @@
                     {% if m.approved_assessment_count > 0 %}
                     <div class="alert alert-danger py-2 mb-0">
                         <i class="fas fa-exclamation-triangle"></i>
-                        This municipality has {{ m.approved_assessment_count }} assessment(s) and cannot be deleted.
+                        This municipality has {{ m.approved_assessment_count }} approved assessment(s) and cannot be deleted.
                     </div>
                     {% endif %}
                 </div>
@@ -237,7 +237,7 @@ function confirmBulkDelete() {
         var name = row.querySelector('strong').textContent;
         var assessments = parseInt(row.getAttribute('data-assessments')) || 0;
         if (assessments > 0) {
-            skippable.push(name + ' (' + assessments + ' approved)');
+            skippable.push(name + ' (' + assessments + ' assessment(s))');
         } else {
             selected.push(name);
             var input = document.createElement('input');
@@ -258,7 +258,7 @@ function confirmBulkDelete() {
     var skipAlert = document.getElementById('bulkSkipAlert');
     if (skippable.length > 0) {
         skipAlert.classList.remove('d-none');
-        document.getElementById('bulkSkipText').textContent = skippable.length + ' will be skipped (has approved assessments): ' + skippable.join(', ');
+        document.getElementById('bulkSkipText').textContent = skippable.length + ' will be skipped (used in assessments): ' + skippable.join(', ');
     } else {
         skipAlert.classList.add('d-none');
     }
