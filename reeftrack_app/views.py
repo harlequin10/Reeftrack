@@ -632,16 +632,18 @@ def parse_cpc_excel(filepath):
     except Exception as e:
         return [], [f'Could not open Excel file: {e}']
 
-    # Find a usable sheet
+    # Find a usable sheet: try preferred names first, then fall back to first sheet
     target_sheet = None
     for name in ['whole'] + [n for n in wb.sheetnames if n.lower().startswith('transect')] + ['Sheet1', 'Sheet']:
         if name in wb.sheetnames:
             target_sheet = name
             break
+    if not target_sheet and wb.sheetnames:
+        target_sheet = wb.sheetnames[0]
 
     if not target_sheet:
         wb.close()
-        return [], ['No usable sheet found. File must contain a "whole" sheet, a "transect" sheet, or "Sheet1" (or "Sheet").']
+        return [], ['No usable sheet found in the Excel file.']
 
     ws = wb[target_sheet]
 
@@ -656,7 +658,7 @@ def parse_cpc_excel(filepath):
     missing = [r for r in required if r not in headers]
     if missing:
         wb.close()
-        return [], [f'Missing required columns: {", ".join(missing)}. Your file must have columns: Sub Category, Major Category, Mean']
+        return [], [f'Missing required columns: {", ".join(missing)} in sheet "{target_sheet}". Your file must have columns: Sub Category, Major Category, Mean']
 
     # Find column indices
     try:
