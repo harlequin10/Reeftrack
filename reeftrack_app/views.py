@@ -2270,6 +2270,7 @@ def admin_manage_barangays(request, municipality_id):
     municipality = get_object_or_404(Municipality, id=municipality_id)
     barangays = municipality.barangays.annotate(
         coord_count=Count('barangay_transects'),
+        approved_assessment_count=Count('assessments', filter=Q(assessments__status='approved')),
     ).order_by('name')
 
     # Pre-fetch transect coords for each barangay
