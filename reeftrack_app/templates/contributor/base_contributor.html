@@ -4,11 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Contributor - ReefTrack{% endblock %}</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <style>
+    body{visibility:hidden}
+    :root{--rt-navy:#062E3F;--rt-navy-light:#0A4A61;--rt-teal:#0E7C86;--rt-teal-light:#17A8B5;--rt-seafoam:#7DD4C0;--rt-sand:#F5EDE0;--rt-sand-light:#FAF7F2;--rt-coral:#E85D3A;--rt-ink:#1A2C30;--rt-ink-soft:#4D6269;--rt-white:#FEFFFE;--rt-border:#D6CFC2;--rt-shadow:0 2px 12px rgba(6,46,63,.1);--rt-shadow-lg:0 8px 28px rgba(6,46,63,.16);--rt-radius:10px;--rt-font-body:'Inter','Segoe UI',system-ui,sans-serif}
+    body{background-color:var(--rt-sand);color:var(--rt-ink);font-family:var(--rt-font-body);line-height:1.6;margin:0;overflow-x:hidden}
+    .rt-navbar{background:linear-gradient(90deg,var(--rt-navy) 0%,var(--rt-navy-light) 100%)!important;box-shadow:var(--rt-shadow);position:relative}
+    .rt-navbar .nav-link{color:var(--rt-seafoam)!important}
+    .rt-navbar .nav-link:hover{color:var(--rt-white)!important}
+    .rt-navbar .nav-link.active{color:var(--rt-white)!important}
+    .rt-navbar .navbar-brand{color:var(--rt-white)!important;font-weight:700;letter-spacing:.02em}
+    .rt-navbar .dropdown-menu{background:var(--rt-white);border:1px solid var(--rt-border)}
+    .rt-navbar .dropdown-item{color:var(--rt-ink)}
+    .rt-navbar .dropdown-item:hover{background:var(--rt-sand-light);color:var(--rt-navy)}
+    .navbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding-top:.5rem;padding-bottom:.5rem}
+    .navbar>.container{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .navbar-brand{padding-top:.3125rem;padding-bottom:.3125rem;margin-right:1rem;font-size:1.25rem;text-decoration:none;white-space:nowrap}
+    .navbar-nav{display:flex;flex-direction:column;padding-left:0;margin-bottom:0;list-style:none}
+    .navbar-collapse{flex-basis:100%;flex-grow:1;align-items:center}
+    .navbar-toggler{padding:.25rem .75rem;font-size:1.25rem;line-height:1;background-color:transparent;border:1px solid transparent;border-radius:var(--rt-radius)}
+    .navbar-toggler:focus{box-shadow:0 0 0 .25rem rgba(14,124,134,.25)}
+    @media(min-width:992px){.navbar-expand-lg .navbar-nav{flex-direction:row}.navbar-expand-lg .navbar-collapse{display:flex!important;flex-basis:auto}.navbar-expand-lg .navbar-toggler{display:none}}
+    .dropdown-toggle::after{display:inline-block;width:0;height:0;margin-left:.255em;vertical-align:.255em;border-top:.3em solid;border-right:.3em solid transparent;border-bottom:0;border-left:.3em solid transparent}
+    .dropdown-menu{position:absolute;top:100%;left:0;z-index:1000;display:none;min-width:10rem;padding:.5rem 0;margin:0;font-size:1rem;color:var(--rt-ink);text-align:left;list-style:none;background-color:var(--rt-white);border:1px solid var(--rt-border);border-radius:var(--rt-radius)}
+    .dropdown-item{display:block;width:100%;padding:.45rem 1rem;clear:both;font-weight:400;color:var(--rt-ink);text-align:inherit;text-decoration:none;white-space:nowrap;background-color:transparent;border:0}
+    .dropdown-item:hover{background-color:var(--rt-sand-light);color:var(--rt-navy)}
+    .badge{display:inline-block;padding:.35em .65em;font-size:.75em;font-weight:700;line-height:1;color:#fff;text-align:center;white-space:nowrap;vertical-align:baseline;border-radius:.375rem}
+    .bg-danger{background-color:var(--rt-coral)!important}
+    .bg-info{background-color:var(--rt-teal)!important}
+    .bg-success{background-color:#198754!important}
+    .rounded-circle{border-radius:50%!important}
+    .position-relative{position:relative!important}
+    .position-absolute{position:absolute!important}
+    .me-1{margin-right:.25rem!important}
+    .ms-auto{margin-left:auto!important}
+    .me-auto{margin-right:auto!important}
+    </style>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     {% load static %}
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=5">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark rt-navbar">
@@ -32,6 +69,24 @@
                         <a class="nav-link" href="{% url 'home' %}">
                             <i class="fas fa-home"></i> Home
                         </a>
+                    </li>
+                    <li class="nav-item notif-wrapper">
+                        <a class="nav-link position-relative" href="#" id="notif-bell" onclick="event.preventDefault();toggleNotifPanel();">
+                            <i class="fas fa-bell"></i>
+                            <span class="badge bg-danger rounded-pill position-absolute" id="notif-badge" style="font-size:0.6rem;top:4px;right:0;display:none;"></span>
+                        </a>
+                        <div class="notif-panel" id="notif-panel">
+                            <div class="notif-panel-header">
+                                <h6>Notifications</h6>
+                                <button class="notif-mark-all-btn" onclick="markAllReadNotif()">Mark all as read</button>
+                            </div>
+                            <div class="notif-panel-body" id="notif-panel-body">
+                                <div class="notif-loading"><i class="fas fa-spinner fa-spin"></i></div>
+                            </div>
+                            <div class="notif-panel-footer">
+                                <a href="{% url 'notifications_list' %}">See all notifications</a>
+                            </div>
+                        </div>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="contributorDropdown" role="button" 
@@ -105,5 +160,127 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+    .notif-wrapper{position:relative;}
+    .notif-panel{display:none;position:absolute;top:100%;right:-60px;width:360px;max-height:420px;background:#fff;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,0.18);z-index:9999;overflow:hidden;flex-direction:column;}
+    .notif-panel.open{display:flex;}
+    .notif-panel-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 10px;border-bottom:1px solid #e5e7eb;}
+    .notif-panel-header h6{margin:0;font-weight:700;font-size:1.1rem;color:#1e293b;}
+    .notif-mark-all-btn{background:none;border:none;color:#1a73e8;font-size:0.78rem;font-weight:600;cursor:pointer;padding:2px 4px;border-radius:4px;}
+    .notif-mark-all-btn:hover{background:#e8f0fe;}
+    .notif-panel-body{flex:1;overflow-y:auto;max-height:320px;}
+    .notif-panel-footer{border-top:1px solid #e5e7eb;text-align:center;padding:10px;}
+    .notif-panel-footer a{color:#1a73e8;font-weight:600;font-size:0.85rem;text-decoration:none;}
+    .notif-panel-footer a:hover{text-decoration:underline;}
+    .notif-loading{text-align:center;padding:30px;color:#94a3b8;}
+    .notif-empty{text-align:center;padding:30px 16px;color:#94a3b8;font-size:0.85rem;}
+    .notif-item{display:flex;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.15s;border-left:3px solid transparent;align-items:flex-start;}
+    .notif-item:hover{background:#f1f5f9;}
+    .notif-item.unread{background:#eff6ff;border-left-color:#3b82f6;}
+    .notif-item.unread:hover{background:#dbeafe;}
+    .notif-item .notif-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.8rem;color:#fff;}
+    .notif-item .notif-icon.type-approved{background:#059669;}
+    .notif-item .notif-icon.type-rejected{background:#dc2626;}
+    .notif-item .notif-icon.type-returned{background:#d97706;}
+    .notif-item .notif-icon.type-info{background:#2563eb;}
+    .notif-item .notif-text{flex:1;min-width:0;}
+    .notif-item .notif-title{font-size:0.82rem;font-weight:600;color:#1e293b;margin-bottom:1px;}
+    .notif-item .notif-msg{font-size:0.78rem;color:#475569;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .notif-item .notif-time{font-size:0.7rem;color:#94a3b8;margin-top:2px;}
+    .notif-item .notif-unread-dot{width:8px;height:8px;border-radius:50%;background:#3b82f6;flex-shrink:0;margin-top:6px;}
+    @media(max-width:400px){.notif-panel{right:-40px;width:300px;}}
+    </style>
+    <script>
+    (function() {
+        var panel=document.getElementById('notif-panel');
+        var panelBody=document.getElementById('notif-panel-body');
+        var badge=document.getElementById('notif-badge');
+
+        window.toggleNotifPanel=function(){
+            if(panel.classList.contains('open')){
+                panel.classList.remove('open');
+            }else{
+                panel.classList.add('open');
+                loadNotifs();
+            }
+        };
+
+        document.addEventListener('click',function(e){
+            if(!e.target.closest('.notif-wrapper')&&panel.classList.contains('open')){
+                panel.classList.remove('open');
+            }
+        });
+
+        function loadNotifs(){
+            panelBody.innerHTML='<div class="notif-loading"><i class="fas fa-spinner fa-spin"></i></div>';
+            fetch('/api/notifications/recent/')
+                .then(function(r){return r.json();})
+                .then(function(data){
+                    updateBadge(data.unread_count);
+                    if(!data.notifications||data.notifications.length===0){
+                        panelBody.innerHTML='<div class="notif-empty"><i class="fas fa-bell-slash" style="font-size:1.5rem;display:block;margin-bottom:8px;color:#cbd5e1;"></i>No notifications yet</div>';
+                        return;
+                    }
+                    var html='';
+                    data.notifications.forEach(function(n){
+                        var iconClass=n.type==='approved'?'fa-check':n.type==='rejected'?'fa-times':n.type==='returned'?'fa-undo':'fa-info';
+                        html+='<div class="notif-item'+(n.is_read?'':' unread')+'" onclick="handleNotifClick('+n.id+','+n.assessment_id+',this)">';
+                        html+='<div class="notif-icon type-'+n.type+'"><i class="fas '+iconClass+'"></i></div>';
+                        html+='<div class="notif-text"><div class="notif-title">'+escHtml(n.title)+'</div><div class="notif-msg">'+escHtml(n.message)+'</div><div class="notif-time">'+escHtml(n.created_at)+'</div></div>';
+                        if(!n.is_read)html+='<div class="notif-unread-dot"></div>';
+                        html+='</div>';
+                    });
+                    panelBody.innerHTML=html;
+                })
+                .catch(function(){panelBody.innerHTML='<div class="notif-empty">Failed to load</div>';});
+        }
+
+        window.handleNotifClick=function(id,assessmentId,el){
+            if(el.classList.contains('unread')){
+                el.classList.remove('unread');
+                var dot=el.querySelector('.notif-unread-dot');if(dot)dot.remove();
+                fetch('/api/notifications/mark-read/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({id:id})});
+                var c=parseInt(badge.textContent)||0;if(c>1){badge.textContent=c-1;}else{badge.style.display='none';}
+            }
+            if(assessmentId){window.location.href='/assessment/'+assessmentId+'/detail/';}
+        };
+
+        window.markAllReadNotif=function(){
+            fetch('/notifications/mark-all-read/',{method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken')}});
+            document.querySelectorAll('.notif-item.unread').forEach(function(el){el.classList.remove('unread');var d=el.querySelector('.notif-unread-dot');if(d)d.remove();});
+            badge.style.display='none';
+        };
+
+        function updateBadge(count){
+            if(count>0){badge.textContent=count>99?'99+':count;badge.style.display='inline-block';}
+            else{badge.style.display='none';}
+        }
+
+        function getCookie(name){var v=document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+        function escHtml(s){var d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML;}
+
+        fetch('/api/notifications/unread-count/').then(function(r){return r.json();}).then(function(d){updateBadge(d.count);}).catch(function(){});
+        setInterval(function(){
+            fetch('/api/notifications/unread-count/').then(function(r){return r.json();}).then(function(d){updateBadge(d.count);}).catch(function(){});
+        },30000);
+
+        var proto=location.protocol==='https:'?'wss:':'ws:';
+        var wsUrl=proto+'//'+location.host+'/ws/assessments/';
+        var notifWs=null;
+        function connectNotifWs(){
+            try{notifWs=new WebSocket(wsUrl);}catch(e){return;}
+            notifWs.onmessage=function(e){
+                try{var msg=JSON.parse(e.data);}catch(x){return;}
+                if(msg.type==='notification_update'){
+                    fetch('/api/notifications/unread-count/').then(function(r){return r.json();}).then(function(d){updateBadge(d.count);}).catch(function(){});
+                }
+            };
+            notifWs.onclose=function(){setTimeout(connectNotifWs,5000);};
+            notifWs.onerror=function(){};
+        }
+        connectNotifWs();
+    })();
+    </script>
+    <script>window.addEventListener('load',function(){document.body.style.visibility='visible';});</script>
 </body>
 </html>

@@ -46,6 +46,10 @@
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-3">
+                                    <small class="text-muted">Province</small><br>
+                                    <strong>{{ pending.province_name|default:"-" }}</strong>
+                                </div>
+                                <div class="col-md-3">
                                     <small class="text-muted">Municipality</small><br>
                                     <strong>{{ pending.municipality_name|default:"-" }}</strong>
                                 </div>

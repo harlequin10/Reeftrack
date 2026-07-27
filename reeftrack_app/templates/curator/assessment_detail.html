@@ -32,12 +32,16 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-sm-6 col-md-3">
+                        <small class="text-muted">Province</small><br>
+                        <strong>{{ assessment.municipality.province.name }}</strong>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Municipality</small><br>
-                        <strong>{{ assessment.municipality }}</strong>
+                        <strong>{{ assessment.municipality.name }}</strong>
                     </div>
                     <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Barangay</small><br>
-                        <strong>{{ assessment.barangay }}</strong>
+                        <strong>{{ assessment.barangay.name }}</strong>
                     </div>
                     <div class="col-sm-6 col-md-3">
                         <small class="text-muted">Date</small><br>
@@ -208,8 +212,23 @@
                 {% if has_species_records %}
                 {% regroup t.species_data.all by depth as depth_groups %}
                 {% for depth_group in depth_groups %}
-                <h6 class="{% if depth_group.grouper == 'shallow' %}text-info{% else %}text-primary{% endif %} mt-3">
-                    <i class="fas fa-table"></i> {{ depth_group.grouper|title }} Species
+                <h6 class="{% if depth_group.grouper == 'shallow' %}text-info{% else %}text-primary{% endif %} mt-3" style="display:flex;align-items:center;justify-content:space-between;">
+                    <span><i class="fas fa-table"></i> {{ depth_group.grouper|title }} Species ({{ depth_group.list|length }})</span>
+                    {% if depth_group.grouper == 'shallow' %}
+                    {% with h=t.shallow_health %}
+                    <span style="display:inline-flex;align-items:center;gap:0.3rem;border-radius:5px;padding:0.15rem 0.55rem;font-size:0.75rem;font-weight:600;background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
+                        <span style="width:7px;height:7px;border-radius:50%;background:{{ h.color }};flex-shrink:0;"></span>
+                        {{ h.label }} · {{ h.avg|floatformat:1 }}%
+                    </span>
+                    {% endwith %}
+                    {% else %}
+                    {% with h=t.deep_health %}
+                    <span style="display:inline-flex;align-items:center;gap:0.3rem;border-radius:5px;padding:0.15rem 0.55rem;font-size:0.75rem;font-weight:600;background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
+                        <span style="width:7px;height:7px;border-radius:50%;background:{{ h.color }};flex-shrink:0;"></span>
+                        {{ h.label }} · {{ h.avg|floatformat:1 }}%
+                    </span>
+                    {% endwith %}
+                    {% endif %}
                 </h6>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
@@ -308,7 +327,7 @@
                                 </strong>
                                 <br>
                                 <small class="text-muted">
-                                    {{ sim.assessment.barangay }}, {{ sim.assessment.municipality }}
+                                    {{ sim.assessment.barangay.name }}, {{ sim.assessment.municipality.name }}, {{ sim.assessment.municipality.province.name }}
                                     | {{ sim.assessment.assessment_date|date:"M d, Y" }}
                                     | Uploaded by {{ sim.assessment.uploaded_by.profile.get_full_name|default:sim.assessment.uploaded_by.email }}
                                     | {{ sim.match_count }}/{{ sim.total }} species match exactly

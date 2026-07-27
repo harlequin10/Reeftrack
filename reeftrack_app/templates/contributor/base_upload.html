@@ -4,11 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Upload Assessment - ReefTrack{% endblock %}</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <style>
+    body{visibility:hidden}
+    :root{--rt-navy:#062E3F;--rt-navy-light:#0A4A61;--rt-teal:#0E7C86;--rt-teal-light:#17A8B5;--rt-seafoam:#7DD4C0;--rt-sand:#F5EDE0;--rt-sand-light:#FAF7F2;--rt-coral:#E85D3A;--rt-ink:#1A2C30;--rt-ink-soft:#4D6269;--rt-white:#FEFFFE;--rt-border:#D6CFC2;--rt-shadow:0 2px 12px rgba(6,46,63,.1);--rt-shadow-lg:0 8px 28px rgba(6,46,63,.16);--rt-radius:10px;--rt-font-body:'Inter','Segoe UI',system-ui,sans-serif}
+    body{background-color:var(--rt-sand);color:var(--rt-ink);font-family:var(--rt-font-body);line-height:1.6;margin:0;overflow-x:hidden}
+    .rt-navbar{background:linear-gradient(90deg,var(--rt-navy) 0%,var(--rt-navy-light) 100%)!important;box-shadow:var(--rt-shadow);position:relative}
+    .rt-navbar .nav-link{color:var(--rt-seafoam)!important}
+    .rt-navbar .nav-link:hover{color:var(--rt-white)!important}
+    .rt-navbar .nav-link.active{color:var(--rt-white)!important}
+    .rt-navbar .navbar-brand{color:var(--rt-white)!important;font-weight:700;letter-spacing:.02em}
+    .rt-navbar .dropdown-menu{background:var(--rt-white);border:1px solid var(--rt-border)}
+    .rt-navbar .dropdown-item{color:var(--rt-ink)}
+    .rt-navbar .dropdown-item:hover{background:var(--rt-sand-light);color:var(--rt-navy)}
+    .navbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding-top:.5rem;padding-bottom:.5rem}
+    .navbar>.container{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .navbar-brand{padding-top:.3125rem;padding-bottom:.3125rem;margin-right:1rem;font-size:1.25rem;text-decoration:none;white-space:nowrap}
+    .navbar-nav{display:flex;flex-direction:column;padding-left:0;margin-bottom:0;list-style:none}
+    .navbar-collapse{flex-basis:100%;flex-grow:1;align-items:center}
+    .navbar-toggler{padding:.25rem .75rem;font-size:1.25rem;line-height:1;background-color:transparent;border:1px solid transparent;border-radius:var(--rt-radius)}
+    .navbar-toggler:focus{box-shadow:0 0 0 .25rem rgba(14,124,134,.25)}
+    @media(min-width:992px){.navbar-expand-lg .navbar-nav{flex-direction:row}.navbar-expand-lg .navbar-collapse{display:flex!important;flex-basis:auto}.navbar-expand-lg .navbar-toggler{display:none}}
+    .dropdown-toggle::after{display:inline-block;width:0;height:0;margin-left:.255em;vertical-align:.255em;border-top:.3em solid;border-right:.3em solid transparent;border-bottom:0;border-left:.3em solid transparent}
+    .dropdown-menu{position:absolute;top:100%;left:0;z-index:1000;display:none;min-width:10rem;padding:.5rem 0;margin:0;font-size:1rem;color:var(--rt-ink);text-align:left;list-style:none;background-color:var(--rt-white);border:1px solid var(--rt-border);border-radius:var(--rt-radius)}
+    .dropdown-item{display:block;width:100%;padding:.45rem 1rem;clear:both;font-weight:400;color:var(--rt-ink);text-align:inherit;text-decoration:none;white-space:nowrap;background-color:transparent;border:0}
+    .dropdown-item:hover{background-color:var(--rt-sand-light);color:var(--rt-navy)}
+    .badge{display:inline-block;padding:.35em .65em;font-size:.75em;font-weight:700;line-height:1;color:#fff;text-align:center;white-space:nowrap;vertical-align:baseline;border-radius:.375rem}
+    .bg-danger{background-color:var(--rt-coral)!important}
+    .bg-info{background-color:var(--rt-teal)!important}
+    .bg-success{background-color:#198754!important}
+    .rounded-circle{border-radius:50%!important}
+    .position-relative{position:relative!important}
+    .position-absolute{position:absolute!important}
+    .me-1{margin-right:.25rem!important}
+    .ms-auto{margin-left:auto!important}
+    .me-auto{margin-right:auto!important}
+    </style>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     {% load static %}
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=5">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark rt-navbar">
@@ -119,5 +156,6 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>window.addEventListener('load',function(){document.body.style.visibility='visible';});</script>
 </body>
 </html>

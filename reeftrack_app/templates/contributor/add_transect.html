@@ -41,7 +41,7 @@
                 <div class="alert alert-light border mb-4">
                     <i class="fas fa-info-circle text-success me-1"></i>
                     <strong>Assessment:</strong>
-                    {{ pending.barangay_name|default:"-" }}, {{ pending.municipality_name|default:"-" }}
+                    {{ pending.barangay_name|default:"-" }}
                     | {{ pending.assessment_date }}
                     | {{ pending.methodology|title }}
                     {% if pending.thesis_tmp %} | Thesis PDF attached{% endif %}
@@ -82,7 +82,7 @@
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
                                         <i class="fas fa-map-marker-alt me-1"></i>
-                                        <strong id="refMatchText">These coordinates match Reference #1.</strong>
+                                        <strong id="refMatchText">These coordinates match a reference for this barangay.</strong>
                                         <span id="refMatchSource" class="badge bg-info ms-1" style="display:none;"></span>
                                     </div>
                                     <div class="d-flex gap-2">
@@ -109,13 +109,13 @@
                                                     <label class="form-label small fw-bold">Start Latitude</label>
                                                     <input type="number" step="any" min="-90" max="90" required
                                                            class="form-control form-control-sm coord-input"
-                                                           name="shallow_start_lat" id="shallow_start_lat" placeholder="e.g. 6.1234567">
+                                                           name="shallow_start_lat" id="shallow_start_lat" placeholder="e.g. 6.1234567" value="{{ pending_transect.shallow_start_lat|default:'' }}">
                                                 </div>
                                                 <div class="col-6">
                                                     <label class="form-label small fw-bold">Start Longitude</label>
                                                     <input type="number" step="any" min="-180" max="180" required
                                                            class="form-control form-control-sm coord-input"
-                                                           name="shallow_start_lng" id="shallow_start_lng" placeholder="e.g. 125.1234567">
+                                                           name="shallow_start_lng" id="shallow_start_lng" placeholder="e.g. 125.1234567" value="{{ pending_transect.shallow_start_lng|default:'' }}">
                                                 </div>
                                             </div>
                                             <div class="row g-2 mb-3">
@@ -123,13 +123,13 @@
                                                     <label class="form-label small fw-bold">End Latitude</label>
                                                     <input type="number" step="any" min="-90" max="90" required
                                                            class="form-control form-control-sm coord-input"
-                                                           name="shallow_end_lat" id="shallow_end_lat" placeholder="e.g. 6.1245678">
+                                                           name="shallow_end_lat" id="shallow_end_lat" placeholder="e.g. 6.1245678" value="{{ pending_transect.shallow_end_lat|default:'' }}">
                                                 </div>
                                                 <div class="col-6">
                                                     <label class="form-label small fw-bold">End Longitude</label>
                                                     <input type="number" step="any" min="-180" max="180" required
                                                            class="form-control form-control-sm coord-input"
-                                                           name="shallow_end_lng" id="shallow_end_lng" placeholder="e.g. 125.1245678">
+                                                           name="shallow_end_lng" id="shallow_end_lng" placeholder="e.g. 125.1245678" value="{{ pending_transect.shallow_end_lng|default:'' }}">
                                                 </div>
                                             </div>
                                             <label class="form-label small fw-bold">
@@ -470,7 +470,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(data) {
                 if (data.match) {
                     lastMatchedRef = data;
-                    refMatchText.textContent = 'These coordinates match Reference #' + data.ref_number + ' for {{ pending.barangay_name|default:"this barangay" }}.';
+                    refMatchText.textContent = 'These coordinates match a reference from ' + data.date + ' for {{ pending.barangay_name|default:"this barangay" }}.';
                     refMatchSource.textContent = data.source === 'assessment' ? 'Assessment-sourced' : 'Manually added';
                     refMatchSource.style.display = 'inline';
                     refMatchAlert.classList.remove('d-none');
@@ -504,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateMap();
         refMatchAlert.classList.remove('alert-warning');
         refMatchAlert.classList.add('alert-success');
-        refMatchText.textContent = 'Reference #' + lastMatchedRef.ref_number + ' coordinates applied. Will be linked upon approval.';
+        refMatchText.textContent = 'Reference from ' + lastMatchedRef.date + ' coordinates applied. Will be linked upon approval.';
         refMatchSource.style.display = 'none';
         document.getElementById('refMatchUseBtn').style.display = 'none';
         document.getElementById('refMatchDismissBtn').style.display = 'none';
@@ -565,6 +565,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 var list = document.getElementById('suggestionsList');
                 section.style.display = 'block';
 
+                var INITIAL_SHOW = 5;
+
                 allSuggestions.forEach(function(s, idx) {
                     var col = document.createElement('div');
                     col.className = 'col-12';
@@ -582,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             '<div class="card-body py-2 px-3">' +
                                 '<div class="d-flex justify-content-between align-items-center">' +
                                     '<div>' +
-                                        '<strong class="text-secondary">Reference ' + s.ref_number + '</strong>' +
+                                        '<strong class="text-secondary">' + s.date + '</strong>' +
                                         '<div class="small text-muted mt-1">' +
                                             '<span class="text-info"><i class="fas fa-water"></i> Shallow:</span> ' + (shallow.length > 0 ? shallow.join(' &rarr; ') : '<em>—</em>') +
                                             '<br><span class="text-primary"><i class="fas fa-water"></i> Deep:</span> ' + (deep.length > 0 ? deep.join(' &rarr; ') : '<em>—</em>') +
@@ -642,7 +644,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
 
                     list.appendChild(col);
+                    if (idx >= INITIAL_SHOW) { col.style.display = 'none'; }
                 });
+
+                if (allSuggestions.length > INITIAL_SHOW) {
+                    var moreBtn = document.createElement('div');
+                    moreBtn.className = 'col-12 text-center mt-2';
+                    moreBtn.innerHTML = '<button type="button" class="btn btn-sm btn-outline-info" id="showMoreRefsBtn"><i class="fas fa-chevron-down"></i> Show all ' + allSuggestions.length + ' references</button>';
+                    list.appendChild(moreBtn);
+                    document.getElementById('showMoreRefsBtn').addEventListener('click', function() {
+                        list.querySelectorAll('.col-12').forEach(function(c) { c.style.display = ''; });
+                        this.remove();
+                        list.style.maxHeight = 'none';
+                    });
+                }
 
                 document.getElementById('showAllSugMapBtn').addEventListener('click', function() {
                     var container = document.getElementById('allSugMapContainer');
@@ -656,14 +671,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             var bds = [];
                             allSuggestions.forEach(function(s, i) {
                                 var c = colors[i % colors.length];
+                                var shortLabel = s.date.replace(', 20','').replace(' ','');
                                 var tIcon = function(label) {
                                     return L.divIcon({className:'',html:'<div style="background:'+c+';color:#fff;font-weight:bold;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">'+label+'</div>',iconSize:[20,20],iconAnchor:[10,10]});
                                 };
-                                var rn = s.ref_number;
-                                if(s.shallow_start_lat&&s.shallow_start_lng){L.marker([s.shallow_start_lat,s.shallow_start_lng],{icon:tIcon('R'+rn)}).addTo(allMap).bindPopup('Ref '+rn+' Shallow Start');bds.push([s.shallow_start_lat,s.shallow_start_lng]);}
-                                if(s.shallow_end_lat&&s.shallow_end_lng){L.marker([s.shallow_end_lat,s.shallow_end_lng],{icon:tIcon('R'+rn)}).addTo(allMap).bindPopup('Ref '+rn+' Shallow End');bds.push([s.shallow_end_lat,s.shallow_end_lng]);if(s.shallow_start_lat&&s.shallow_start_lng)L.polyline([[s.shallow_start_lat,s.shallow_start_lng],[s.shallow_end_lat,s.shallow_end_lng]],{color:c,weight:3}).addTo(allMap);}
-                                if(s.deep_start_lat&&s.deep_start_lng){L.marker([s.deep_start_lat,s.deep_start_lng],{icon:tIcon('R'+rn)}).addTo(allMap).bindPopup('Ref '+rn+' Deep Start');bds.push([s.deep_start_lat,s.deep_start_lng]);}
-                                if(s.deep_end_lat&&s.deep_end_lng){L.marker([s.deep_end_lat,s.deep_end_lng],{icon:tIcon('R'+rn)}).addTo(allMap).bindPopup('Ref '+rn+' Deep End');bds.push([s.deep_end_lat,s.deep_end_lng]);if(s.deep_start_lat&&s.deep_start_lng)L.polyline([[s.deep_start_lat,s.deep_start_lng],[s.deep_end_lat,s.deep_end_lng]],{color:c,weight:3,dashArray:'6,4'}).addTo(allMap);}
+                                if(s.shallow_start_lat&&s.shallow_start_lng){L.marker([s.shallow_start_lat,s.shallow_start_lng],{icon:tIcon(shortLabel)}).addTo(allMap).bindPopup(s.date+' Shallow Start');bds.push([s.shallow_start_lat,s.shallow_start_lng]);}
+                                if(s.shallow_end_lat&&s.shallow_end_lng){L.marker([s.shallow_end_lat,s.shallow_end_lng],{icon:tIcon(shortLabel)}).addTo(allMap).bindPopup(s.date+' Shallow End');bds.push([s.shallow_end_lat,s.shallow_end_lng]);if(s.shallow_start_lat&&s.shallow_start_lng)L.polyline([[s.shallow_start_lat,s.shallow_start_lng],[s.shallow_end_lat,s.shallow_end_lng]],{color:c,weight:3}).addTo(allMap);}
+                                if(s.deep_start_lat&&s.deep_start_lng){L.marker([s.deep_start_lat,s.deep_start_lng],{icon:tIcon(shortLabel)}).addTo(allMap).bindPopup(s.date+' Deep Start');bds.push([s.deep_start_lat,s.deep_start_lng]);}
+                                if(s.deep_end_lat&&s.deep_end_lng){L.marker([s.deep_end_lat,s.deep_end_lng],{icon:tIcon(shortLabel)}).addTo(allMap).bindPopup(s.date+' Deep End');bds.push([s.deep_end_lat,s.deep_end_lng]);if(s.deep_start_lat&&s.deep_start_lng)L.polyline([[s.deep_start_lat,s.deep_start_lng],[s.deep_end_lat,s.deep_end_lng]],{color:c,weight:3,dashArray:'6,4'}).addTo(allMap);}
                             });
                             if(bds.length>0) allMap.fitBounds(bds,{padding:[30,30]});
                             else allMap.setView([6.0,125.0],10);

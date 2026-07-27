@@ -4,199 +4,424 @@
 {% block title %}Assessments - Admin - ReefTrack{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-        <h4 class="mb-0"><i class="fas fa-clipboard-list"></i> Assessments</h4>
-        <a href="{% url 'upload_assessment' %}" class="btn btn-sm btn-success">
-            <i class="fas fa-upload"></i> Upload New
+<style>
+    .am-page{margin-bottom:2rem;}
+
+    .am-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
+    .am-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
+    .am-breadcrumb a:hover{color:var(--rt-primary);}
+    .am-breadcrumb .sep{color:#d1d5db;}
+
+    .am-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;}
+    .am-header-left h3{margin:0;font-weight:800;color:var(--rt-navy);font-size:1.5rem;letter-spacing:-.02em;}
+    .am-header-left h3 i{color:var(--rt-primary);margin-right:.5rem;font-size:1.2rem;}
+    .am-header-left p{margin:.2rem 0 0;color:#64748b;font-size:.85rem;}
+    .am-header-right{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}
+    .am-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem 1rem;border-radius:10px;font-size:.82rem;font-weight:600;border:1px solid transparent;cursor:pointer;transition:all .2s ease;white-space:nowrap;text-decoration:none;line-height:1.4;}
+    .am-btn i{font-size:.78rem;}
+    .am-btn-primary{background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border-color:#0ea5e9;box-shadow:0 2px 8px rgba(14,165,233,.25);}
+    .am-btn-primary:hover{background:linear-gradient(135deg,#0284c7,#0369a1);box-shadow:0 4px 14px rgba(14,165,233,.35);transform:translateY(-1px);}
+    .am-btn-danger{background:#fff;color:#dc2626;border-color:#fecaca;}
+    .am-btn-danger:hover{background:#fef2f2;border-color:#fca5a5;}
+    .am-btn-danger.active{background:#dc2626;color:#fff;border-color:#dc2626;box-shadow:0 2px 8px rgba(220,38,38,.25);}
+
+    .am-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem;margin-bottom:1.5rem;}
+    .am-stat{border-radius:12px;padding:1rem 1.15rem;color:#fff;position:relative;overflow:hidden;cursor:pointer;transition:all .2s ease;border:1px solid transparent;}
+    .am-stat:hover{transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,0,0,.18);}
+    .am-stat.active{border-color:rgba(255,255,255,.5);box-shadow:0 0 0 2px rgba(255,255,255,.3),0 8px 25px rgba(0,0,0,.18);}
+    .am-stat::before{content:'';position:absolute;top:-30px;right:-30px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08);}
+    .am-stat::after{content:'';position:absolute;bottom:-20px;left:-20px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.05);}
+    .am-stat-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+    .am-stat-val{font-size:1.8rem;font-weight:800;line-height:1;}
+    .am-stat-icon{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:.95rem;}
+    .am-stat-lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.6px;opacity:.8;margin-top:.5rem;font-weight:600;position:relative;z-index:1;}
+
+    .am-toolbar{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .am-toolbar-row{display:flex;align-items:center;height:48px;}
+    .am-search{display:flex;align-items:center;flex:1;min-width:0;padding:0 .75rem;gap:.6rem;}
+    .am-search i{color:#a1a1aa;font-size:.85rem;flex-shrink:0;}
+    .am-search input{flex:1;border:none;outline:none;font-size:.87rem;color:#1e293b;background:transparent;height:100%;padding:0;}
+    .am-search input::placeholder{color:#b0b8c4;}
+    .am-search-divider{width:1px;height:24px;background:#e5e7eb;flex-shrink:0;margin:0 .25rem;}
+    .am-search-kbd{display:flex;align-items:center;padding:.1rem .4rem;border-radius:4px;background:#f1f5f9;border:1px solid #e5e7eb;font-size:.65rem;color:#94a3b8;flex-shrink:0;line-height:1;}
+    .am-divider{width:1px;height:24px;background:#e5e7eb;flex-shrink:0;}
+    .am-filter-btn{display:flex;align-items:center;gap:.4rem;padding:0 .75rem;height:100%;font-size:.82rem;color:#475569;cursor:pointer;transition:background .12s;white-space:nowrap;border:none;background:none;font-family:inherit;}
+    .am-filter-btn:hover{background:#f8fafc;}
+    .am-filter-btn i.icon{font-size:.75rem;color:#94a3b8;}
+    .am-filter-btn i.chevron{font-size:.5rem;color:#c0c6d0;margin-left:.15rem;}
+    .am-filter-btn .val{font-weight:600;color:#0ea5e9;}
+    .am-filter-btn.active{background:#f0f7ff;}
+    .am-filter-btn.active::after{content:'';position:absolute;bottom:0;left:75px;right:75px;height:2px;background:#0ea5e9;border-radius:1px;}
+    .am-filter-btn{position:relative;}
+    .am-right{display:flex;align-items:center;gap:.4rem;margin-left:auto;padding:0 .5rem;height:100%;}
+    .am-icon-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;transition:all .15s;font-size:.78rem;}
+    .am-icon-btn:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
+    .am-icon-btn.primary{background:#0ea5e9;border-color:#0ea5e9;color:#fff;}
+    .am-icon-btn.primary:hover{background:#0284c7;}
+
+    .am-drop{position:relative;}
+    .am-drop-panel{display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.12);padding:.4rem;min-width:200px;z-index:50;}
+    .am-drop.open .am-drop-panel{display:block;}
+    .am-drop-opt{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-radius:8px;font-size:.83rem;color:#475569;cursor:pointer;transition:background .1s;}
+    .am-drop-opt:hover{background:#f1f5f9;}
+    .am-drop-opt.selected{background:#eff6ff;color:#0369a1;font-weight:600;}
+    .am-drop-opt .check{width:18px;height:18px;border-radius:5px;border:1.5px solid #d1d5db;display:flex;align-items:center;justify-content:center;font-size:.6rem;flex-shrink:0;}
+    .am-drop-opt.selected .check{background:#0ea5e9;border-color:#0ea5e9;color:#fff;}
+
+    .am-drop-date{padding:.75rem .7rem;}
+    .am-drop-date label{display:block;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#94a3b8;margin-bottom:.3rem;}
+    .am-drop-date input{width:100%;padding:.5rem .65rem;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.82rem;color:#1e293b;background:#f8fafc;}
+    .am-drop-date input:focus{outline:none;border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.08);}
+    .am-drop-date .am-date-row{display:flex;align-items:center;gap:.5rem;}
+    .am-drop-date .am-date-sep{color:#d1d5db;font-size:.78rem;}
+    .am-drop-date .am-date-apply{margin-top:.75rem;}
+
+    .am-chips{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.85rem;}
+    .am-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .65rem;border-radius:6px;font-size:.73rem;font-weight:500;background:#f0f7ff;color:#0369a1;border:1px solid #bae6fd;transition:all .15s;}
+    .am-chip:hover{background:#e0f2fe;}
+    .am-chip i.rm{font-size:.6rem;cursor:pointer;opacity:.45;transition:opacity .12s;margin-left:.1rem;}
+    .am-chip i.rm:hover{opacity:1;color:#dc2626;}
+    .am-chip-clear{background:#fef2f2;color:#b91c1c;border-color:#fecaca;}
+    .am-chip-clear:hover{background:#fee2e2;}
+
+    .am-info-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}
+    .am-info-bar span{font-size:.82rem;color:#64748b;}
+    .am-info-bar strong{color:var(--rt-navy);font-weight:700;}
+
+    .am-table-card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .am-tbl{width:100%;border-collapse:collapse;}
+    .am-tbl thead{position:sticky;top:0;z-index:2;}
+    .am-tbl th{background:#f8fafc;padding:.7rem .85rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.6px;color:#64748b;font-weight:700;border-bottom:2px solid #e5e7eb;white-space:nowrap;user-select:none;}
+    .am-tbl th a{color:#64748b;text-decoration:none;display:inline-flex;align-items:center;gap:.35rem;transition:color .15s;padding:.15rem .3rem;border-radius:4px;}
+    .am-tbl th a:hover{color:var(--rt-primary);background:rgba(14,165,233,.06);}
+    .am-tbl th a.on{color:var(--rt-navy);}
+    .am-tbl th .si{font-size:.55rem;opacity:.35;transition:all .15s;}
+    .am-tbl th a.on .si{opacity:1;color:var(--rt-primary);}
+    .am-tbl td{padding:.7rem .85rem;font-size:.85rem;color:#334155;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+    .am-tbl tbody tr{transition:background .12s;cursor:pointer;}
+    .am-tbl tbody tr:hover{background:#f0f7ff;}
+    .am-tbl tbody tr:last-child td{border-bottom:none;}
+    .am-tbl tbody tr.am-selected{background:#eff6ff;}
+
+    .am-id{display:inline-flex;align-items:center;justify-content:center;min-width:30px;padding:.2rem .5rem;border-radius:6px;font-size:.75rem;font-weight:700;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;font-variant-numeric:tabular-nums;}
+    .am-loc strong{color:#1e293b;font-weight:600;}
+    .am-loc small{display:block;font-size:.73rem;color:#94a3b8;margin-top:1px;}
+    .am-user{display:flex;align-items:center;gap:.45rem;}
+    .am-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#e0e7ff,#c7d2fe);color:#4338ca;font-size:.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .am-user-info{font-size:.82rem;line-height:1.2;}
+    .am-user-info small{color:#94a3b8;font-size:.72rem;}
+    .am-transect-pill{display:inline-flex;align-items:center;justify-content:center;min-width:24px;padding:.15rem .45rem;border-radius:12px;font-size:.75rem;font-weight:700;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;}
+    .am-cover{font-weight:700;font-size:.85rem;}
+    .am-cover.excellent{color:#16a34a;}
+    .am-cover.good{color:#2563eb;}
+    .am-cover.fair{color:#d97706;}
+    .am-cover.poor{color:#dc2626;}
+    .am-nodata{color:#d1d5db;font-size:.8rem;}
+
+    .am-badge{display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .65rem;border-radius:6px;font-size:.72rem;font-weight:700;letter-spacing:.01em;}
+    .am-badge.approved{background:#dcfce7;color:#15803d;}
+    .am-badge.submitted{background:#fef3c7;color:#b45309;}
+    .am-badge.rejected{background:#fee2e2;color:#dc2626;}
+    .am-badge.draft{background:#f3f4f6;color:#6b7280;}
+
+    .am-acts{display:flex;gap:.3rem;}
+    .am-act{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;font-size:.78rem;border:1px solid transparent;cursor:pointer;text-decoration:none;transition:all .15s;}
+    .am-act-v{background:#eff6ff;color:#2563eb;border-color:#bfdbfe;}
+    .am-act-v:hover{background:#dbeafe;transform:translateY(-1px);box-shadow:0 2px 6px rgba(37,99,235,.2);}
+    .am-act-r{background:#fef9c3;color:#ca8a04;border-color:#fde047;}
+    .am-act-r:hover{background:#fef08a;transform:translateY(-1px);box-shadow:0 2px 6px rgba(202,138,4,.2);}
+    .am-act-d{background:#fef2f2;color:#dc2626;border-color:#fecaca;}
+    .am-act-d:hover{background:#fee2e2;transform:translateY(-1px);box-shadow:0 2px 6px rgba(220,38,38,.2);}
+
+    .am-empty{text-align:center;padding:4rem 1.5rem;}
+    .am-empty-icon{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem;}
+    .am-empty-icon i{font-size:1.8rem;color:#94a3b8;}
+    .am-empty h5{color:#475569;font-weight:700;margin-bottom:.3rem;font-size:1.05rem;}
+    .am-empty p{color:#94a3b8;font-size:.88rem;margin:0;}
+
+    .am-paginate{display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding:.75rem 0;font-size:.82rem;color:#64748b;}
+    .am-paginate a,.am-paginate span{padding:.4rem .7rem;border-radius:8px;text-decoration:none;font-weight:500;transition:all .15s;}
+    .am-paginate a{color:#475569;background:#fff;border:1px solid #e2e8f0;}
+    .am-paginate a:hover{background:#f8fafc;border-color:#cbd5e1;}
+    .am-paginate .cur{color:#fff;background:var(--rt-primary);border:1px solid var(--rt-primary);font-weight:700;}
+
+    @media(max-width:992px){.am-stats{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:768px){
+        .am-stats{grid-template-columns:repeat(2,1fr);gap:.5rem;}
+        .am-stat{padding:.75rem .85rem;}
+        .am-stat-val{font-size:1.4rem;}
+        .am-header-left h3{font-size:1.2rem;}
+        .am-tbl th:nth-child(5),.am-tbl td:nth-child(5),
+        .am-tbl th:nth-child(6),.am-tbl td:nth-child(6){display:none;}
+        .am-user{flex-direction:column;align-items:flex-start;gap:0;}
+        .am-toolbar-row{flex-wrap:wrap;}
+        .am-search{border-right:none;border-bottom:1px solid #f1f5f9;min-width:100%;}
+        .am-ctrls{flex-wrap:wrap;}
+        .am-search-kbd{display:none;}
+    }
+    @media(max-width:576px){
+        .am-header{flex-direction:column;align-items:flex-start;}
+        .am-header-right{width:100%;}
+        .am-btn{flex:1;justify-content:center;padding:.6rem .75rem;font-size:.78rem;}
+        .am-ctrl{padding:0 .6rem;font-size:.75rem;}
+        .am-ctrl span{display:none;}
+    }
+</style>
+
+<div class="am-page">
+    <div class="am-breadcrumb">
+        <a href="{% url 'admin_dashboard' %}"><i class="fas fa-home"></i></a>
+        <span class="sep">/</span>
+        <span>Assessments</span>
+    </div>
+
+    <div class="am-header">
+        <div class="am-header-left">
+            <h3><i class="fas fa-clipboard-list"></i> Assessments</h3>
+            <p>Review, approve, and manage coral reef assessment submissions.</p>
+        </div>
+        <div class="am-header-right">
+            <button type="button" class="am-btn am-btn-danger d-none" id="bulkDeleteBtn" onclick="confirmBulkDelete()">
+                <i class="fas fa-trash-alt"></i> Delete (<span id="bulkCount">0</span>)
+            </button>
+            <a href="{% url 'upload_assessment' %}" class="am-btn am-btn-primary">
+                <i class="fas fa-plus"></i> New Assessment
+            </a>
+        </div>
+    </div>
+
+    <div class="am-stats">
+        <a href="?status=&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if not status_filter %}active{% endif %}" style="background:linear-gradient(135deg,#475569,#334155);text-decoration:none;color:#fff;">
+            <div class="am-stat-top"><div class="am-stat-val">{{ stats.total }}</div><div class="am-stat-icon"><i class="fas fa-layer-group"></i></div></div>
+            <div class="am-stat-lbl">Total Assessments</div>
+        </a>
+        <a href="?status=submitted&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if status_filter == 'submitted' %}active{% endif %}" style="background:linear-gradient(135deg,#f59e0b,#d97706);text-decoration:none;color:#fff;">
+            <div class="am-stat-top"><div class="am-stat-val">{{ stats.submitted }}</div><div class="am-stat-icon"><i class="fas fa-clock"></i></div></div>
+            <div class="am-stat-lbl">Pending Review</div>
+        </a>
+        <a href="?status=approved&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if status_filter == 'approved' %}active{% endif %}" style="background:linear-gradient(135deg,#22c55e,#16a34a);text-decoration:none;color:#fff;">
+            <div class="am-stat-top"><div class="am-stat-val">{{ stats.approved }}</div><div class="am-stat-icon"><i class="fas fa-check-double"></i></div></div>
+            <div class="am-stat-lbl">Approved</div>
+        </a>
+        <a href="?status=rejected&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if status_filter == 'rejected' %}active{% endif %}" style="background:linear-gradient(135deg,#ef4444,#dc2626);text-decoration:none;color:#fff;">
+            <div class="am-stat-top"><div class="am-stat-val">{{ stats.rejected }}</div><div class="am-stat-icon"><i class="fas fa-times-circle"></i></div></div>
+            <div class="am-stat-lbl">Rejected</div>
+        </a>
+        <a href="?status=draft&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if status_filter == 'draft' %}active{% endif %}" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);text-decoration:none;color:#fff;">
+            <div class="am-stat-top"><div class="am-stat-val">{{ stats.draft }}</div><div class="am-stat-icon"><i class="fas fa-pen-to-square"></i></div></div>
+            <div class="am-stat-lbl">Draft</div>
         </a>
     </div>
-</div>
 
-<!-- Stats Cards -->
-<div class="row mb-4" id="statsRow">
-    <div class="col-md-2">
-        <div class="card text-center border-secondary">
-            <div class="card-body py-2">
-                <h5 class="mb-0">{{ stats.total }}</h5>
-                <small class="text-muted">Total</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card text-center border-warning">
-            <div class="card-body py-2">
-                <h5 class="mb-0 text-warning">{{ stats.submitted }}</h5>
-                <small class="text-muted">Pending Review</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card text-center border-success">
-            <div class="card-body py-2">
-                <h5 class="mb-0 text-success">{{ stats.approved }}</h5>
-                <small class="text-muted">Approved</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card text-center border-danger">
-            <div class="card-body py-2">
-                <h5 class="mb-0 text-danger">{{ stats.rejected }}</h5>
-                <small class="text-muted">Rejected</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card text-center border-secondary">
-            <div class="card-body py-2">
-                <h5 class="mb-0 text-secondary">{{ stats.draft }}</h5>
-                <small class="text-muted">Draft</small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Filters -->
-<div class="card mb-4">
-    <div class="card-body py-2">
-        <form method="GET" class="row g-2 align-items-end">
-            <div class="col-sm-6 col-md-3">
-                <input type="text" class="form-control form-control-sm" name="search"
-                       placeholder="Search location or user..." value="{{ search_query }}">
-            </div>
-            <div class="col-sm-6 col-md-2">
-                <select class="form-select form-select-sm" name="status">
-                    <option value="">All Status</option>
-                    <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Pending Review</option>
-                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
-                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
-                    <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
-                </select>
-            </div>
-            <div class="col-sm-6 col-md-2">
-                <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i> Filter</button>
-                <a href="{% url 'admin_assessments' %}" class="btn btn-sm btn-outline-secondary">Clear</a>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Assessments Table -->
-<div class="card">
-    <div class="card-body">
-        <div class="d-flex justify-content-end mb-2">
-            <button class="btn btn-sm btn-danger d-none" id="bulkDeleteAssessmentBtn" onclick="confirmBulkDeleteAssessment()">
-                <i class="fas fa-trash"></i> Delete Selected (<span id="selectedAssessmentCount">0</span>)
-            </button>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover" id="assessmentsTable">
-                <thead>
-                    <tr>
-                        <th style="width:40px;">
-                            <input type="checkbox" id="selectAllAssessments" class="form-check-input" title="Select all">
-                        </th>
-                        <th>#</th>
-                        <th>Location</th>
-                        <th>Date</th>
-                        <th>Uploaded By</th>
-                        <th>Reviewed By</th>
-                        <th>Transects</th>
-                        <th>Coral Cover</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for a in assessments %}
-                    <tr class="assess-row" data-id="{{ a.id }}" data-status="{{ a.status }}">
-                        <td>
-                            {% if a.status == 'rejected' or a.status == 'draft' %}
-                            <input type="checkbox" class="form-check-input assess-check" value="{{ a.id }}">
-                            {% endif %}
-                        </td>
-                        <td><strong>{{ a.id }}</strong></td>
-                        <td>
-                            <strong>{{ a.barangay }}</strong>
-                            <br><small class="text-muted">{{ a.municipality }}</small>
-                        </td>
-                        <td>{{ a.assessment_date|date:"M d, Y" }}</td>
-                        <td>{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</td>
-                        <td>
-                            {% if a.reviewed_by %}
-                                <small>{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}</small>
-                            {% else %}
-                                <small class="text-muted">-</small>
-                            {% endif %}
-                        </td>
-                        <td>{{ a.transects.count }}</td>
-                        <td>{% if a.overall_coral_cover %}{{ a.overall_coral_cover }}%{% else %}-{% endif %}</td>
-                        <td>
-                            <span class="badge
-                                {% if a.status == 'approved' %}bg-success
-                                {% elif a.status == 'submitted' %}bg-warning text-dark
-                                {% elif a.status == 'rejected' %}bg-danger
-                                {% else %}bg-secondary{% endif %}">
-                                {{ a.get_status_display }}
-                            </span>
-                        </td>
-                        <td>
-                            <a href="{% url 'admin_assessment_detail' a.id %}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-eye"></i> View
-                            </a>
-                            {% if a.status == 'submitted' %}
-                            <a href="{% url 'admin_confirm_approval' a.id %}" class="btn btn-sm btn-success" title="Review & Approve">
-                                <i class="fas fa-check"></i>
-                            </a>
-                            {% endif %}
-                            {% if a.status == 'rejected' %}
-                            <form method="POST" action="{% url 'delete_assessment' a.id %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"
-                                        onclick="return confirm('Delete Assessment #{{ a.id }}? This cannot be undone.')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="10" class="text-center py-4">
-                            <i class="fas fa-clipboard fa-3x text-muted mb-3 d-block"></i>
-                            <h5>No assessments found</h5>
-                            <p class="text-muted">No assessments match your filters.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Bulk Delete Confirmation Modal -->
-<div class="modal fade" id="bulkDeleteAssessmentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="bulkDeleteAssessmentForm" method="POST" action="{% url 'admin_bulk_delete_assessments' %}">
-                {% csrf_token %}
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Delete Selected Assessments</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <form method="GET" id="filterForm">
+        <div class="am-toolbar">
+            <div class="am-toolbar-row">
+                <div class="am-search">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="text" name="search" placeholder="Search ID, location, contributor..." value="{{ search_query }}" autocomplete="off" id="searchInput">
+                    <span class="am-search-kbd">/</span>
                 </div>
-                <div class="modal-body">
-                    <p>You are about to delete <strong id="bulkDeleteAssessmentCount">0</strong> assessment(s).</p>
-                    <div id="bulkDeleteAssessmentList" class="mb-2"></div>
-                    <div id="bulkSkipAssessmentAlert" class="alert alert-warning py-2 mb-0 d-none">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span id="bulkSkipAssessmentText"></span>
+
+                <div class="am-divider"></div>
+
+                <div class="am-drop" id="statusDrop">
+                    <button type="button" class="am-filter-btn {% if status_filter %}active{% endif %}" onclick="toggleDrop('statusDrop')">
+                        <i class="fas fa-circle-half-stroke icon"></i>
+                        Status{% if status_filter %}: <span class="val">{{ status_filter|title }}</span>{% endif %}
+                        <i class="fas fa-chevron-down chevron"></i>
+                    </button>
+                    <div class="am-drop-panel">
+                        <div class="am-drop-opt {% if not status_filter %}selected{% endif %}" data-field="status" data-val="">
+                            <span class="check">{% if not status_filter %}<i class="fas fa-check"></i>{% endif %}</span> All Status
+                        </div>
+                        <div class="am-drop-opt {% if status_filter == 'submitted' %}selected{% endif %}" data-field="status" data-val="submitted">
+                            <span class="check">{% if status_filter == 'submitted' %}<i class="fas fa-check"></i>{% endif %}</span> Pending Review
+                        </div>
+                        <div class="am-drop-opt {% if status_filter == 'approved' %}selected{% endif %}" data-field="status" data-val="approved">
+                            <span class="check">{% if status_filter == 'approved' %}<i class="fas fa-check"></i>{% endif %}</span> Approved
+                        </div>
+                        <div class="am-drop-opt {% if status_filter == 'rejected' %}selected{% endif %}" data-field="status" data-val="rejected">
+                            <span class="check">{% if status_filter == 'rejected' %}<i class="fas fa-check"></i>{% endif %}</span> Rejected
+                        </div>
+                        <div class="am-drop-opt {% if status_filter == 'draft' %}selected{% endif %}" data-field="status" data-val="draft">
+                            <span class="check">{% if status_filter == 'draft' %}<i class="fas fa-check"></i>{% endif %}</span> Draft
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete</button>
+
+                <div class="am-drop" id="muniDrop">
+                    <button type="button" class="am-filter-btn {% if municipality_filter %}active{% endif %}" onclick="toggleDrop('muniDrop')">
+                        <i class="fas fa-location-dot icon"></i>
+                        Municipality{% if municipality_filter %}: <span class="val">Filtered</span>{% endif %}
+                        <i class="fas fa-chevron-down chevron"></i>
+                    </button>
+                    <div class="am-drop-panel" style="min-width:240px;max-height:320px;overflow-y:auto;">
+                        <div class="am-drop-opt {% if not municipality_filter %}selected{% endif %}" data-field="municipality" data-val="">
+                            <span class="check">{% if not municipality_filter %}<i class="fas fa-check"></i>{% endif %}</span> All Municipalities
+                        </div>
+                        {% for m in municipalities %}
+                        <div class="am-drop-opt {% if municipality_filter == m.id|stringformat:"d" %}selected{% endif %}" data-field="municipality" data-val="{{ m.id }}">
+                            <span class="check">{% if municipality_filter == m.id|stringformat:"d" %}<i class="fas fa-check"></i>{% endif %}</span> {{ m.name }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="am-drop" id="dateDrop">
+                    <button type="button" class="am-filter-btn {% if date_from or date_to %}active{% endif %}" onclick="toggleDrop('dateDrop')">
+                        <i class="fas fa-calendar icon"></i>
+                        Date{% if date_from or date_to %}: <span class="val">Filtered</span>{% endif %}
+                        <i class="fas fa-chevron-down chevron"></i>
+                    </button>
+                    <div class="am-drop-panel" style="width:270px;">
+                        <div class="am-drop-date">
+                            <label>From</label>
+                            <input type="date" name="date_from" value="{{ date_from }}">
+                            <div style="height:.6rem;"></div>
+                            <label>To</label>
+                            <input type="date" name="date_to" value="{{ date_to }}">
+                            <div class="am-date-apply">
+                                <button type="submit" class="am-icon-btn primary" style="width:100%;border-radius:8px;height:34px;font-size:.78rem;font-weight:600;" onclick="closeAllDrops()"><i class="fas fa-check" style="margin-right:.3rem;"></i> Apply</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="am-right">
+                    <input type="hidden" name="sort" value="{{ sort_by }}">
+                    <button type="submit" class="am-icon-btn primary" title="Search"><i class="fas fa-magnifying-glass"></i></button>
+                    <a href="{% url 'admin_assessments' %}" class="am-icon-btn" title="Reset filters"><i class="fas fa-rotate-left"></i></a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if status_filter or search_query or municipality_filter or date_from or date_to %}
+    <div class="am-chips">
+        {% if status_filter %}<span class="am-chip"><i class="fas fa-circle" style="font-size:.35rem;"></i> Status: {{ status_filter|title }} <i class="fas fa-xmark rm" data-clear="status"></i></span>{% endif %}
+        {% if search_query %}<span class="am-chip"><i class="fas fa-magnifying-glass" style="font-size:.5rem;"></i> "{{ search_query }}" <i class="fas fa-xmark rm" data-clear="search"></i></span>{% endif %}
+        {% if municipality_filter %}<span class="am-chip"><i class="fas fa-location-dot" style="font-size:.5rem;"></i> Municipality <i class="fas fa-xmark rm" data-clear="municipality"></i></span>{% endif %}
+        {% if date_from %}<span class="am-chip"><i class="fas fa-calendar" style="font-size:.5rem;"></i> From: {{ date_from }} <i class="fas fa-xmark rm" data-clear="date_from"></i></span>{% endif %}
+        {% if date_to %}<span class="am-chip"><i class="fas fa-calendar-check" style="font-size:.5rem;"></i> To: {{ date_to }} <i class="fas fa-xmark rm" data-clear="date_to"></i></span>{% endif %}
+        <a href="{% url 'admin_assessments' %}" class="am-chip am-chip-clear"><i class="fas fa-circle-xmark"></i> Clear all</a>
+    </div>
+    {% endif %}
+
+    <div class="am-info-bar">
+        <span>Showing <strong>{{ total_count }}</strong> assessment{{ total_count|pluralize }}</span>
+    </div>
+
+    <div class="am-table-card">
+        <table class="am-tbl" id="assessTable">
+            <thead>
+                <tr>
+                    <th style="width:36px;"><input type="checkbox" id="selectAll" class="form-check-input" title="Select all"></th>
+                    {% with base="status="|add:status_filter|add:"&search="|add:search_query|add:"&municipality="|add:municipality_filter|add:"&date_from="|add:date_from|add:"&date_to="|add:date_to %}
+                    <th><a href="?sort={% if sort_by == 'barangay' %}-barangay{% else %}barangay{% endif %}&{{ base }}" class="{% if sort_by == 'barangay' or sort_by == '-barangay' %}on{% endif %}">Location <i class="fas fa-sort si"></i></a></th>
+                    <th><a href="?sort={% if sort_by == 'assessment_date' %}-assessment_date{% else %}assessment_date{% endif %}&{{ base }}" class="{% if sort_by == 'assessment_date' or sort_by == '-assessment_date' %}on{% endif %}">Date <i class="fas fa-sort si"></i></a></th>
+                    <th><a href="?sort={% if sort_by == 'uploaded_by' %}-uploaded_by{% else %}uploaded_by{% endif %}&{{ base }}" class="{% if sort_by == 'uploaded_by' or sort_by == '-uploaded_by' %}on{% endif %}">Uploaded By <i class="fas fa-sort si"></i></a></th>
+                    <th>Reviewed By</th>
+                    <th><a href="?sort={% if sort_by == 'transects' %}-id{% else %}transects{% endif %}&{{ base }}" class="{% if sort_by == 'transects' %}on{% endif %}">Transects <i class="fas fa-sort si"></i></a></th>
+                    <th><a href="?sort={% if sort_by == 'coral_cover' %}-coral_cover{% else %}coral_cover{% endif %}&{{ base }}" class="{% if sort_by == 'coral_cover' or sort_by == '-coral_cover' %}on{% endif %}">Cover <i class="fas fa-sort si"></i></a></th>
+                    <th><a href="?sort={% if sort_by == 'status' %}-status{% else %}status{% endif %}&{{ base }}" class="{% if sort_by == 'status' or sort_by == '-status' %}on{% endif %}">Status <i class="fas fa-sort si"></i></a></th>
+                    <th style="width:90px;">Actions</th>
+                    {% endwith %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in assessments %}
+                <tr class="assess-row" data-id="{{ a.id }}" data-status="{{ a.status }}" onclick="window.location='{% url 'admin_assessment_detail' a.id %}'">
+                    <td onclick="event.stopPropagation()">
+                        {% if a.status == 'rejected' or a.status == 'draft' %}
+                        <input type="checkbox" class="form-check-input assess-check" value="{{ a.id }}">
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="am-loc">
+                            <strong>{{ a.barangay.name }}</strong>
+                            <small>{{ a.municipality.name }}, {{ a.municipality.province.name }}</small>
+                        </div>
+                    </td>
+                    <td>{{ a.assessment_date|date:"M d, Y" }}</td>
+                    <td>
+                        <div class="am-user">
+                            <div class="am-avatar">{{ a.uploaded_by.first_name.0|default:a.uploaded_by.email.0|upper }}</div>
+                            <div class="am-user-info">
+                                {{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if a.reviewed_by %}
+                        <div class="am-user">
+                            <div class="am-avatar" style="background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;">{{ a.reviewed_by.first_name.0|default:a.reviewed_by.email.0|upper }}</div>
+                            <div class="am-user-info">
+                                {{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}
+                            </div>
+                        </div>
+                        {% else %}
+                        <span class="am-nodata">—</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="am-transect-pill">{{ a.transects.count }}</span></td>
+                    <td>
+                        {% if a.overall_coral_cover %}
+                        <span class="am-cover {% if a.overall_coral_cover >= 65 %}excellent{% elif a.overall_coral_cover >= 45 %}good{% elif a.overall_coral_cover >= 25 %}fair{% else %}poor{% endif %}">{{ a.overall_coral_cover }}%</span>
+                        {% else %}
+                        <span class="am-nodata">—</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="am-badge {{ a.status }}">{{ a.get_status_display }}</span></td>
+                    <td onclick="event.stopPropagation()">
+                        <div class="am-acts">
+                            <a href="{% url 'admin_assessment_detail' a.id %}" class="am-act am-act-v" title="View details"><i class="fas fa-arrow-up-right-from-square"></i></a>
+                            {% if a.status == 'submitted' %}
+                            <a href="{% url 'admin_confirm_approval' a.id %}" class="am-act am-act-r" title="Review & approve"><i class="fas fa-eye"></i></a>
+                            {% endif %}
+                            {% if a.status == 'rejected' %}
+                            <form method="POST" action="{% url 'delete_assessment' a.id %}" class="d-inline" style="margin:0;" onclick="event.stopPropagation()">
+                                {% csrf_token %}
+                                <button type="submit" class="am-act am-act-d" title="Delete" onclick="return confirm('Delete Assessment #{{ a.id }}?')"><i class="fas fa-trash-can"></i></button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9">
+                        <div class="am-empty">
+                            <div class="am-empty-icon"><i class="fas fa-clipboard-question"></i></div>
+                            <h5>No assessments found</h5>
+                            <p>{% if search_query or status_filter or municipality_filter %}Try adjusting your search or filters.{% else %}Assessments will appear here once contributors submit them.{% endif %}</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border:none;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+            <form id="bulkDeleteForm" method="POST" action="{% url 'admin_bulk_delete_assessments' %}">
+                {% csrf_token %}
+                <div class="modal-header" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;padding:1.1rem 1.5rem;">
+                    <h6 class="modal-title" style="font-weight:700;"><i class="fas fa-triangle-exclamation"></i> Confirm Deletion</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="padding:1.5rem;">
+                    <p style="margin-bottom:.75rem;">You are about to permanently delete <strong id="bulkDeleteCount">0</strong> assessment(s).</p>
+                    <div id="bulkDeleteList" style="max-height:150px;overflow-y:auto;"></div>
+                    <div id="bulkSkipAlert" class="alert alert-warning py-2 mb-0 mt-2 d-none" style="font-size:.82rem;">
+                        <i class="fas fa-circle-exclamation"></i> <span id="bulkSkipText"></span>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:.85rem 1.5rem;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px;">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-danger" style="border-radius:8px;font-weight:600;"><i class="fas fa-trash-can"></i> Delete</button>
                 </div>
             </form>
         </div>
@@ -205,70 +430,84 @@
 
 <script src="{% static 'js/assessment_sync.js' %}"></script>
 <script>
-var selectAllA = document.getElementById('selectAllAssessments');
-var aChecks = document.querySelectorAll('.assess-check');
-var bulkABtn = document.getElementById('bulkDeleteAssessmentBtn');
-var countASpan = document.getElementById('selectedAssessmentCount');
+(function(){
+    var selAll=document.getElementById('selectAll');
+    var bulkBtn=document.getElementById('bulkDeleteBtn');
+    var cntSpan=document.getElementById('bulkCount');
 
-if (selectAllA) {
-    selectAllA.addEventListener('change', function() {
-        var checked = this.checked;
-        document.querySelectorAll('.assess-check').forEach(function(c) { c.checked = checked; });
-        updateBulkABtn();
-    });
-}
+    if(selAll)selAll.addEventListener('change',function(){var c=this.checked;document.querySelectorAll('.assess-check').forEach(function(cb){cb.checked=c;});updBulk();});
+    document.querySelectorAll('.assess-check').forEach(function(cb){cb.addEventListener('change',updBulk);});
 
-document.querySelectorAll('.assess-check').forEach(function(c) {
-    c.addEventListener('change', updateBulkABtn);
-});
-
-function updateBulkABtn() {
-    var sel = document.querySelectorAll('.assess-check:checked').length;
-    if (countASpan) countASpan.textContent = sel;
-    if (bulkABtn) bulkABtn.classList.toggle('d-none', sel === 0);
-}
-
-function confirmBulkDeleteAssessment() {
-    var selected = [];
-    var skippable = [];
-    var form = document.getElementById('bulkDeleteAssessmentForm');
-    form.querySelectorAll('input[name="ids"]').forEach(function(e) { e.remove(); });
-
-    document.querySelectorAll('.assess-check:checked').forEach(function(c) {
-        var row = c.closest('.assess-row');
-        var id = c.value;
-        var status = row.getAttribute('data-status');
-        var loc = row.querySelector('strong').textContent;
-        if (status === 'submitted' || status === 'approved') {
-            skippable.push('#' + id + ' ' + loc + ' (' + status + ')');
-        } else {
-            selected.push('#' + id + ' ' + loc + ' (' + status + ')');
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'ids';
-            input.value = id;
-            form.appendChild(input);
-        }
-    });
-
-    if (selected.length === 0 && skippable.length === 0) return;
-
-    document.getElementById('bulkDeleteAssessmentCount').textContent = selected.length;
-    document.getElementById('bulkDeleteAssessmentList').innerHTML = selected.map(function(n) {
-        return '<span class="badge bg-danger me-1 mb-1">' + n + '</span>';
-    }).join('');
-
-    var skipAlert = document.getElementById('bulkSkipAssessmentAlert');
-    if (skippable.length > 0) {
-        skipAlert.classList.remove('d-none');
-        document.getElementById('bulkSkipAssessmentText').textContent = skippable.length + ' will be skipped (pending or approved): ' + skippable.join(', ');
-    } else {
-        skipAlert.classList.add('d-none');
+    function updBulk(){
+        var n=document.querySelectorAll('.assess-check:checked').length;
+        if(cntSpan)cntSpan.textContent=n;
+        if(bulkBtn)bulkBtn.classList.toggle('d-none',n===0);
     }
 
-    new bootstrap.Modal(document.getElementById('bulkDeleteAssessmentModal')).show();
-}
+    window.confirmBulkDelete=function(){
+        var sel=[],skip=[];
+        var form=document.getElementById('bulkDeleteForm');
+        form.querySelectorAll('input[name="ids"]').forEach(function(e){e.remove();});
+        document.querySelectorAll('.assess-check:checked').forEach(function(cb){
+            var row=cb.closest('.assess-row'),id=cb.value,st=row.getAttribute('data-status');
+            var loc=row.querySelector('.am-loc strong').textContent;
+            if(st==='submitted'||st==='approved'){skip.push('#'+id+' '+loc+' ('+st+')');}
+            else{sel.push('#'+id+' '+loc+' ('+st+')');var inp=document.createElement('input');inp.type='hidden';inp.name='ids';inp.value=id;form.appendChild(inp);}
+        });
+        if(!sel.length&&!skip.length)return;
+        document.getElementById('bulkDeleteCount').textContent=sel.length;
+        document.getElementById('bulkDeleteList').innerHTML=sel.map(function(s){return '<span style="display:inline-block;padding:.25rem .6rem;border-radius:6px;font-size:.78rem;font-weight:600;background:#fee2e2;color:#991b1b;margin:0 .3rem .3rem 0;">'+s+'</span>';}).join('');
+        var sa=document.getElementById('bulkSkipAlert');
+        if(skip.length){sa.classList.remove('d-none');document.getElementById('bulkSkipText').textContent=skip.length+' skipped (submitted/approved): '+skip.join(', ');}
+        else sa.classList.add('d-none');
+        new bootstrap.Modal(document.getElementById('bulkDeleteModal')).show();
+    };
 
-RTAssessmentSync.init({ role: 'admin', csrfToken: '{{ csrf_token }}', filters: 'status={{ status_filter }}&search={{ search_query }}' });
+    RTAssessmentSync.init({role:'admin',csrfToken:'{{ csrf_token }}',filters:'status={{ status_filter }}&search={{ search_query }}'});
+
+    document.querySelectorAll('[data-clear]').forEach(function(el){
+        el.addEventListener('click',function(e){
+            e.stopPropagation();
+            var p=new URLSearchParams(window.location.search);
+            p.delete(this.getAttribute('data-clear'));
+            window.location.href='?'+p.toString();
+        });
+    });
+
+    window.toggleDrop=function(id){
+        var d=document.getElementById(id);
+        var wasOpen=d.classList.contains('open');
+        document.querySelectorAll('.am-drop.open').forEach(function(el){el.classList.remove('open');});
+        if(!wasOpen)d.classList.add('open');
+    };
+    window.closeAllDrops=function(){document.querySelectorAll('.am-drop.open').forEach(function(el){el.classList.remove('open');});};
+    document.addEventListener('click',function(e){
+        if(!e.target.closest('.am-drop'))closeAllDrops();
+    });
+
+    document.querySelectorAll('.am-drop-opt').forEach(function(opt){
+        opt.addEventListener('click',function(){
+            var drop=this.closest('.am-drop');
+            var panel=drop.querySelector('.am-drop-panel');
+            var name='';
+            if(drop.id==='statusDrop')name='status';
+            else if(drop.id==='muniDrop')name='municipality';
+            if(!name)return;
+            var val=this.getAttribute('data-val');
+            var h=document.createElement('input');h.type='hidden';h.name=name;h.value=val;
+            var existing=document.querySelector('#filterForm input[name="'+name+'"]');
+            if(existing)existing.remove();
+            document.getElementById('filterForm').appendChild(h);
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    document.addEventListener('keydown',function(e){
+        if(e.key==='/'&&!e.target.closest('input,textarea,select')){
+            e.preventDefault();document.getElementById('searchInput').focus();
+        }
+        if(e.key==='Escape')document.querySelectorAll('.am-drop.open').forEach(function(el){el.classList.remove('open');});
+    });
+})();
 </script>
 {% endblock %}

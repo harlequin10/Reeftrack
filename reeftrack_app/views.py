@@ -5,6 +5,10 @@ from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.cache import cache_page
+from django.views.decorators.csrf import csrf_protect
+from django_ratelimit.decorators import ratelimit
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
@@ -16,7 +20,7 @@ from django.http import JsonResponse
 from .forms import RegisterForm, LoginForm, AdminCreateUserForm, UserProfileForm, CustomPasswordChangeForm
 from .decorators import admin_required, curator_required, contributor_required
 from .models import (
-    UserProfile, Municipality, Barangay, Assessment,
+    UserProfile, Province, Municipality, Barangay, Assessment,
     Transect, Species, TransectSpecies, AssessmentImage, Contributor, CustomMethodology,
     BarangayTransect
 )
@@ -31,6 +35,33 @@ def notify_assessment_refresh(action=''):
             {
                 'type': 'assessment.refresh',
                 'action': action,
+            }
+        )
+    except Exception:
+        pass
+
+
+def create_assessment_notification(user, assessment, notif_type, title, message):
+    """Create a notification for a user about an assessment."""
+    from .models import Notification
+    Notification.objects.create(
+        user=user,
+        assessment=assessment,
+        notification_type=notif_type,
+        title=title,
+        message=message,
+    )
+    notify_notification_refresh(user.id)
+
+
+def notify_notification_refresh(user_id):
+    """Push a notification update signal to a specific user via WebSocket."""
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'notifications_%s' % user_id,
+            {
+                'type': 'notification.refresh',
             }
         )
     except Exception:
@@ -89,15 +120,19 @@ def about(request):
     """Public about page"""
     return render(request, 'public/about.html', {'active_page': 'about'})
 
+@ratelimit(key='ip', rate='5/h', method='POST', block=True)
 def register(request):
     """Registration page - Only allows contributor role"""
     if request.user.is_authenticated:
         return redirect('dashboard')
-    
+
+    from .audit import log_security_event
+
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
+            log_security_event('account_created', request=request, user=user, details={'email': user.email})
             messages.success(
                 request, 
                 f'Registration successful! Welcome {user.username}! '
@@ -117,57 +152,83 @@ def register(request):
     
     return render(request, 'public/register.html', {'form': form})
 
+@ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def login_view(request):
     """Public login page - email + password"""
     if request.user.is_authenticated:
         return redirect('dashboard')
-    
+
+    from .security import is_locked_out, record_failed_login_for_view, clear_login_failures
+    from .audit import log_security_event
+
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data.get('email')
             password = form.cleaned_data.get('password')
+
+            # Check account lockout by email AND by IP
+            if is_locked_out(email) or is_locked_out(request.META.get('REMOTE_ADDR', '')):
+                log_security_event('login_locked', request=request, details={'email': email})
+                messages.error(request, 'Too many failed attempts. Please try again in 15 minutes.')
+                return render(request, 'public/login.html', {'form': form})
+
             try:
                 user_obj = User.objects.get(email=email)
                 user = authenticate(username=user_obj.username, password=password)
             except User.DoesNotExist:
                 user = None
-            
+
             if user is not None:
                 if not user.is_active:
-                    messages.error(request, 'Your account has been deactivated. Please contact an administrator.')
+                    # Don't reveal if account is deactivated — same error as wrong password
+                    record_failed_login_for_view(request, email)
+                    log_security_event('login_failed', request=request, details={'email': email, 'reason': 'deactivated'})
+                    messages.error(request, 'Invalid email or password.')
                     return render(request, 'public/login.html', {'form': form})
-                
+
                 if hasattr(user, 'profile'):
                     if user.profile.status == 'approved':
+                        clear_login_failures(email)
+                        clear_login_failures(request.META.get('REMOTE_ADDR', ''))
                         login(request, user)
+                        log_security_event('login_success', request=request, user=user)
                         messages.success(request, f'Welcome back {user.profile.get_full_name() or user.email}!')
                         return redirect('dashboard')
                     elif user.profile.status == 'pending':
                         messages.warning(
-                            request, 
+                            request,
                             'Your account is pending approval. '
                             'Please wait for an admin or curator to approve your account.'
                         )
                     elif user.profile.status == 'rejected':
-                        messages.error(
-                            request, 
-                            'Your account has been rejected. '
-                            f'Reason: {user.profile.rejection_reason or "No reason provided"}'
+                        messages.warning(
+                            request,
+                            'Your account is pending approval. '
+                            'Please wait for an admin or curator to approve your account.'
                         )
                 else:
-                    messages.error(request, 'Invalid account configuration.')
+                    messages.error(request, 'Invalid email or password.')
             else:
-                messages.error(request, 'Invalid email or password.')
+                # Wrong password — record failure, generic error
+                locked = record_failed_login_for_view(request, email)
+                if locked:
+                    log_security_event('login_locked', request=request, details={'email': email})
+                    messages.error(request, 'Too many failed attempts. Please try again in 15 minutes.')
+                else:
+                    log_security_event('login_failed', request=request, details={'email': email})
+                    messages.error(request, 'Invalid email or password.')
         else:
             messages.error(request, 'Invalid email or password.')
     else:
         form = LoginForm()
-    
+
     return render(request, 'public/login.html', {'form': form})
 
 @login_required
 def logout_view(request):
+    from .audit import log_security_event
+    log_security_event('logout', request=request)
     logout(request)
     messages.info(request, 'You have been logged out.')
     return redirect('home')
@@ -188,6 +249,10 @@ def dashboard(request):
 @admin_required
 def admin_dashboard(request):
     """Admin dashboard with user stats and assessment stats"""
+    from django.db.models import Count, Q, Avg
+    from django.utils import timezone
+    from datetime import timedelta
+
     total_users = User.objects.count()
     
     # Only count pending contributors (admins and curators are auto-approved)
@@ -198,16 +263,30 @@ def admin_dashboard(request):
     pending_assessments = Assessment.objects.filter(status='submitted').count()
     total_assessments = Assessment.objects.count()
     approved_assessments = Assessment.objects.filter(status='approved').count()
+    rejected_assessments = Assessment.objects.filter(status='rejected').count()
+    draft_assessments = Assessment.objects.filter(status='draft').count()
     
     # Location & species stats
+    total_provinces = Province.objects.count()
     total_municipalities = Municipality.objects.count()
     total_barangays = Barangay.objects.count()
     total_species = Species.objects.count()
+    total_families = Species.objects.values('major_category').distinct().count()
+    
+    # Recent activity (last 30 days)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    recent_uploads = Assessment.objects.filter(created_at__gte=thirty_days_ago).count()
+    recent_approvals = Assessment.objects.filter(approved_at__gte=thirty_days_ago).count()
     
     # Recent approved assessments
     recent_approved = Assessment.objects.filter(
         status='approved'
     ).select_related('municipality', 'barangay', 'uploaded_by').order_by('-approved_at')[:5]
+    
+    # Recent pending reviews
+    recent_pending = Assessment.objects.filter(
+        status='submitted'
+    ).select_related('municipality', 'barangay', 'uploaded_by').order_by('-created_at')[:5]
     
     context = {
         'total_users': total_users,
@@ -216,10 +295,17 @@ def admin_dashboard(request):
         'pending_assessments': pending_assessments,
         'total_assessments': total_assessments,
         'approved_assessments': approved_assessments,
+        'rejected_assessments': rejected_assessments,
+        'draft_assessments': draft_assessments,
+        'total_provinces': total_provinces,
         'total_municipalities': total_municipalities,
         'total_barangays': total_barangays,
         'total_species': total_species,
+        'total_families': total_families,
+        'recent_uploads': recent_uploads,
+        'recent_approvals': recent_approvals,
         'recent_approved': recent_approved,
+        'recent_pending': recent_pending,
     }
     
     return render(request, 'admin/dashboard.html', context)
@@ -232,12 +318,12 @@ def admin_manage_users(request):
     Admins cannot see edit/delete options for other admins
     """
     users = User.objects.all().select_related('profile').order_by('-date_joined')
-    
+
     # Get filter parameters
     role_filter = request.GET.get('role', '')
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
-    
+
     # Apply filters
     if role_filter:
         users = users.filter(profile__role=role_filter)
@@ -245,10 +331,14 @@ def admin_manage_users(request):
         users = users.filter(profile__status=status_filter)
     if search_query:
         users = users.filter(
-            Q(username__icontains=search_query) | 
-            Q(email__icontains=search_query)
-        )
-    
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        ).distinct()
+
+    # Stat counts (unfiltered)
+    all_users = User.objects.all().select_related('profile')
     context = {
         'users': users,
         'role_filter': role_filter,
@@ -257,8 +347,12 @@ def admin_manage_users(request):
         'role_choices': UserProfile.ROLE_CHOICES,
         'status_choices': UserProfile.STATUS_CHOICES,
         'is_superuser': request.user.is_superuser,
+        'role_admin_count': all_users.filter(profile__role='admin').count(),
+        'role_curator_count': all_users.filter(profile__role='curator').count(),
+        'role_contributor_count': all_users.filter(profile__role='contributor').count(),
+        'pending_count': all_users.filter(profile__status='pending').count(),
     }
-    
+
     return render(request, 'admin/manage_users/index.html', context)
 
 @login_required
@@ -825,6 +919,30 @@ def cleanup_barangay_transect_coords(assessment):
             rec.delete()
 
 
+def get_or_create_species(sub_category, major_category, source=None):
+    """
+    Case-insensitive get_or_create for Species.
+    Normalizes both fields to UPPER CASE to prevent duplicates like
+    'Acroporidae' vs 'ACROPORIDAE'.
+    Returns (species, created).
+    """
+    sub_norm = sub_category.strip().upper()
+    major_norm = major_category.strip().upper()
+    defaults = {}
+    if source:
+        defaults['source'] = source
+    species = Species.objects.filter(
+        sub_category__iexact=sub_norm, major_category__iexact=major_norm
+    ).first()
+    if species:
+        return species, False
+    return Species.objects.get_or_create(
+        sub_category=sub_norm,
+        major_category=major_norm,
+        defaults=defaults,
+    )
+
+
 def populate_species_from_excel(assessment):
     """
     Parse Excel files for all transects in an assessment and create Species + TransectSpecies records.
@@ -841,10 +959,9 @@ def populate_species_from_excel(assessment):
                 cover = sp.get('cover', 0)
                 if not cover or cover <= 0:
                     continue
-                species, created = Species.objects.get_or_create(
-                    sub_category=sp['sub_category'],
-                    major_category=sp['major_category'],
-                    defaults={'source': Species.SOURCE_ASSESSMENT},
+                species, created = get_or_create_species(
+                    sp['sub_category'], sp['major_category'],
+                    source=Species.SOURCE_ASSESSMENT,
                 )
                 TransectSpecies.objects.create(
                     transect=transect, species=species, depth='shallow', cover=cover
@@ -858,10 +975,9 @@ def populate_species_from_excel(assessment):
                 cover = sp.get('cover', 0)
                 if not cover or cover <= 0:
                     continue
-                species, created = Species.objects.get_or_create(
-                    sub_category=sp['sub_category'],
-                    major_category=sp['major_category'],
-                    defaults={'source': Species.SOURCE_ASSESSMENT},
+                species, created = get_or_create_species(
+                    sp['sub_category'], sp['major_category'],
+                    source=Species.SOURCE_ASSESSMENT,
                 )
                 TransectSpecies.objects.create(
                     transect=transect, species=species, depth='deep', cover=cover
@@ -891,7 +1007,7 @@ def check_duplicate_species(species_list, depth, pending_transects, barangay_id=
         return []
 
     warnings = []
-    species_set = {(sp['sub_category'], sp['major_category'], round(sp['cover'], 2)) for sp in species_list}
+    species_set = {(sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)) for sp in species_list}
 
     # 1. Check against other transects in the same assessment session
     for t in pending_transects:
@@ -900,7 +1016,7 @@ def check_duplicate_species(species_list, depth, pending_transects, barangay_id=
         existing_species = t.get(f'{existing_key}_species', [])
         if not existing_species:
             continue
-        other_set = {(sp['sub_category'], sp['major_category'], round(sp['cover'], 2)) for sp in existing_species}
+        other_set = {(sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)) for sp in existing_species}
         overlap = species_set & other_set
         if len(overlap) == len(species_set) and len(species_set) == len(other_set) and len(species_set) > 0:
             warnings.append(
@@ -938,7 +1054,7 @@ def check_duplicate_species(species_list, depth, pending_transects, barangay_id=
         ).select_related('species').values_list(
             'species__sub_category', 'species__major_category', 'cover'
         )
-        db_set = {(s[0], s[1], round(float(s[2]), 2)) for s in db_species}
+        db_set = {(s[0].lower(), s[1].lower(), round(float(s[2]), 2)) for s in db_species}
         if not db_set:
             continue
 
@@ -981,12 +1097,12 @@ def validate_species_list(species_items):
     """
     import re
     existing_qs = Species.objects.all()
-    existing_map = {(s.sub_category, s.major_category): s for s in existing_qs}
+    existing_map = {(s.sub_category.lower(), s.major_category.lower()): s for s in existing_qs}
 
     results = []
     seen = set()
     for sub_cat, major_cat in species_items:
-        key = (sub_cat, major_cat)
+        key = (sub_cat.lower(), major_cat.lower())
         if key in seen:
             continue
         seen.add(key)
@@ -1021,11 +1137,33 @@ def validate_species_list(species_items):
 @contributor_required
 def upload_assessment(request):
     """Step 1: Assessment info + thesis PDF + images."""
+    pending = request.session.get('pending_assessment')
+
     if request.method != 'POST':
+        # Build image info list with preview URLs
+        image_info = []
+        if pending:
+            tmp_dir_name = os.path.basename(pending.get('tmp_dir', ''))
+            for img_path in pending.get('image_tmps', []):
+                # Get relative path from tmp_dir
+                rel_path = os.path.relpath(img_path, pending['tmp_dir'])
+                url = f'/api/temp-file/{tmp_dir_name}/{rel_path}'
+                name = os.path.basename(img_path)
+                image_info.append({'url': url, 'path': rel_path, 'name': name})
+
+        thesis_url = None
+        if pending and pending.get('thesis_tmp'):
+            tmp_dir_name = os.path.basename(pending.get('tmp_dir', ''))
+            thesis_url = f'/api/temp-file/{tmp_dir_name}/thesis.pdf'
+
         return render(request, 'contributor/upload_assessment.html', {
-            'municipalities': Municipality.objects.all(),
+            'provinces': Province.objects.all().order_by('name'),
             'custom_methodologies': CustomMethodology.objects.all(),
             'methodology_choices': Assessment.METHODOLOGY_CHOICES,
+            'pending': pending,
+            'has_thesis': bool(pending and pending.get('thesis_tmp')),
+            'thesis_url': thesis_url,
+            'image_info': image_info,
         })
 
     municipality_id = request.POST.get('municipality')
@@ -1045,29 +1183,73 @@ def upload_assessment(request):
         messages.error(request, 'Please fill in all required fields.')
         return redirect('upload_assessment')
 
-    # Save files to temp dir
-    import tempfile, os, shutil
-    tmp_dir = tempfile.mkdtemp()
+    # Save files to temp dir, or keep existing files from session
+    import tempfile, shutil
 
     thesis_pdf = request.FILES.get('thesis_pdf')
-    thesis_tmp = None
+    # Validate thesis PDF
     if thesis_pdf:
-        thesis_tmp = os.path.join(tmp_dir, 'thesis.pdf')
-        with open(thesis_tmp, 'wb') as f:
-            for chunk in thesis_pdf.chunks():
-                f.write(chunk)
-
+        if thesis_pdf.size > 20 * 1024 * 1024:
+            messages.error(request, 'Thesis PDF must be under 20 MB.')
+            return redirect('upload_assessment')
+        if not thesis_pdf.name.lower().endswith('.pdf'):
+            messages.error(request, 'Thesis file must be a PDF.')
+            return redirect('upload_assessment')
+        header = thesis_pdf.read(5)
+        thesis_pdf.seek(0)
+        if not header.startswith(b'%PDF'):
+            messages.error(request, 'Uploaded thesis is not a valid PDF file.')
+            return redirect('upload_assessment')
     images = request.FILES.getlist('images')
-    image_tmps = []
-    if images:
-        img_dir = os.path.join(tmp_dir, 'images')
-        os.makedirs(img_dir)
-        for idx, img in enumerate(images):
-            p = os.path.join(img_dir, f'image_{idx}{os.path.splitext(img.name)[1]}')
-            with open(p, 'wb') as f:
-                for chunk in img.chunks():
+    # Validate images
+    for img in images:
+        if img.size > 10 * 1024 * 1024:
+            messages.error(request, f'Image "{img.name}" must be under 10 MB.')
+            return redirect('upload_assessment')
+        if not img.content_type.startswith('image/'):
+            messages.error(request, f'File "{img.name}" is not a valid image.')
+            return redirect('upload_assessment')
+
+    existing_tmp_dir = pending.get('tmp_dir') if pending else None
+    existing_thesis = pending.get('thesis_tmp') if pending else None
+    existing_images = pending.get('image_tmps') if pending else []
+
+    if thesis_pdf or images:
+        # New files uploaded — create fresh temp dir
+        tmp_dir = tempfile.mkdtemp()
+
+        thesis_tmp = None
+        if thesis_pdf:
+            thesis_tmp = os.path.join(tmp_dir, 'thesis.pdf')
+            with open(thesis_tmp, 'wb') as f:
+                for chunk in thesis_pdf.chunks():
                     f.write(chunk)
-            image_tmps.append(p)
+
+        image_tmps = []
+        if images:
+            img_dir = os.path.join(tmp_dir, 'images')
+            os.makedirs(img_dir)
+            for idx, img in enumerate(images):
+                p = os.path.join(img_dir, f'image_{idx}{os.path.splitext(img.name)[1]}')
+                with open(p, 'wb') as f:
+                    for chunk in img.chunks():
+                        f.write(chunk)
+                image_tmps.append(p)
+
+        # Clean old temp dir if different
+        if existing_tmp_dir and existing_tmp_dir != tmp_dir and os.path.isdir(existing_tmp_dir):
+            shutil.rmtree(existing_tmp_dir, ignore_errors=True)
+    else:
+        # No new files — keep existing from session, minus any removed
+        tmp_dir = existing_tmp_dir
+        thesis_tmp = existing_thesis
+        removed = [p for p in request.POST.get('removed_images', '').split(',') if p.strip()]
+        image_tmps = [p for p in existing_images if os.path.basename(p) not in removed and p not in removed]
+
+    # Validate images are present
+    if not image_tmps:
+        messages.error(request, 'Please upload at least one assessment photo.')
+        return redirect('upload_assessment')
 
     municipality = get_object_or_404(Municipality, id=municipality_id)
     barangay = get_object_or_404(Barangay, id=barangay_id, municipality=municipality)
@@ -1077,15 +1259,17 @@ def upload_assessment(request):
         'barangay_id': barangay_id,
         'municipality_name': str(municipality),
         'barangay_name': str(barangay),
+        'province_name': municipality.province.name,
         'assessment_date': assessment_date,
         'methodology': methodology,
         'is_custom_methodology': is_custom_methodology,
         'description': request.POST.get('description', '').strip(),
         'contributor_ids': [x.strip() for x in request.POST.get('contributors', '').split(',') if x.strip()],
+        'contributor_names': request.POST.get('contributor_names', ''),
         'tmp_dir': tmp_dir,
         'thesis_tmp': thesis_tmp,
         'image_tmps': image_tmps,
-        'transects': [],
+        'transects': pending.get('transects', []) if pending else [],
     }
 
     return redirect('add_transect')
@@ -1107,6 +1291,14 @@ def add_transect(request):
             # Parse shallow excel
             shallow_file = request.FILES.get('shallow_excel')
             deep_file = request.FILES.get('deep_excel')
+            # Validate Excel files
+            for f in [shallow_file, deep_file]:
+                if f.size > 5 * 1024 * 1024:
+                    messages.error(request, f'Excel file "{f.name}" must be under 5 MB.')
+                    return redirect('add_transect')
+                if not f.name.lower().endswith(('.xlsx', '.xls')):
+                    messages.error(request, f'File "{f.name}" is not a valid Excel file.')
+                    return redirect('add_transect')
             shallow_start_lat = request.POST.get('shallow_start_lat')
             shallow_start_lng = request.POST.get('shallow_start_lng')
             shallow_end_lat = request.POST.get('shallow_end_lat')
@@ -1118,6 +1310,12 @@ def add_transect(request):
 
             if not shallow_file or not deep_file:
                 messages.error(request, 'Both shallow and deep Excel files are required.')
+                request.session['pending_transect'] = {
+                    'shallow_start_lat': shallow_start_lat, 'shallow_start_lng': shallow_start_lng,
+                    'shallow_end_lat': shallow_end_lat, 'shallow_end_lng': shallow_end_lng,
+                    'deep_start_lat': deep_start_lat, 'deep_start_lng': deep_start_lng,
+                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng,
+                }
                 return redirect('add_transect')
 
             # Validate all 8 coordinate fields
@@ -1145,6 +1343,12 @@ def add_transect(request):
                         coord_errors.append(f'{label} must be a valid number.')
             if coord_errors:
                 messages.error(request, 'Invalid coordinates. ' + ' '.join(coord_errors))
+                request.session['pending_transect'] = {
+                    'shallow_start_lat': shallow_start_lat, 'shallow_start_lng': shallow_start_lng,
+                    'shallow_end_lat': shallow_end_lat, 'shallow_end_lng': shallow_end_lng,
+                    'deep_start_lat': deep_start_lat, 'deep_start_lng': deep_start_lng,
+                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng,
+                }
                 return redirect('add_transect')
 
             import os
@@ -1211,6 +1415,12 @@ def add_transect(request):
 
             if file_errors:
                 messages.error(request, 'Invalid Excel file(s). ' + ' | '.join(file_errors) + '. Please check the format (Sub Category, Major Category, Mean).')
+                request.session['pending_transect'] = {
+                    'shallow_start_lat': shallow_start_lat, 'shallow_start_lng': shallow_start_lng,
+                    'shallow_end_lat': shallow_end_lat, 'shallow_end_lng': shallow_end_lng,
+                    'deep_start_lat': deep_start_lat, 'deep_start_lng': deep_start_lng,
+                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng,
+                }
                 return redirect('add_transect')
 
             # Check for duplicates
@@ -1231,6 +1441,7 @@ def add_transect(request):
 
             pending['transects'].append(transect_info)
             request.session['pending_assessment'] = pending
+            request.session.pop('pending_transect', None)
             if dup_warnings:
                 request.session['dup_warnings_shown'] = True
             messages.success(request, f'Transect {t_num} added. Add another or proceed to preview.')
@@ -1244,6 +1455,7 @@ def add_transect(request):
                 for i, t in enumerate(pending['transects'], 1):
                     t['transect_number'] = i
                 request.session['pending_assessment'] = pending
+            request.session.pop('pending_transect', None)
             return redirect('add_transect')
 
         elif action == 'preview':
@@ -1257,6 +1469,7 @@ def add_transect(request):
         'pending': pending,
         'transects': pending['transects'],
         'municipalities': Municipality.objects.all(),
+        'pending_transect': request.session.get('pending_transect', {}),
     })
 
 
@@ -1377,6 +1590,7 @@ def confirm_assessment(request):
         status=assessment_status,
         uploaded_by=request.user,
         reviewed_by=request.user if auto_approve and user_role in ('admin', 'curator') else None,
+        approved_at=timezone.now() if auto_approve and user_role in ('admin', 'curator') else None,
         description=pending.get('description', ''),
     )
 
@@ -1487,6 +1701,7 @@ def confirm_assessment(request):
 
 
 @login_required
+@require_GET
 def get_transect_suggestions(request):
     """API: Get previous transect locations for a given barangay from BarangayTransect records."""
     barangay_id = request.GET.get('barangay_id')
@@ -1495,13 +1710,13 @@ def get_transect_suggestions(request):
 
     barangay_transects = BarangayTransect.objects.filter(
         barangay_id=barangay_id,
-    ).order_by('pk')[:20]
+    ).order_by('-created_at')[:50]
 
     suggestions = []
-    for idx, btc in enumerate(barangay_transects):
+    for btc in barangay_transects:
         suggestions.append({
             'id': btc.id,
-            'ref_number': idx + 1,
+            'date': btc.created_at.strftime('%b %d, %Y') if btc.created_at else 'Unknown',
             'shallow_start_lat': str(btc.shallow_start_lat) if btc.shallow_start_lat else None,
             'shallow_start_lng': str(btc.shallow_start_lng) if btc.shallow_start_lng else None,
             'shallow_end_lat': str(btc.shallow_end_lat) if btc.shallow_end_lat else None,
@@ -1516,6 +1731,7 @@ def get_transect_suggestions(request):
 
 
 @login_required
+@require_GET
 def check_reference_match(request):
     """API: Check if entered coordinates match any existing BarangayTransect reference."""
     barangay_id = request.GET.get('barangay_id')
@@ -1558,13 +1774,10 @@ def check_reference_match(request):
     ).first()
 
     if match:
-        # Calculate ref_number by position
-        refs = list(BarangayTransect.objects.filter(barangay_id=barangay_id).order_by('pk').values_list('pk', flat=True))
-        ref_number = refs.index(match.pk) + 1 if match.pk in refs else '?'
         return JsonResponse({
             'match': True,
-            'ref_number': ref_number,
             'ref_id': match.id,
+            'date': match.created_at.strftime('%b %d, %Y') if match.created_at else 'Unknown',
             'source': match.source,
             'shallow_start_lat': str(match.shallow_start_lat) if match.shallow_start_lat else None,
             'shallow_start_lng': str(match.shallow_start_lng) if match.shallow_start_lng else None,
@@ -1580,6 +1793,18 @@ def check_reference_match(request):
 
 
 @login_required
+@require_GET
+def get_municipalities(request):
+    """API: Get municipalities filtered by province_id."""
+    province_id = request.GET.get('province_id')
+    if not province_id:
+        return JsonResponse({'municipalities': list(Municipality.objects.order_by('name').values('id', 'name'))})
+    municipalities = Municipality.objects.filter(province_id=province_id).order_by('name').values('id', 'name')
+    return JsonResponse({'municipalities': list(municipalities)})
+
+
+@login_required
+@require_GET
 def get_barangays(request):
     """API: Get barangays for a municipality."""
     municipality_id = request.GET.get('municipality_id')
@@ -1651,6 +1876,7 @@ def search_contributors(request):
 
 
 @login_required
+@require_POST
 def create_contributor(request):
     """API: Create a new external contributor (non-system user)."""
     if request.method != 'POST':
@@ -1691,7 +1917,17 @@ def create_contributor(request):
 def my_assessments(request):
     """View list of contributor's own assessments."""
     assessments = Assessment.objects.filter(uploaded_by=request.user).order_by('-assessment_date')
-    return render(request, 'contributor/my_assessments.html', {'assessments': assessments})
+    stats = {
+        'total': assessments.count(),
+        'submitted': assessments.filter(status='submitted').count(),
+        'approved': assessments.filter(status='approved').count(),
+        'rejected': assessments.filter(status='rejected').count(),
+        'draft': assessments.filter(status='draft').count(),
+    }
+    return render(request, 'contributor/my_assessments.html', {
+        'assessments': assessments,
+        'stats': stats,
+    })
 
 
 @login_required
@@ -1788,6 +2024,8 @@ def delete_assessment(request, assessment_id):
 
         assessment.delete()
         messages.success(request, f'Assessment #{assessment_id} has been deleted.')
+        from .audit import log_security_event
+        log_security_event('assessment_deleted', request=request, details={'assessment_id': assessment_id})
         notify_assessment_refresh('delete')
     if user_role == 'admin':
         return redirect('admin_assessments')
@@ -1799,22 +2037,72 @@ def delete_assessment(request, assessment_id):
 @login_required
 @admin_required
 def admin_assessments(request):
-    """Admin: List all assessments with filters."""
+    """Admin: List all assessments with filters, sorting, and search."""
     assessments = Assessment.objects.select_related(
         'municipality', 'barangay', 'uploaded_by', 'reviewed_by'
     ).prefetch_related('transects').all()
 
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
+    municipality_filter = request.GET.get('municipality', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    sort_by = request.GET.get('sort', '-assessment_date')
+
+    ALLOWED_SORTS = {
+        'assessment_date': 'assessment_date',
+        '-assessment_date': '-assessment_date',
+        'id': 'id',
+        '-id': '-id',
+        'barangay': 'barangay__name',
+        '-barangay': '-barangay__name',
+        'municipality': 'municipality__name',
+        '-municipality': '-municipality__name',
+        'uploaded_by': 'uploaded_by__email',
+        '-uploaded_by': '-uploaded_by__email',
+        'status': 'status',
+        '-status': '-status',
+        'coral_cover': 'overall_coral_cover',
+        '-coral_cover': '-overall_coral_cover',
+        'transects': 'transect_count',
+    }
+    if sort_by in ALLOWED_SORTS:
+        if sort_by == 'transects':
+            assessments = assessments.annotate(transect_count=Count('transects')).order_by('-transect_count')
+        else:
+            assessments = assessments.order_by(ALLOWED_SORTS[sort_by])
+    else:
+        assessments = assessments.order_by('-assessment_date')
 
     if status_filter:
         assessments = assessments.filter(status=status_filter)
+    if municipality_filter:
+        assessments = assessments.filter(municipality__id=municipality_filter)
+    if date_from:
+        try:
+            assessments = assessments.filter(assessment_date__gte=date_from)
+        except (ValueError, TypeError):
+            pass
+    if date_to:
+        try:
+            assessments = assessments.filter(assessment_date__lte=date_to)
+        except (ValueError, TypeError):
+            pass
     if search_query:
         assessments = assessments.filter(
+            Q(id__icontains=search_query) |
             Q(barangay__name__icontains=search_query) |
             Q(municipality__name__icontains=search_query) |
-            Q(uploaded_by__username__icontains=search_query)
-        )
+            Q(uploaded_by__email__icontains=search_query) |
+            Q(uploaded_by__first_name__icontains=search_query) |
+            Q(uploaded_by__last_name__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(notes__icontains=search_query) |
+            Q(contributors__first_name__icontains=search_query) |
+            Q(contributors__last_name__icontains=search_query)
+        ).distinct()
+
+    total_count = assessments.count()
 
     stats = {
         'total': Assessment.objects.count(),
@@ -1824,11 +2112,19 @@ def admin_assessments(request):
         'draft': Assessment.objects.filter(status='draft').count(),
     }
 
+    municipalities = Municipality.objects.order_by('name')
+
     context = {
         'assessments': assessments,
         'status_filter': status_filter,
         'search_query': search_query,
+        'municipality_filter': municipality_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'sort_by': sort_by,
+        'total_count': total_count,
         'stats': stats,
+        'municipalities': municipalities,
     }
     return render(request, 'admin/assessments/index.html', context)
 
@@ -1901,12 +2197,12 @@ def admin_assessment_detail(request, assessment_id):
     # Use parsed species if no DB records
     if not has_species_records:
         for sp in parsed_species:
-                current_species.add((sp['sub_category'], sp['major_category'], round(sp['cover'], 2)))
+                current_species.add((sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)))
     else:
         for ts in TransectSpecies.objects.filter(
             transect__assessment=assessment
         ).select_related('species'):
-            current_species.add((ts.species.sub_category, ts.species.major_category, float(ts.cover)))
+            current_species.add((ts.species.sub_category.lower(), ts.species.major_category.lower(), float(ts.cover)))
 
     if current_species:
         other_assessments = Assessment.objects.filter(
@@ -1919,7 +2215,7 @@ def admin_assessment_detail(request, assessment_id):
             for ts in TransectSpecies.objects.filter(
                 transect__assessment=other
             ).select_related('species'):
-                other_species.add((ts.species.sub_category, ts.species.major_category, float(ts.cover)))
+                other_species.add((ts.species.sub_category.lower(), ts.species.major_category.lower(), float(ts.cover)))
 
             if not other_species:
                 continue
@@ -1984,7 +2280,7 @@ def admin_confirm_approval(request, assessment_id):
                 all_species.append(sp)
 
     # Check for duplicates against approved assessments
-    current_set = {(sp['sub_category'], sp['major_category'], round(sp['cover'], 2)) for sp in all_species}
+    current_set = {(sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)) for sp in all_species}
     duplicate_warnings = []
     if current_set:
         approved = Assessment.objects.filter(
@@ -1994,7 +2290,7 @@ def admin_confirm_approval(request, assessment_id):
             other_species = TransectSpecies.objects.filter(
                 transect__assessment=other
             ).select_related('species')
-            other_set = {(ts.species.sub_category, ts.species.major_category, round(float(ts.cover), 2)) for ts in other_species}
+            other_set = {(ts.species.sub_category.lower(), ts.species.major_category.lower(), round(float(ts.cover), 2)) for ts in other_species}
             if not other_set:
                 continue
             overlap = current_set & other_set
@@ -2050,6 +2346,7 @@ def admin_confirm_approval(request, assessment_id):
 @admin_required
 def admin_assessment_action(request, assessment_id):
     """Admin: Approve, reject, or return assessment to pending."""
+    from .audit import log_security_event
     with transaction.atomic():
         try:
             assessment = Assessment.objects.select_for_update().get(id=assessment_id)
@@ -2080,6 +2377,13 @@ def admin_assessment_action(request, assessment_id):
             if assessment.methodology not in built_in:
                 CustomMethodology.objects.get_or_create(name=assessment.methodology)
             messages.success(request, f'Assessment #{assessment.id} approved. {species_count} species record(s) created.')
+            log_security_event('assessment_approved', request=request, details={'assessment_id': assessment.id})
+            if assessment.uploaded_by != request.user:
+                create_assessment_notification(
+                    assessment.uploaded_by, assessment, 'approved',
+                    f'Assessment #{assessment.id} Approved',
+                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been approved by {request.user.profile.get_full_name or request.user.email}.'
+                )
         elif action == 'reject':
             rejection_reason = request.POST.get('rejection_reason', '')
             assessment.status = 'rejected'
@@ -2088,12 +2392,26 @@ def admin_assessment_action(request, assessment_id):
             assessment.notes = rejection_reason
             assessment.save()
             messages.info(request, f'Assessment #{assessment.id} has been rejected.')
+            log_security_event('assessment_rejected', request=request, details={'assessment_id': assessment.id, 'reason': rejection_reason})
+            if assessment.uploaded_by != request.user:
+                create_assessment_notification(
+                    assessment.uploaded_by, assessment, 'rejected',
+                    f'Assessment #{assessment.id} Rejected',
+                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been rejected. Reason: {rejection_reason or "No reason provided."}'
+                )
         elif action == 'return_to_pending':
             assessment.status = 'submitted'
             assessment.reviewed_by = None
             assessment.approved_at = None
             assessment.notes = ''
             assessment.save()
+            log_security_event('assessment_rejected', request=request, details={'assessment_id': assessment.id, 'reason': 'returned_to_pending'})
+            if assessment.uploaded_by != request.user:
+                create_assessment_notification(
+                    assessment.uploaded_by, assessment, 'returned',
+                    f'Assessment #{assessment.id} Returned to Pending',
+                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been returned to pending review.'
+                )
             if assessment.methodology not in built_in:
                 other_approved = Assessment.objects.filter(
                     status='approved', methodology=assessment.methodology
@@ -2276,34 +2594,127 @@ def admin_barangay_transect_coords(request, barangay_id):
 
 @login_required
 @admin_required
-def admin_manage_locations(request):
-    """Admin: List all municipalities with barangay counts."""
-    municipalities = Municipality.objects.annotate(
-        barangay_count=Count('barangays'),
-        approved_assessment_count=Count('barangays__assessments', filter=Q(barangays__assessments__status='approved')),
-        total_assessment_count=Count('barangays__assessments'),
+def admin_manage_municipalities(request, province_id):
+    """Admin: List municipalities for a province."""
+    province = get_object_or_404(Province, id=province_id)
+    municipalities = province.municipalities.annotate(
+        barangay_count=Count('barangays', distinct=True),
+        approved_assessment_count=Count('barangays__assessments', filter=Q(barangays__assessments__status='approved'), distinct=True),
+        total_assessment_count=Count('barangays__assessments', distinct=True),
     ).order_by('name')
-    return render(request, 'admin/locations/index.html', {
+    return render(request, 'admin/locations/municipalities.html', {
+        'province': province,
         'municipalities': municipalities,
     })
 
 
 @login_required
 @admin_required
-def admin_add_municipality(request):
-    """Admin: Add a new municipality."""
+def admin_add_province(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if not name:
+            messages.error(request, 'Province name is required.')
+            return redirect('admin_manage_locations')
+        if Province.objects.filter(name__iexact=name).exists():
+            messages.error(request, f'Province "{name}" already exists.')
+            return redirect('admin_manage_locations')
+        Province.objects.create(name=name)
+        messages.success(request, f'Province "{name}" added successfully.')
+    return redirect('admin_manage_locations')
+
+
+@login_required
+@admin_required
+def admin_edit_province(request, province_id):
+    province = get_object_or_404(Province, id=province_id)
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if not name:
+            messages.error(request, 'Province name is required.')
+            return redirect('admin_manage_locations')
+        if Province.objects.filter(name__iexact=name).exclude(id=province_id).exists():
+            messages.error(request, f'Province "{name}" already exists.')
+            return redirect('admin_manage_locations')
+        province.name = name
+        province.save()
+        messages.success(request, f'Province updated to "{name}".')
+    return redirect('admin_manage_locations')
+
+
+@login_required
+@admin_required
+def admin_delete_province(request, province_id):
+    province = get_object_or_404(Province, id=province_id)
+    if request.method == 'POST':
+        name = province.name
+        if province.municipalities.exists():
+            messages.error(request, f'Cannot delete "{name}" — it contains municipalities.')
+            return redirect('admin_manage_locations')
+        province.delete()
+        messages.success(request, f'Province "{name}" deleted.')
+    return redirect('admin_manage_locations')
+
+
+@login_required
+@admin_required
+def admin_bulk_delete_provinces(request):
+    if request.method == 'POST':
+        ids = request.POST.getlist('ids')
+        if not ids:
+            messages.warning(request, 'No provinces selected.')
+            return redirect('admin_manage_locations')
+        deleted = []
+        skipped = []
+        for pid in ids:
+            try:
+                p = Province.objects.get(id=pid)
+            except Province.DoesNotExist:
+                continue
+            if p.municipalities.exists():
+                skipped.append(p.name)
+            else:
+                deleted.append(p.name)
+                p.delete()
+        if deleted:
+            messages.success(request, f'Deleted {len(deleted)} province(s): {", ".join(deleted)}.')
+        if skipped:
+            messages.warning(request, f'Skipped {len(skipped)} (contain municipalities): {", ".join(skipped)}.')
+    return redirect('admin_manage_locations')
+
+
+@login_required
+@admin_required
+def admin_manage_locations(request):
+    """Admin: List all provinces with municipality/barangay counts."""
+    provinces = Province.objects.annotate(
+        municipality_count=Count('municipalities', distinct=True),
+        barangay_count=Count('municipalities__barangays', distinct=True),
+        approved_assessment_count=Count('municipalities__barangays__assessments', filter=Q(municipalities__barangays__assessments__status='approved'), distinct=True),
+        total_assessment_count=Count('municipalities__barangays__assessments', distinct=True),
+    ).order_by('name')
+    return render(request, 'admin/locations/index.html', {
+        'provinces': provinces,
+    })
+
+
+@login_required
+@admin_required
+def admin_add_municipality(request, province_id):
+    """Admin: Add a new municipality to a province."""
+    province = get_object_or_404(Province, id=province_id)
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         if not name:
             messages.error(request, 'Municipality name is required.')
-            return redirect('admin_manage_locations')
-        if Municipality.objects.filter(name__iexact=name).exists():
-            messages.error(request, f'Municipality "{name}" already exists.')
-            return redirect('admin_manage_locations')
-        Municipality.objects.create(name=name)
+            return redirect('admin_manage_municipalities', province_id=province_id)
+        if Municipality.objects.filter(name__iexact=name, province=province).exists():
+            messages.error(request, f'Municipality "{name}" already exists in {province.name}.')
+            return redirect('admin_manage_municipalities', province_id=province_id)
+        Municipality.objects.create(name=name, province=province)
         messages.success(request, f'Municipality "{name}" added successfully.')
-        return redirect('admin_manage_locations')
-    return redirect('admin_manage_locations')
+        return redirect('admin_manage_municipalities', province_id=province_id)
+    return redirect('admin_manage_municipalities', province_id=province_id)
 
 
 @login_required
@@ -2315,15 +2726,15 @@ def admin_edit_municipality(request, municipality_id):
         name = request.POST.get('name', '').strip()
         if not name:
             messages.error(request, 'Municipality name is required.')
-            return redirect('admin_manage_locations')
-        if Municipality.objects.filter(name__iexact=name).exclude(id=municipality_id).exists():
-            messages.error(request, f'Municipality "{name}" already exists.')
-            return redirect('admin_manage_locations')
+            return redirect('admin_manage_municipalities', province_id=municipality.province_id)
+        if Municipality.objects.filter(name__iexact=name, province=municipality.province).exclude(id=municipality_id).exists():
+            messages.error(request, f'Municipality "{name}" already exists in {municipality.province.name}.')
+            return redirect('admin_manage_municipalities', province_id=municipality.province_id)
         municipality.name = name
         municipality.save()
         messages.success(request, f'Municipality updated to "{name}".')
-        return redirect('admin_manage_locations')
-    return redirect('admin_manage_locations')
+        return redirect('admin_manage_municipalities', province_id=municipality.province_id)
+    return redirect('admin_manage_municipalities', province_id=municipality.province_id)
 
 
 @login_required
@@ -2331,14 +2742,15 @@ def admin_edit_municipality(request, municipality_id):
 def admin_delete_municipality(request, municipality_id):
     """Admin: Delete a municipality."""
     municipality = get_object_or_404(Municipality, id=municipality_id)
+    province_id = municipality.province_id
     if request.method == 'POST':
         name = municipality.name
         if municipality.assessments.exists():
             messages.error(request, f'Cannot delete "{name}" — it is used in existing assessments.')
-            return redirect('admin_manage_locations')
+            return redirect('admin_manage_municipalities', province_id=province_id)
         municipality.delete()
         messages.success(request, f'Municipality "{name}" deleted.')
-    return redirect('admin_manage_locations')
+    return redirect('admin_manage_municipalities', province_id=province_id)
 
 
 @login_required
@@ -2347,9 +2759,10 @@ def admin_bulk_delete_municipalities(request):
     """Admin: Bulk delete selected municipalities (skips those with any assessments)."""
     if request.method == 'POST':
         ids = request.POST.getlist('ids')
+        province_id = request.POST.get('province_id')
         if not ids:
             messages.warning(request, 'No municipalities selected.')
-            return redirect('admin_manage_locations')
+            return redirect('admin_manage_municipalities', province_id=province_id)
         deleted = []
         skipped = []
         for mid in ids:
@@ -2366,7 +2779,11 @@ def admin_bulk_delete_municipalities(request):
             messages.success(request, f'Deleted {len(deleted)} municipality: {", ".join(deleted)}.')
         if skipped:
             messages.warning(request, f'Skipped {len(skipped)} (used in assessments): {", ".join(skipped)}.')
-    return redirect('admin_manage_locations')
+        if not province_id and deleted:
+            first = Municipality.objects.first()
+            if first:
+                province_id = first.province_id
+    return redirect('admin_manage_municipalities', province_id=province_id)
 
 
 @login_required
@@ -2547,7 +2964,7 @@ def admin_manage_barangays(request, municipality_id):
         'barangays': barangays,
         'barangay_data': barangay_data,
         'all_transects': all_transects,
-        'transect_data_json': json.dumps(transect_data_json),
+        'transect_data_json': transect_data_json,
     })
 
 
@@ -2665,10 +3082,10 @@ def admin_add_family(request):
         code = request.POST.get('code', '').strip()
         sub = request.POST.get('sub_category', '').strip()
         if sub:
-            Species.objects.create(sub_category=sub, major_category=name, code=code)
+            Species.objects.create(sub_category=sub.strip().upper(), major_category=name.upper(), code=code)
         else:
-            Species.objects.create(sub_category=f'OTHER {name}', major_category=name, code=code or name[:3].upper())
-        messages.success(request, f'Family "{name}" created with initial species.')
+            Species.objects.create(sub_category=f'OTHER {name.upper()}', major_category=name.upper(), code=code or name[:3].upper())
+        messages.success(request, f'Family "{name.upper()}" created with initial species.')
     return redirect('admin_manage_species')
 
 
@@ -2699,11 +3116,12 @@ def admin_add_species(request, family_name):
         if not sub_category:
             messages.error(request, 'Species name is required.')
             return redirect('admin_manage_family_species_by_name', family_name=family_name)
+        sub_category = sub_category.strip().upper()
         if Species.objects.filter(sub_category__iexact=sub_category, major_category__iexact=family_name).exists():
             messages.error(request, f'Species "{sub_category}" already exists in {family_name}.')
             return redirect('admin_manage_family_species_by_name', family_name=family_name)
-        Species.objects.create(sub_category=sub_category, major_category=family_name, code=code)
-        messages.success(request, f'Species "{sub_category}" added to {family_name}.')
+        Species.objects.create(sub_category=sub_category, major_category=family_name.strip().upper(), code=code)
+        messages.success(request, f'Species "{sub_category}" added to {family_name.upper()}.')
     return redirect('admin_manage_family_species_by_name', family_name=family_name)
 
 
@@ -2719,10 +3137,12 @@ def admin_edit_species(request, species_id):
         if not sub_category:
             messages.error(request, 'Species name is required.')
             return redirect('admin_manage_family_species_by_name', family_name=family_name)
+        sub_category = sub_category.strip().upper()
         if Species.objects.filter(sub_category__iexact=sub_category, major_category__iexact=family_name).exclude(id=species_id).exists():
             messages.error(request, f'Species "{sub_category}" already exists in {family_name}.')
             return redirect('admin_manage_family_species_by_name', family_name=family_name)
         species.sub_category = sub_category
+        species.major_category = family_name.strip().upper()
         species.code = code
         species.save()
         messages.success(request, f'Species updated to "{sub_category}".')
@@ -2843,12 +3263,12 @@ def curator_assessment_detail(request, assessment_id):
 
     if not has_species_records:
         for sp in parsed_species:
-                current_species.add((sp['sub_category'], sp['major_category'], round(sp['cover'], 2)))
+                current_species.add((sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)))
     else:
         for ts in TransectSpecies.objects.filter(
             transect__assessment=assessment
         ).select_related('species'):
-            current_species.add((ts.species.sub_category, ts.species.major_category, float(ts.cover)))
+            current_species.add((ts.species.sub_category.lower(), ts.species.major_category.lower(), float(ts.cover)))
 
     if current_species:
         other_assessments = Assessment.objects.filter(
@@ -2861,7 +3281,7 @@ def curator_assessment_detail(request, assessment_id):
             for ts in TransectSpecies.objects.filter(
                 transect__assessment=other
             ).select_related('species'):
-                other_species.add((ts.species.sub_category, ts.species.major_category, float(ts.cover)))
+                other_species.add((ts.species.sub_category.lower(), ts.species.major_category.lower(), float(ts.cover)))
 
             if not other_species:
                 continue
@@ -2924,7 +3344,7 @@ def curator_confirm_approval(request, assessment_id):
                 sp['depth'] = 'Deep'
                 all_species.append(sp)
 
-    current_set = {(sp['sub_category'], sp['major_category'], round(sp['cover'], 2)) for sp in all_species}
+    current_set = {(sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)) for sp in all_species}
     duplicate_warnings = []
     if current_set:
         approved = Assessment.objects.filter(
@@ -2934,7 +3354,7 @@ def curator_confirm_approval(request, assessment_id):
             other_species = TransectSpecies.objects.filter(
                 transect__assessment=other
             ).select_related('species')
-            other_set = {(ts.species.sub_category, ts.species.major_category, round(float(ts.cover), 2)) for ts in other_species}
+            other_set = {(ts.species.sub_category.lower(), ts.species.major_category.lower(), round(float(ts.cover), 2)) for ts in other_species}
             if not other_set:
                 continue
             overlap = current_set & other_set
@@ -2986,6 +3406,7 @@ def curator_confirm_approval(request, assessment_id):
 @curator_required
 def curator_assessment_action(request, assessment_id):
     """Curator: Approve, reject, or return assessment to pending."""
+    from .audit import log_security_event
     with transaction.atomic():
         try:
             assessment = Assessment.objects.select_for_update().get(id=assessment_id)
@@ -3016,6 +3437,13 @@ def curator_assessment_action(request, assessment_id):
             if assessment.methodology not in built_in:
                 CustomMethodology.objects.get_or_create(name=assessment.methodology)
             messages.success(request, f'Assessment #{assessment.id} approved. {species_count} species record(s) created.')
+            log_security_event('assessment_approved', request=request, details={'assessment_id': assessment.id})
+            if assessment.uploaded_by != request.user:
+                create_assessment_notification(
+                    assessment.uploaded_by, assessment, 'approved',
+                    f'Assessment #{assessment.id} Approved',
+                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been approved by {request.user.profile.get_full_name or request.user.email}.'
+                )
         elif action == 'reject':
             rejection_reason = request.POST.get('rejection_reason', '')
             assessment.status = 'rejected'
@@ -3024,12 +3452,25 @@ def curator_assessment_action(request, assessment_id):
             assessment.notes = rejection_reason
             assessment.save()
             messages.info(request, f'Assessment #{assessment.id} has been rejected.')
+            log_security_event('assessment_rejected', request=request, details={'assessment_id': assessment.id, 'reason': rejection_reason})
+            if assessment.uploaded_by != request.user:
+                create_assessment_notification(
+                    assessment.uploaded_by, assessment, 'rejected',
+                    f'Assessment #{assessment.id} Rejected',
+                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been rejected. Reason: {rejection_reason or "No reason provided."}'
+                )
         elif action == 'return_to_pending':
             assessment.status = 'submitted'
             assessment.reviewed_by = None
             assessment.approved_at = None
             assessment.notes = ''
             assessment.save()
+            if assessment.uploaded_by != request.user:
+                create_assessment_notification(
+                    assessment.uploaded_by, assessment, 'returned',
+                    f'Assessment #{assessment.id} Returned to Pending',
+                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been returned to pending review.'
+                )
             if assessment.methodology not in built_in:
                 other_approved = Assessment.objects.filter(
                     status='approved', methodology=assessment.methodology
@@ -3061,6 +3502,7 @@ def curator_assessment_action(request, assessment_id):
 # ==================== SPECIES SUGGESTIONS API ====================
 
 @login_required
+@require_GET
 def get_species_suggestions(request):
     """API: Get species that have been observed in approved assessments for a barangay.
     Only returns species from approved assessments."""
@@ -3117,8 +3559,9 @@ def profile_change_password(request):
         form = CustomPasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
-            # Update session to prevent logout
             update_session_auth_hash(request, user)
+            from .audit import log_security_event
+            log_security_event('password_change', request=request)
             messages.success(request, '✅ Your password has been changed successfully!')
             return redirect('profile_view')
         else:
@@ -3141,6 +3584,8 @@ def public_dashboard(request):
     return render(request, 'public/dashboard.html', {'active_page': 'explore'})
 
 
+@require_GET
+@cache_page(60 * 3)  # cache API response for 3 minutes
 def public_dashboard_data(request):
     """Public API: Return all approved assessment data for the map dashboard."""
     municipality_id = request.GET.get('municipality_id')
@@ -3152,7 +3597,7 @@ def public_dashboard_data(request):
     assessments = Assessment.objects.filter(
         status='approved'
     ).select_related(
-        'municipality', 'barangay', 'uploaded_by'
+        'municipality__province', 'barangay', 'uploaded_by'
     ).prefetch_related(
         'transects__species_data__species'
     )
@@ -3178,6 +3623,16 @@ def public_dashboard_data(request):
     cover_count = 0
     trend_years = {}
 
+    def _health_for_species(species_list):
+        if not species_list:
+            return {'label': None, 'avg': None}
+        avg = sum(float(s.cover) for s in species_list) / len(species_list)
+        if avg >= 65: lbl = 'excellent'
+        elif avg >= 45: lbl = 'good'
+        elif avg >= 25: lbl = 'fair'
+        else: lbl = 'poor'
+        return {'label': lbl, 'avg': round(avg, 1)}
+
     for a in assessments:
         m_id = a.municipality_id
         m_name = a.municipality.name
@@ -3186,7 +3641,7 @@ def public_dashboard_data(request):
 
         if m_id not in municipalities:
             municipalities[m_id] = {
-                'id': m_id, 'name': m_name, 'barangays': {}
+                'id': m_id, 'name': m_name, 'province': a.municipality.province.name, 'barangays': {}
             }
         if b_id not in municipalities[m_id]['barangays']:
             municipalities[m_id]['barangays'][b_id] = {
@@ -3204,16 +3659,11 @@ def public_dashboard_data(request):
         transects_list = []
         for t in a.transects.all():
             total_transects += 1
-            sp = []
-            for ts in t.species_data.all():
+            sp = t.species_data.all()
+            for ts in sp:
                 species_set.add(ts.species.id)
-                sp.append({
-                    'co': ts.species.code,
-                    'nm': ts.species.sub_category,
-                    'fm': ts.species.major_category,
-                    'cv': float(ts.cover),
-                    'dp': ts.depth,
-                })
+            shallow_sp = [ts for ts in sp if ts.depth == 'shallow']
+            deep_sp = [ts for ts in sp if ts.depth == 'deep']
             transects_list.append({
                 'n': t.transect_number,
                 's': {
@@ -3225,7 +3675,8 @@ def public_dashboard_data(request):
                     'e': [float(t.deep_end_lat), float(t.deep_end_lng)] if t.deep_end_lat and t.deep_end_lng else None,
                 },
                 'sc': len(sp),
-                'sp': sp,
+                'sh': _health_for_species(shallow_sp),
+                'dh': _health_for_species(deep_sp),
             })
 
         cover = float(a.overall_coral_cover) if a.overall_coral_cover is not None else None
@@ -3307,6 +3758,7 @@ def public_dashboard_data(request):
         result_m.append({
             'id': m_id,
             'name': m_data['name'],
+            'province': m_data.get('province', ''),
             'lat': m_lat,
             'lng': m_lng,
             'b': b_list,
@@ -3337,7 +3789,124 @@ def public_dashboard_data(request):
 })
 
 
+@require_GET
+def assessment_detail_api(request, assessment_id):
+    """Public API: Return full species data for a single assessment (on-demand)."""
+    try:
+        a = Assessment.objects.select_related(
+            'municipality__province', 'barangay', 'uploaded_by'
+        ).prefetch_related(
+            'transects__species_data__species'
+        ).get(id=assessment_id, status='approved')
+    except Assessment.DoesNotExist:
+        return JsonResponse({'error': 'Assessment not found'}, status=404)
+
+    uploader_name = ''
+    if a.uploaded_by:
+        profile = getattr(a.uploaded_by, 'profile', None)
+        if profile:
+            uploader_name = profile.get_full_name()
+        if not uploader_name:
+            uploader_name = a.uploaded_by.get_full_name() or a.uploaded_by.email
+
+    transects = []
+    for t in a.transects.all():
+        sp = []
+        for ts in t.species_data.all():
+            sp.append({
+                'co': ts.species.code,
+                'nm': ts.species.sub_category,
+                'fm': ts.species.major_category,
+                'cv': float(ts.cover),
+                'dp': ts.depth,
+            })
+        transects.append({
+            'n': t.transect_number,
+            'sp': sp,
+        })
+
+    cover = float(a.overall_coral_cover) if a.overall_coral_cover is not None else None
+
+    return JsonResponse({
+        'id': a.id,
+        'd': str(a.assessment_date),
+        'c': a.condition or '',
+        'cc': cover,
+        'mt': a.get_methodology_display_name(),
+        'up': uploader_name,
+        'municipality': a.municipality.name,
+        'province': a.municipality.province.name,
+        'barangay': a.barangay.name,
+        'tr': transects,
+    })
+
+
 @login_required
+def serve_temp_file(request, tmp_dir_name, file_path):
+    """Serve a file from a temp directory for preview during upload flow.
+    Only serves files belonging to the current user's pending assessment."""
+    from django.http import FileResponse, Http404
+
+    pending = request.session.get('pending_assessment')
+    if not pending:
+        raise Http404
+
+    tmp_dir = pending.get('tmp_dir', '')
+    if not tmp_dir:
+        raise Http404
+
+    # Security: verify the requested file is inside the user's temp dir
+    real_tmp = os.path.realpath(tmp_dir)
+    requested = os.path.realpath(os.path.join(tmp_dir, file_path))
+
+    if not requested.startswith(real_tmp + os.sep) and requested != real_tmp:
+        raise Http404
+
+    if not os.path.isfile(requested):
+        raise Http404
+
+    return FileResponse(open(requested, 'rb'))
+
+
+@login_required
+@require_POST
+def remove_temp_image(request):
+    """AJAX: Remove a single image from the pending assessment session."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    pending = request.session.get('pending_assessment')
+    if not pending:
+        return JsonResponse({'error': 'No pending assessment'}, status=400)
+
+    rel_path = request.POST.get('path', '')
+    if not rel_path:
+        return JsonResponse({'error': 'No path provided'}, status=400)
+
+    image_tmps = pending.get('image_tmps', [])
+
+    # Find and remove the image
+    new_tmps = []
+    removed = False
+    for p in image_tmps:
+        basename = os.path.basename(p)
+        rel = os.path.relpath(p, pending['tmp_dir']) if pending.get('tmp_dir') else basename
+        if rel == rel_path or basename == rel_path:
+            # Delete the actual file
+            if os.path.isfile(p):
+                os.remove(p)
+            removed = True
+        else:
+            new_tmps.append(p)
+
+    pending['image_tmps'] = new_tmps
+    request.session['pending_assessment'] = pending
+
+    return JsonResponse({'ok': True, 'removed': removed, 'remaining': len(new_tmps)})
+
+
+@login_required
+@require_GET
 def assessments_sync(request):
     """Lightweight API: Return assessment IDs, statuses, and stats for polling.
     Returns a hash that changes when data changes, so clients only
@@ -3400,3 +3969,89 @@ def assessments_sync(request):
         'stats': stats,
         'role': user_role,
     })
+
+
+# ==================== NOTIFICATIONS ====================
+
+@login_required
+def notifications_list(request):
+    """Display all notifications for the current user."""
+    from .models import Notification
+    notifications = Notification.objects.filter(user=request.user)
+    unread_count = notifications.filter(is_read=False).count()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'mark_read':
+            notif_id = request.POST.get('notification_id')
+            if notif_id:
+                Notification.objects.filter(id=notif_id, user=request.user).update(is_read=True)
+        elif action == 'mark_all_read':
+            Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return redirect('notifications_list')
+
+    user_role = request.user.profile.role if hasattr(request.user, 'profile') else 'contributor'
+    if user_role == 'admin':
+        template = 'notifications/list_admin.html'
+    elif user_role == 'curator':
+        template = 'notifications/list_curator.html'
+    else:
+        template = 'notifications/list.html'
+
+    return render(request, template, {
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'active_page': 'notifications',
+    })
+
+
+@login_required
+@require_GET
+def notifications_unread_count(request):
+    """API endpoint to get unread notification count."""
+    from .models import Notification
+    count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return JsonResponse({'count': count})
+
+
+@login_required
+@require_GET
+def notifications_recent(request):
+    """API endpoint to get recent notifications for dropdown."""
+    from .models import Notification
+    notifs = Notification.objects.filter(user=request.user).select_related('assessment')[:15]
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    rows = []
+    for n in notifs:
+        rows.append({
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'type': n.notification_type,
+            'is_read': n.is_read,
+            'assessment_id': n.assessment_id,
+            'created_at': n.created_at.strftime('%b %d, %Y %I:%M %p'),
+            'time_since': n.created_at.strftime('%b %d, %Y %I:%M %p'),
+        })
+    return JsonResponse({'notifications': rows, 'unread_count': unread_count})
+
+
+@login_required
+@require_POST
+def notifications_mark_read(request):
+    """API: Mark a single notification as read."""
+    from .models import Notification
+    body = json.loads(request.body) if request.body else {}
+    notif_id = body.get('id') or request.POST.get('notification_id')
+    if notif_id:
+        Notification.objects.filter(id=notif_id, user=request.user).update(is_read=True)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_POST
+def notifications_mark_all_read(request):
+    """Mark all notifications as read."""
+    from .models import Notification
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({'ok': True})

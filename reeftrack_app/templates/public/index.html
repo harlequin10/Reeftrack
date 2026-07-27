@@ -227,9 +227,10 @@ document.addEventListener('DOMContentLoaded', function(){
             <p style="color: var(--rt-ink-soft);">Latest coral reef monitoring data from the field</p>
         </div>
         {% if recent_assessments %}
-        <div class="row g-4 rt-stagger">
+        <div id="assessments-carousel" class="position-relative">
+        <div class="row g-4 rt-stagger" id="assessments-grid">
             {% for a in recent_assessments %}
-            <div class="col-md-4">
+            <div class="col-md-4 assessment-card" data-page="{{ forloop.counter0 }}">
                 <a href="{% url 'public_assessment_detail' a.id %}" class="text-decoration-none" style="color:inherit;">
                 <div class="card h-100 border-0 shadow-sm" style="transition: transform 0.2s, box-shadow 0.2s; cursor:pointer;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
                     <div class="card-body">
@@ -278,6 +279,16 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
             {% endfor %}
         </div>
+        <div class="d-flex justify-content-center align-items-center gap-3 mt-4" id="assessments-nav" style="display:none !important;">
+            <button id="assess-prev" class="btn btn-outline-secondary btn-sm rounded-pill px-3" disabled>
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <span id="assess-dots" class="d-flex gap-2"></span>
+            <button id="assess-next" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        </div>
         {% else %}
         <div class="text-center rt-animate fade-up">
             <div class="py-4">
@@ -308,5 +319,55 @@ document.addEventListener('DOMContentLoaded', function(){
         {% endif %}
     </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var cards = document.querySelectorAll('.assessment-card');
+    var perPage = 3;
+    var total = cards.length;
+    var totalPages = Math.ceil(total / perPage);
+    var currentPage = 0;
+
+    if (total <= perPage) return;
+
+    var nav = document.getElementById('assessments-nav');
+    nav.style.display = 'flex';
+
+    var dotsContainer = document.getElementById('assess-dots');
+    for (var i = 0; i < totalPages; i++) {
+        var dot = document.createElement('span');
+        dot.className = 'rounded-circle';
+        dot.style.cssText = 'width:10px;height:10px;cursor:pointer;transition:all 0.3s;border:2px solid ' + (i === 0 ? 'var(--rt-coral)' : '#cbd5e1') + ';background:' + (i === 0 ? 'var(--rt-coral)' : '#cbd5e1') + ';';
+        dot.dataset.page = i;
+        dot.addEventListener('click', function() {
+            goToPage(parseInt(this.dataset.page));
+        });
+        dotsContainer.appendChild(dot);
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        cards.forEach(function(card, idx) {
+            card.style.display = (idx >= page * perPage && idx < (page + 1) * perPage) ? '' : 'none';
+        });
+        document.getElementById('assess-prev').disabled = currentPage === 0;
+        document.getElementById('assess-next').disabled = currentPage >= totalPages - 1;
+        var dots = dotsContainer.querySelectorAll('span');
+        dots.forEach(function(d, i) {
+            d.style.background = i === currentPage ? 'var(--rt-coral)' : '#cbd5e1';
+            d.style.borderColor = i === currentPage ? 'var(--rt-coral)' : '#cbd5e1';
+        });
+    }
+
+    document.getElementById('assess-prev').addEventListener('click', function() {
+        if (currentPage > 0) goToPage(currentPage - 1);
+    });
+    document.getElementById('assess-next').addEventListener('click', function() {
+        if (currentPage < totalPages - 1) goToPage(currentPage + 1);
+    });
+
+    goToPage(0);
+});
+</script>
 
 {% endblock %}

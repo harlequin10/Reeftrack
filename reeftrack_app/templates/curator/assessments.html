@@ -4,153 +4,170 @@
 {% block title %}Assessments - Curator - ReefTrack{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-        <h4 class="mb-0"><i class="fas fa-clipboard-list"></i> Assessments</h4>
-        <a href="{% url 'upload_assessment' %}" class="btn btn-sm btn-success">
-            <i class="fas fa-upload"></i> Upload New
-        </a>
-    </div>
+<div class="rt-page-header">
+    <h4><i class="fas fa-clipboard-list"></i> Assessments</h4>
 </div>
 
 <!-- Stats Cards -->
-<div class="row mb-4" id="statsRow">
-    <div class="col-md-2">
-        <div class="card text-center border-secondary">
-            <div class="card-body py-2">
-                <h5 class="mb-0">{{ stats.total }}</h5>
-                <small class="text-muted">Total</small>
+<div class="row g-3 mb-4" id="statsRow">
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #6b7280, #4b5563);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value">{{ stats.total }}</div>
+                </div>
+                <div class="stat-icon"><i class="fas fa-folder-open"></i></div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-center border-warning">
-            <div class="card-body py-2">
-                <h5 class="mb-0 text-warning">{{ stats.submitted }}</h5>
-                <small class="text-muted">Pending Review</small>
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #d97706, #b45309);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Pending Review</div>
+                    <div class="stat-value">{{ stats.submitted }}</div>
+                </div>
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-center border-success">
-            <div class="card-body py-2">
-                <h5 class="mb-0 text-success">{{ stats.approved }}</h5>
-                <small class="text-muted">Approved</small>
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #059669, #047857);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Approved</div>
+                    <div class="stat-value">{{ stats.approved }}</div>
+                </div>
+                <div class="stat-icon"><i class="fas fa-check-double"></i></div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-center border-danger">
-            <div class="card-body py-2">
-                <h5 class="mb-0 text-danger">{{ stats.rejected }}</h5>
-                <small class="text-muted">Rejected</small>
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #dc2626, #b91c1c);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Rejected</div>
+                    <div class="stat-value">{{ stats.rejected }}</div>
+                </div>
+                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-center border-secondary">
-            <div class="card-body py-2">
-                <h5 class="mb-0 text-secondary">{{ stats.draft }}</h5>
-                <small class="text-muted">Draft</small>
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #6b7280, #9ca3af);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Draft</div>
+                    <div class="stat-value">{{ stats.draft }}</div>
+                </div>
+                <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Filters -->
-<div class="card mb-4">
-    <div class="card-body py-2">
-        <form method="GET" class="row g-2 align-items-end">
-            <div class="col-sm-6 col-md-3">
-                <input type="text" class="form-control form-control-sm" name="search"
-                       placeholder="Search location or user..." value="{{ search_query }}">
-            </div>
-            <div class="col-sm-6 col-md-2">
-                <select class="form-select form-select-sm" name="status">
-                    <option value="">All Status</option>
-                    <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Pending Review</option>
-                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
-                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
-                    <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
-                </select>
-            </div>
-            <div class="col-sm-6 col-md-2">
-                <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i> Filter</button>
-                <a href="{% url 'curator_assessments' %}" class="btn btn-sm btn-outline-secondary">Clear</a>
-            </div>
-        </form>
-    </div>
+<div class="rt-filter-bar">
+    <form method="GET" class="row g-2 align-items-center">
+        <div class="col-sm-6 col-md-4">
+            <input type="text" class="form-control" name="search"
+                   placeholder="Search location or user..." value="{{ search_query }}">
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <select class="form-select" name="status">
+                <option value="">All Status</option>
+                <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Pending Review</option>
+                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+            </select>
+        </div>
+        <div class="col-sm-12 col-md-5 d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+            <a href="{% url 'curator_assessments' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            <a href="{% url 'upload_assessment' %}" class="btn btn-sm btn-success ms-auto">
+                <i class="fas fa-upload"></i> Upload New
+            </a>
+        </div>
+    </form>
 </div>
 
 <!-- Assessments Table -->
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover" id="assessmentsTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Location</th>
-                        <th>Date</th>
-                        <th>Uploaded By</th>
-                        <th>Reviewed By</th>
-                        <th>Transects</th>
-                        <th>Coral Cover</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for a in assessments %}
-                    <tr>
-                        <td><strong>{{ a.id }}</strong></td>
-                        <td>
-                            <strong>{{ a.barangay }}</strong>
-                            <br><small class="text-muted">{{ a.municipality }}</small>
-                        </td>
-                        <td>{{ a.assessment_date|date:"M d, Y" }}</td>
-                        <td>{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</td>
-                        <td>
-                            {% if a.reviewed_by %}
-                                <small>{% if a.reviewed_by %}{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}{% else %}-{% endif %}</small>
-                            {% else %}
-                                <small class="text-muted">-</small>
-                            {% endif %}
-                        </td>
-                        <td>{{ a.transects.count }}</td>
-                        <td>{% if a.overall_coral_cover %}{{ a.overall_coral_cover }}%{% else %}-{% endif %}</td>
-                        <td>
-                            <span class="badge
-                                {% if a.status == 'approved' %}bg-success
-                                {% elif a.status == 'submitted' %}bg-warning text-dark
-                                {% elif a.status == 'rejected' %}bg-danger
-                                {% else %}bg-secondary{% endif %}">
-                                {{ a.get_status_display }}
-                            </span>
-                        </td>
-                        <td>
-                            <a href="{% url 'curator_assessment_detail' a.id %}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-eye"></i> View
+<div class="rt-table-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle" id="assessmentsTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Location</th>
+                    <th>Date</th>
+                    <th>Uploaded By</th>
+                    <th>Reviewed By</th>
+                    <th>Transects</th>
+                    <th>Coral Cover</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in assessments %}
+                <tr>
+                    <td><span class="badge bg-secondary">#{{ a.id }}</span></td>
+                    <td>
+                        <strong>{{ a.barangay.name }}</strong>
+                        <br><small class="text-muted">{{ a.municipality.name }}, {{ a.municipality.province.name }}</small>
+                    </td>
+                    <td>{{ a.assessment_date|date:"M d, Y" }}</td>
+                    <td><small>{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</small></td>
+                    <td>
+                        {% if a.reviewed_by %}
+                            <small>{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}</small>
+                        {% else %}
+                            <small class="text-muted">—</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ a.transects.count }}</td>
+                    <td>{% if a.overall_coral_cover %}{{ a.overall_coral_cover }}%{% else %}—{% endif %}</td>
+                    <td>
+                        <span class="rt-badge
+                            {% if a.status == 'approved' %}rt-badge-approved
+                            {% elif a.status == 'submitted' %}rt-badge-submitted
+                            {% elif a.status == 'rejected' %}rt-badge-rejected
+                            {% else %}rt-badge-draft{% endif %}">
+                            {{ a.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="rt-action-group">
+                            <a href="{% url 'curator_assessment_detail' a.id %}" class="rt-action-btn rt-action-btn-view" title="View assessment">
+                                <i class="fas fa-eye"></i> <span class="btn-label">View</span>
                             </a>
                             {% if a.status == 'submitted' %}
-                            <a href="{% url 'curator_confirm_approval' a.id %}" class="btn btn-sm btn-success" title="Review & Approve">
-                                <i class="fas fa-check"></i>
+                            <a href="{% url 'curator_confirm_approval' a.id %}" class="rt-action-btn rt-action-btn-review" title="Review & approve">
+                                <i class="fas fa-check"></i> <span class="btn-label">Review</span>
                             </a>
                             {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="9" class="text-center py-4">
-                            <i class="fas fa-clipboard fa-3x text-muted mb-3 d-block"></i>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9">
+                        <div class="rt-empty-state">
+                            <div class="rt-empty-icon"><i class="fas fa-clipboard"></i></div>
                             <h5>No assessments found</h5>
-                            <p class="text-muted">No assessments match your filters.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                            <p>No assessments match your current filters.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 

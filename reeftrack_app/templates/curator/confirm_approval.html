@@ -49,6 +49,10 @@
     <div class="card-body">
         <div class="info-grid">
             <div class="info-item">
+                <div class="label">Province</div>
+                <div class="value">{{ assessment.municipality.province.name }}</div>
+            </div>
+            <div class="info-item">
                 <div class="label">Municipality</div>
                 <div class="value">{{ assessment.municipality.name }}</div>
             </div>
@@ -236,7 +240,7 @@
                         {% endif %}
                     </strong>
                     <p class="mb-1 mt-1">
-                        Assessment #{{ warn.assessment.id }} — {{ warn.assessment.barangay.name }}, {{ warn.assessment.municipality.name }} ({{ warn.assessment.assessment_date }})
+                        Assessment #{{ warn.assessment.id }} — {{ warn.assessment.barangay.name }}, {{ warn.assessment.municipality.name }}, {{ warn.assessment.municipality.province.name }} ({{ warn.assessment.assessment_date }})
                     </p>
                     <small>{{ warn.match_count }} of {{ warn.total }} species match exactly</small>
                 </div>

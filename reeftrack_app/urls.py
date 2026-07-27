@@ -8,6 +8,7 @@ urlpatterns = [
     path('assessment/<int:assessment_id>/', views.public_assessment_detail, name='public_assessment_detail'),
     path('explore/', views.public_dashboard, name='public_dashboard'),
     path('api/public/dashboard-data/', views.public_dashboard_data, name='public_dashboard_data'),
+    path('api/public/assessment/<int:assessment_id>/', views.assessment_detail_api, name='assessment_detail_api'),
     path('register/', views.register, name='register'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
@@ -41,10 +42,20 @@ urlpatterns = [
     path('api/transect-suggestions/', views.get_transect_suggestions, name='transect_suggestions'),
     path('api/check-reference-match/', views.check_reference_match, name='check_reference_match'),
     path('api/species-suggestions/', views.get_species_suggestions, name='species_suggestions'),
+    path('api/municipalities/', views.get_municipalities, name='get_municipalities'),
     path('api/barangays/', views.get_barangays, name='get_barangays'),
     path('api/contributors/search/', views.search_contributors, name='search_contributors'),
     path('api/contributors/create/', views.create_contributor, name='create_contributor'),
     path('api/assessments/sync/', views.assessments_sync, name='assessments_sync'),
+    path('api/temp-file/<str:tmp_dir_name>/<path:file_path>', views.serve_temp_file, name='serve_temp_file'),
+    path('api/temp-file/remove/', views.remove_temp_image, name='remove_temp_image'),
+    path('api/notifications/unread-count/', views.notifications_unread_count, name='notifications_unread_count'),
+    path('api/notifications/recent/', views.notifications_recent, name='notifications_recent'),
+    path('api/notifications/mark-read/', views.notifications_mark_read, name='notifications_mark_read'),
+
+    # ==================== NOTIFICATIONS ====================
+    path('notifications/', views.notifications_list, name='notifications_list'),
+    path('notifications/mark-all-read/', views.notifications_mark_all_read, name='notifications_mark_all_read'),
 
     # ==================== ADMIN ASSESSMENT REVIEW ====================
     path('manage/assessments/', views.admin_assessments, name='admin_assessments'),
@@ -54,16 +65,26 @@ urlpatterns = [
     path('manage/assessments/<int:assessment_id>/action/', views.admin_assessment_action, name='admin_assessment_action'),
 
     # ==================== ADMIN LOCATION MANAGEMENT ====================
-    path('manage/locations/', views.admin_manage_locations, name='admin_manage_locations'),
-    path('manage/locations/bulk-delete/', views.admin_bulk_delete_municipalities, name='admin_bulk_delete_municipalities'),
-    path('manage/locations/add-municipality/', views.admin_add_municipality, name='admin_add_municipality'),
-    path('manage/locations/<int:municipality_id>/edit/', views.admin_edit_municipality, name='admin_edit_municipality'),
-    path('manage/locations/<int:municipality_id>/delete/', views.admin_delete_municipality, name='admin_delete_municipality'),
-    path('manage/locations/<int:municipality_id>/barangays/', views.admin_manage_barangays, name='admin_manage_barangays'),
-    path('manage/locations/<int:municipality_id>/barangays/bulk-delete/', views.admin_bulk_delete_barangays, name='admin_bulk_delete_barangays'),
-    path('manage/locations/<int:municipality_id>/barangays/add/', views.admin_add_barangay, name='admin_add_barangay'),
-    path('manage/locations/barangays/<int:barangay_id>/edit/', views.admin_edit_barangay, name='admin_edit_barangay'),
-    path('manage/locations/barangays/<int:barangay_id>/delete/', views.admin_delete_barangay, name='admin_delete_barangay'),
+    # Province management
+    path('manage/locations/',                                                  views.admin_manage_locations,          name='admin_manage_locations'),
+    path('manage/locations/add-province/',                                     views.admin_add_province,              name='admin_add_province'),
+    path('manage/locations/<int:province_id>/edit/',                           views.admin_edit_province,             name='admin_edit_province'),
+    path('manage/locations/<int:province_id>/delete/',                         views.admin_delete_province,           name='admin_delete_province'),
+    path('manage/locations/bulk-delete-provinces/',                            views.admin_bulk_delete_provinces,     name='admin_bulk_delete_provinces'),
+
+    # Municipality management (within province)
+    path('manage/locations/<int:province_id>/municipalities/',                 views.admin_manage_municipalities,     name='admin_manage_municipalities'),
+    path('manage/locations/<int:province_id>/municipalities/add/',             views.admin_add_municipality,         name='admin_add_municipality'),
+    path('manage/locations/<int:province_id>/municipalities/bulk-delete/',     views.admin_bulk_delete_municipalities,name='admin_bulk_delete_municipalities'),
+    path('manage/locations/municipalities/<int:municipality_id>/edit/',        views.admin_edit_municipality,        name='admin_edit_municipality'),
+    path('manage/locations/municipalities/<int:municipality_id>/delete/',      views.admin_delete_municipality,      name='admin_delete_municipality'),
+
+    # Barangay management (within municipality)
+    path('manage/locations/municipalities/<int:municipality_id>/barangays/',              views.admin_manage_barangays,     name='admin_manage_barangays'),
+    path('manage/locations/municipalities/<int:municipality_id>/barangays/bulk-delete/',  views.admin_bulk_delete_barangays,name='admin_bulk_delete_barangays'),
+    path('manage/locations/municipalities/<int:municipality_id>/barangays/add/',          views.admin_add_barangay,         name='admin_add_barangay'),
+    path('manage/locations/barangays/<int:barangay_id>/edit/',                            views.admin_edit_barangay,        name='admin_edit_barangay'),
+    path('manage/locations/barangays/<int:barangay_id>/delete/',                          views.admin_delete_barangay,      name='admin_delete_barangay'),
 
     # ==================== ADMIN SPECIES MANAGEMENT ====================
     path('manage/species/', views.admin_manage_species, name='admin_manage_species'),

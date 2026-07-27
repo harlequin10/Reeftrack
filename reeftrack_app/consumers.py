@@ -3,12 +3,10 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 
 class AssessmentSyncConsumer(AsyncWebsocketConsumer):
-    """WebSocket consumer for real-time assessment sync.
+    """WebSocket consumer for real-time assessment sync and notification updates.
 
     All authenticated users join the 'assessments' group.
-    When any assessment changes, a 'refresh' signal is pushed
-    to all connected clients. The client then fetches fresh
-    data via the /api/assessments/sync/ HTTP endpoint.
+    Each user also joins a personal 'notifications_<user_id>' group.
     """
 
     async def connect(self):
@@ -17,6 +15,11 @@ class AssessmentSyncConsumer(AsyncWebsocketConsumer):
             self.group_name = 'assessments'
             await self.channel_layer.group_add(
                 self.group_name,
+                self.channel_name
+            )
+            self.notif_group = 'notifications_%s' % self.user.id
+            await self.channel_layer.group_add(
+                self.notif_group,
                 self.channel_name
             )
             await self.accept()
@@ -29,6 +32,11 @@ class AssessmentSyncConsumer(AsyncWebsocketConsumer):
                 self.group_name,
                 self.channel_name
             )
+        if hasattr(self, 'notif_group'):
+            await self.channel_layer.group_discard(
+                self.notif_group,
+                self.channel_name
+            )
 
     async def receive(self, text_data):
         pass
@@ -38,4 +46,10 @@ class AssessmentSyncConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'refresh',
             'action': event.get('action', ''),
+        }))
+
+    async def notification_refresh(self, event):
+        """Handle notification update signal."""
+        await self.send(text_data=json.dumps({
+            'type': 'notification_update',
         }))

@@ -4,279 +4,331 @@
 
 {% block content %}
 <style>
-    .dash-card {
-        border: none;
-        border-radius: 14px;
-        transition: transform 0.2s, box-shadow 0.2s;
-        overflow: hidden;
-    }
-    .dash-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 24px rgba(0,0,0,0.12);
-    }
-    .dash-stat {
-        border: none;
-        border-radius: 14px;
-        color: #fff;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .dash-stat:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    }
-    .dash-stat .stat-icon {
-        font-size: 2.2rem;
-        opacity: 0.25;
-    }
-    .dash-stat .stat-value {
-        font-size: 2rem;
-        font-weight: 700;
-        line-height: 1.1;
-    }
-    .dash-stat .stat-label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        opacity: 0.9;
-    }
-    .quick-action {
-        border: 2px solid #e9ecef;
-        border-radius: 14px;
-        text-align: center;
-        padding: 28px 16px;
-        transition: all 0.2s;
-        text-decoration: none;
-        color: inherit;
-        display: block;
-        height: 100%;
-    }
-    .quick-action:hover {
-        border-color: #0E7C86;
-        background: #f0fdf9;
-        transform: translateY(-3px);
-        box-shadow: 0 6px 16px rgba(14,124,134,0.12);
-        color: inherit;
-    }
-    .quick-action .action-icon {
-        font-size: 2rem;
-        margin-bottom: 10px;
-        transition: transform 0.2s;
-    }
-    .quick-action:hover .action-icon {
-        transform: scale(1.1);
-    }
-    .quick-action h6 {
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-    .quick-action p {
-        font-size: 0.8rem;
-        color: #6c757d;
-        margin: 0;
-    }
-    .section-title {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #6c757d;
-        font-weight: 600;
-        margin-bottom: 14px;
-        padding-left: 4px;
+    .ad-page{padding:0 0 2rem;}
+    .ad-welcome{background:linear-gradient(135deg,var(--rt-navy) 0%,var(--rt-teal) 100%);border-radius:14px;padding:1.8rem 2rem;color:var(--rt-white);margin-bottom:1.5rem;position:relative;overflow:hidden;}
+    .ad-welcome::after{content:'';position:absolute;right:-30px;top:-30px;width:160px;height:160px;background:rgba(255,255,255,.06);border-radius:50%;}
+    .ad-welcome::before{content:'';position:absolute;right:60px;bottom:-40px;width:120px;height:120px;background:rgba(255,255,255,.04);border-radius:50%;}
+    .ad-welcome h4{font-weight:700;margin:0 0 .3rem;font-size:1.35rem;color:var(--rt-white);}
+    .ad-welcome h4 i{color:var(--rt-white);}
+    .ad-welcome p{margin:0;opacity:.85;font-size:.85rem;color:var(--rt-white);}
+    .ad-welcome .ad-welcome-date{font-size:.78rem;opacity:.65;margin-top:.4rem;}
+    .ad-section{margin-bottom:1.5rem;}
+    .ad-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}
+    .ad-section-title{font-size:.78rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--rt-ink-soft);font-weight:700;margin:0;}
+    .ad-section-title i{margin-right:.35rem;opacity:.7;}
+    .ad-section-link{font-size:.75rem;color:var(--rt-teal);text-decoration:none;font-weight:600;transition:color .15s;}
+    .ad-section-link:hover{color:var(--rt-navy);}
+
+    .ad-stat-card{background:var(--rt-white);border:1px solid var(--rt-border);border-radius:12px;padding:1.15rem 1.2rem;display:flex;align-items:center;gap:1rem;transition:all .2s;cursor:pointer;text-decoration:none;color:inherit;height:100%;}
+    .ad-stat-card:hover{border-color:var(--rt-teal);box-shadow:var(--rt-shadow);transform:translateY(-2px);text-decoration:none;color:inherit;}
+    .ad-stat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+    .ad-stat-info{flex:1;min-width:0;}
+    .ad-stat-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.8px;color:var(--rt-ink-soft);font-weight:600;margin-bottom:.15rem;}
+    .ad-stat-value{font-size:1.5rem;font-weight:700;color:var(--rt-ink);line-height:1.1;}
+    .ad-stat-sub{font-size:.68rem;color:var(--rt-ink-soft);margin-top:.2rem;}
+    .ad-stat-sub .ad-up{color:var(--rt-success-dark);font-weight:600;}
+    .ad-stat-sub .ad-warn{color:var(--rt-coral-dark);font-weight:600;}
+
+    .ad-action-card{background:var(--rt-white);border:1px solid var(--rt-border);border-radius:12px;padding:1.2rem;text-align:center;text-decoration:none;color:inherit;transition:all .2s;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .ad-action-card:hover{border-color:var(--rt-teal);box-shadow:var(--rt-shadow);transform:translateY(-2px);text-decoration:none;color:inherit;}
+    .ad-action-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;margin-bottom:.6rem;}
+    .ad-action-card h6{font-size:.82rem;font-weight:600;margin:0 0 .2rem;color:var(--rt-ink);}
+    .ad-action-card p{font-size:.7rem;color:var(--rt-ink-soft);margin:0;line-height:1.3;}
+
+    .ad-table-card{background:var(--rt-white);border:1px solid var(--rt-border);border-radius:12px;overflow:hidden;}
+    .ad-table-card .card-body{padding:0;}
+    .ad-table{margin:0;}
+    .ad-table thead th{background:var(--rt-sand-light);font-size:.7rem;text-transform:uppercase;letter-spacing:.8px;color:var(--rt-ink-soft);font-weight:600;padding:.7rem 1rem;border-bottom:1px solid var(--rt-border);}
+    .ad-table tbody td{padding:.7rem 1rem;font-size:.82rem;vertical-align:middle;border-bottom:1px solid rgba(0,0,0,.04);}
+    .ad-table tbody tr:last-child td{border-bottom:none;}
+    .ad-table tbody tr:hover{background:var(--rt-sand-light);}
+    .ad-table .ad-name{font-weight:600;color:var(--rt-ink);}
+    .ad-table .ad-sub{font-size:.72rem;color:var(--rt-ink-soft);}
+    .ad-table .ad-date{font-size:.78rem;color:var(--rt-ink-soft);}
+    .ad-view-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:8px;font-size:.72rem;font-weight:600;color:var(--rt-teal);background:rgba(14,124,134,.08);border:none;transition:all .15s;}
+    .ad-view-btn:hover{background:var(--rt-teal);color:var(--rt-white);}
+    .ad-empty{text-align:center;padding:2.5rem 1rem;color:var(--rt-ink-soft);}
+    .ad-empty i{font-size:1.8rem;opacity:.3;margin-bottom:.5rem;}
+    .ad-empty p{font-size:.82rem;margin:0;}
+
+    .ad-activity-card{background:var(--rt-white);border:1px solid var(--rt-border);border-radius:12px;padding:1.2rem;}
+    .ad-activity-row{display:flex;align-items:center;gap:.8rem;padding:.6rem 0;border-bottom:1px solid rgba(0,0,0,.04);}
+    .ad-activity-row:last-child{border-bottom:none;}
+    .ad-activity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .ad-activity-text{flex:1;font-size:.8rem;color:var(--rt-ink);}
+    .ad-activity-text strong{font-weight:600;}
+    .ad-activity-time{font-size:.7rem;color:var(--rt-ink-soft);white-space:nowrap;}
+
+    @media(max-width:768px){
+        .ad-welcome{padding:1.3rem 1.2rem;}
+        .ad-welcome h4{font-size:1.1rem;}
+        .ad-stat-card{padding:.9rem 1rem;}
+        .ad-stat-value{font-size:1.25rem;}
+        .ad-stat-icon{width:38px;height:38px;font-size:.95rem;}
+        .ad-table{font-size:.75rem;}
+        .ad-table thead th,.ad-table tbody td{padding:.55rem .7rem;}
     }
 </style>
 
-<div class="mb-4">
-    <h4 class="fw-bold mb-1" style="color:#c0392b;">
-        <i class="fas fa-tachometer-alt"></i> Admin Dashboard
-    </h4>
-    <small style="color:#6c757d;">Overview of your ReefTrack system</small>
-</div>
+<div class="ad-page">
+    <!-- Welcome Banner -->
+    <div class="ad-welcome">
+        <h4><i class="fas fa-shield-halved"></i> Admin Dashboard</h4>
+        <p>ReefTrack Administration Panel — Manage users, assessments, species, and locations</p>
+        <div class="ad-welcome-date"><i class="far fa-calendar-alt"></i> {{ "now"|date:"l, F j, Y" }}</div>
+    </div>
 
-<!-- Stats Row -->
-<p class="section-title"><i class="fas fa-chart-bar me-1"></i> Statistics</p>
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-        <a href="{% url 'admin_manage_users' %}" class="text-decoration-none">
-            <div class="card dash-stat" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">Total Users</div>
-                        <div class="stat-value">{{ total_users }}</div>
+    <!-- Primary Stats -->
+    <div class="ad-section">
+        <div class="ad-section-head">
+            <p class="ad-section-title"><i class="fas fa-chart-pie"></i> System Overview</p>
+        </div>
+        <div class="row g-3">
+            <div class="col-6 col-lg-3">
+                <a href="{% url 'admin_manage_users' %}" class="ad-stat-card">
+                    <div class="ad-stat-icon" style="background:rgba(10,74,97,.1);color:var(--rt-navy-light);"><i class="fas fa-users"></i></div>
+                    <div class="ad-stat-info">
+                        <div class="ad-stat-label">Total Users</div>
+                        <div class="ad-stat-value">{{ total_users }}</div>
+                        <div class="ad-stat-sub"><span class="ad-up">{{ approved_count }} approved</span></div>
                     </div>
-                    <div class="stat-icon"><i class="fas fa-users"></i></div>
-                </div>
+                </a>
             </div>
-        </a>
-    </div>
-    <div class="col-6 col-lg-3">
-        <a href="{% url 'admin_manage_users' %}?status=pending" class="text-decoration-none">
-            <div class="card dash-stat" style="background: linear-gradient(135deg, #d97706, #b45309);">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">Pending Users</div>
-                        <div class="stat-value">{{ pending_count }}</div>
+            <div class="col-6 col-lg-3">
+                <a href="{% url 'admin_manage_users' %}?status=pending" class="ad-stat-card">
+                    <div class="ad-stat-icon" style="background:rgba(201,68,37,.1);color:var(--rt-coral-dark);"><i class="fas fa-user-clock"></i></div>
+                    <div class="ad-stat-info">
+                        <div class="ad-stat-label">Pending Users</div>
+                        <div class="ad-stat-value">{{ pending_count }}</div>
+                        <div class="ad-stat-sub">{% if pending_count > 0 %}<span class="ad-warn">Needs review</span>{% else %}All clear{% endif %}</div>
                     </div>
-                    <div class="stat-icon"><i class="fas fa-user-clock"></i></div>
-                </div>
+                </a>
             </div>
-        </a>
-    </div>
-    <div class="col-6 col-lg-3">
-        <a href="{% url 'admin_assessments' %}?status=submitted" class="text-decoration-none">
-            <div class="card dash-stat" style="background: linear-gradient(135deg, #dc2626, #b91c1c);">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">Pending Reviews</div>
-                        <div class="stat-value">{{ pending_assessments }}</div>
+            <div class="col-6 col-lg-3">
+                <a href="{% url 'admin_manage_locations' %}" class="ad-stat-card">
+                    <div class="ad-stat-icon" style="background:rgba(14,124,134,.1);color:var(--rt-teal);"><i class="fas fa-map-location-dot"></i></div>
+                    <div class="ad-stat-info">
+                        <div class="ad-stat-label">Locations</div>
+                        <div class="ad-stat-value">{{ total_municipalities }}</div>
+                        <div class="ad-stat-sub">{{ total_provinces }} province{{ total_provinces|pluralize }} · {{ total_barangays }} brgy{{ total_barangays|pluralize }}</div>
                     </div>
-                    <div class="stat-icon"><i class="fas fa-clipboard-check"></i></div>
-                </div>
+                </a>
             </div>
-        </a>
-    </div>
-    <div class="col-6 col-lg-3">
-        <a href="{% url 'admin_assessments' %}?status=approved" class="text-decoration-none">
-            <div class="card dash-stat" style="background: linear-gradient(135deg, #059669, #047857);">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">Approved Assessments</div>
-                        <div class="stat-value">{{ approved_assessments }}</div>
+            <div class="col-6 col-lg-3">
+                <a href="{% url 'admin_manage_species' %}" class="ad-stat-card">
+                    <div class="ad-stat-icon" style="background:rgba(232,93,58,.1);color:var(--rt-coral);"><i class="fas fa-fish"></i></div>
+                    <div class="ad-stat-info">
+                        <div class="ad-stat-label">Coral Species</div>
+                        <div class="ad-stat-value">{{ total_species }}</div>
+                        <div class="ad-stat-sub">{{ total_families }} famil{{ total_families|pluralize:"y,ies" }}</div>
                     </div>
-                    <div class="stat-icon"><i class="fas fa-check-double"></i></div>
-                </div>
+                </a>
             </div>
-        </a>
+        </div>
     </div>
-</div>
 
-<!-- Second Stats Row -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-4">
-        <a href="{% url 'admin_manage_locations' %}" class="text-decoration-none">
-            <div class="card dash-stat" style="background: linear-gradient(135deg, #0E7C86, #0a5c63);">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">Municipalities</div>
-                        <div class="stat-value">{{ total_municipalities }}</div>
+    <!-- Assessment Stats -->
+    <div class="ad-section">
+        <div class="ad-section-head">
+            <p class="ad-section-title"><i class="fas fa-clipboard-list"></i> Assessments</p>
+            <a href="{% url 'admin_assessments' %}" class="ad-section-link">View All <i class="fas fa-arrow-right" style="font-size:.6rem;"></i></a>
+        </div>
+        <div class="row g-3">
+            <div class="col-6 col-lg-3">
+                <a href="{% url 'admin_assessments' %}" class="ad-stat-card">
+                    <div class="ad-stat-icon" style="background:rgba(6,46,63,.08);color:var(--rt-navy);"><i class="fas fa-layer-group"></i></div>
+                    <div class="ad-stat-info">
+                        <div class="ad-stat-label">Total</div>
+                        <div class="ad-stat-value">{{ total_assessments }}</div>
+                        <div class="ad-stat-sub"><span class="ad-up">{{ recent_uploads }} this month</span></div>
                     </div>
-                    <div class="stat-icon"><i class="fas fa-map-marked-alt"></i></div>
-                </div>
+                </a>
             </div>
-        </a>
-    </div>
-    <div class="col-6 col-lg-4">
-        <a href="{% url 'admin_manage_locations' %}" class="text-decoration-none">
-            <div class="card dash-stat" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">Barangays</div>
-                        <div class="stat-value">{{ total_barangays }}</div>
+            <div class="col-6 col-lg-3">
+                <a href="{% url 'admin_assessments' %}?status=submitted" class="ad-stat-card">
+                    <div class="ad-stat-icon" style="background:rgba(10,74,97,.1);color:var(--rt-navy-light);"><i class="fas fa-hourglass-half"></i></div>
+                    <div class="ad-stat-info">
+                        <div class="ad-stat-label">Pending Review</div>
+                        <div class="ad-stat-value">{{ pending_assessments }}</div>
+                        <div class="ad-stat-sub">{% if pending_assessments > 0 %}<span class="ad-warn">Awaiting action</span>{% else %}None pending{% endif %}</div>
                     </div>
-                    <div class="stat-icon"><i class="fas fa-map-pin"></i></div>
-                </div>
+                </a>
             </div>
-        </a>
-    </div>
-    <div class="col-6 col-lg-4 offset-lg-0">
-        <a href="{% url 'admin_manage_species' %}" class="text-decoration-none">
-            <div class="card dash-stat" style="background: linear-gradient(135deg, #ea580c, #c2410c);">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">Coral Species</div>
-                        <div class="stat-value">{{ total_species }}</div>
+            <div class="col-6 col-lg-3">
+                <a href="{% url 'admin_assessments' %}?status=approved" class="ad-stat-card">
+                    <div class="ad-stat-icon" style="background:rgba(27,138,90,.1);color:var(--rt-success-dark);"><i class="fas fa-check-double"></i></div>
+                    <div class="ad-stat-info">
+                        <div class="ad-stat-label">Approved</div>
+                        <div class="ad-stat-value">{{ approved_assessments }}</div>
+                        <div class="ad-stat-sub"><span class="ad-up">{{ recent_approvals }} this month</span></div>
                     </div>
-                    <div class="stat-icon"><i class="fas fa-fish"></i></div>
-                </div>
+                </a>
             </div>
-        </a>
+            <div class="col-6 col-lg-3">
+                <a href="{% url 'admin_assessments' %}?status=rejected" class="ad-stat-card">
+                    <div class="ad-stat-icon" style="background:rgba(232,93,58,.1);color:var(--rt-coral);"><i class="fas fa-times-circle"></i></div>
+                    <div class="ad-stat-info">
+                        <div class="ad-stat-label">Rejected</div>
+                        <div class="ad-stat-value">{{ rejected_assessments }}</div>
+                        <div class="ad-stat-sub">{% if rejected_assessments > 0 %}{{ rejected_assessments }} total{% else %}None{% endif %}</div>
+                    </div>
+                </a>
+            </div>
+        </div>
     </div>
-</div>
 
-<!-- Quick Actions -->
-<p class="section-title"><i class="fas fa-bolt me-1"></i> Quick Actions</p>
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'admin_create_user' %}" class="quick-action">
-            <div class="action-icon text-primary"><i class="fas fa-user-plus"></i></div>
-            <h6>Create User</h6>
-            <p>Add admin, curator, or contributor</p>
-        </a>
+    <!-- Quick Actions -->
+    <div class="ad-section">
+        <div class="ad-section-head">
+            <p class="ad-section-title"><i class="fas fa-bolt"></i> Quick Actions</p>
+        </div>
+        <div class="row g-3">
+            <div class="col-6 col-md-4 col-lg-2">
+                <a href="{% url 'admin_create_user' %}" class="ad-action-card">
+                    <div class="ad-action-icon" style="background:rgba(10,74,97,.1);color:var(--rt-navy-light);"><i class="fas fa-user-plus"></i></div>
+                    <h6>Create User</h6>
+                    <p>Add a new user</p>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <a href="{% url 'admin_manage_users' %}" class="ad-action-card">
+                    <div class="ad-action-icon" style="background:rgba(14,124,134,.1);color:var(--rt-teal);"><i class="fas fa-users-gear"></i></div>
+                    <h6>Manage Users</h6>
+                    <p>View and manage</p>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <a href="{% url 'admin_assessments' %}" class="ad-action-card">
+                    <div class="ad-action-icon" style="background:rgba(6,46,63,.08);color:var(--rt-navy);"><i class="fas fa-clipboard-check"></i></div>
+                    <h6>Assessments</h6>
+                    <p>Review submissions</p>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <a href="{% url 'admin_manage_species' %}" class="ad-action-card">
+                    <div class="ad-action-icon" style="background:rgba(232,93,58,.1);color:var(--rt-coral);"><i class="fas fa-seedling"></i></div>
+                    <h6>Species</h6>
+                    <p>Manage coral species</p>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <a href="{% url 'admin_manage_locations' %}" class="ad-action-card">
+                    <div class="ad-action-icon" style="background:rgba(10,74,97,.1);color:var(--rt-navy-light);"><i class="fas fa-map-marked-alt"></i></div>
+                    <h6>Locations</h6>
+                    <p>Manage geography</p>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <a href="{% url 'admin_manage_transect_coords' %}" class="ad-action-card">
+                    <div class="ad-action-icon" style="background:rgba(201,68,37,.1);color:var(--rt-coral-dark);"><i class="fas fa-crosshairs"></i></div>
+                    <h6>Coordinates</h6>
+                    <p>Reference coords</p>
+                </a>
+            </div>
+        </div>
     </div>
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'admin_manage_users' %}" class="quick-action">
-            <div class="action-icon text-success"><i class="fas fa-users-cog"></i></div>
-            <h6>Manage Users</h6>
-            <p>View, edit, approve or reject</p>
-        </a>
-    </div>
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'admin_assessments' %}" class="quick-action">
-            <div class="action-icon text-info"><i class="fas fa-clipboard-list"></i></div>
-            <h6>Assessments</h6>
-            <p>Review and manage assessments</p>
-        </a>
-    </div>
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'admin_manage_species' %}" class="quick-action">
-            <div class="action-icon" style="color:#ea580c;"><i class="fas fa-seedling"></i></div>
-            <h6>Manage Species</h6>
-            <p>Coral families and species</p>
-        </a>
-    </div>
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'admin_manage_locations' %}" class="quick-action">
-            <div class="action-icon" style="color:#0E7C86;"><i class="fas fa-map-marked-alt"></i></div>
-            <h6>Locations</h6>
-            <p>Municipalities and barangays</p>
-        </a>
-    </div>
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'admin_manage_transect_coords' %}" class="quick-action">
-            <div class="action-icon" style="color:#7c3aed;"><i class="fas fa-crosshairs"></i></div>
-            <h6>Transect Coords</h6>
-            <p>Reference coordinate management</p>
-        </a>
-    </div>
-</div>
 
-<!-- Recent Approved -->
-{% if recent_approved %}
-<p class="section-title"><i class="fas fa-history me-1"></i> Recently Approved Assessments</p>
-<div class="card dash-card shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead style="background:#f8f9fa;">
-                    <tr>
-                        <th class="ps-3">ID</th>
-                        <th>Barangay</th>
-                        <th>Municipality</th>
-                        <th>Assessment Date</th>
-                        <th>Approved On</th>
-                        <th>Uploaded By</th>
-                        <th class="pe-3 text-end">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for a in recent_approved %}
-                    <tr>
-                        <td class="ps-3"><span class="badge bg-secondary">#{{ a.id }}</span></td>
-                        <td>{{ a.barangay.name }}</td>
-                        <td>{{ a.municipality.name }}</td>
-                        <td>{{ a.assessment_date }}</td>
-                        <td><small class="text-success"><i class="fas fa-check-circle"></i> {{ a.approved_at|date:"M d, Y" }}</small></td>
-                        <td><small>{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</small></td>
-                        <td class="pe-3 text-end">
-                            <a href="{% url 'admin_assessment_detail' a.id %}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-eye"></i> View
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <!-- Tables Row -->
+    <div class="row g-3">
+        <!-- Pending Reviews -->
+        <div class="col-lg-6">
+            <div class="ad-section">
+                <div class="ad-section-head">
+                    <p class="ad-section-title"><i class="fas fa-clock"></i> Pending Reviews</p>
+                    {% if pending_assessments > 0 %}
+                    <a href="{% url 'admin_assessments' %}?status=submitted" class="ad-section-link">View All <i class="fas fa-arrow-right" style="font-size:.6rem;"></i></a>
+                    {% endif %}
+                </div>
+                <div class="ad-table-card">
+                    <div class="card-body">
+                        {% if recent_pending %}
+                        <div class="table-responsive">
+                            <table class="table ad-table">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th>Uploaded By</th>
+                                        <th>Date</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for a in recent_pending %}
+                                    <tr>
+                                        <td>
+                                            <div class="ad-name">{{ a.barangay.name }}</div>
+                                            <div class="ad-sub">{{ a.municipality.name }}</div>
+                                        </td>
+                                        <td><small>{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</small></td>
+                                        <td class="ad-date">{{ a.assessment_date }}</td>
+                                        <td class="text-end">
+                                            <a href="{% url 'admin_assessment_detail' a.id %}" class="ad-view-btn"><i class="fas fa-eye"></i> Review</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="ad-empty">
+                            <i class="fas fa-check-circle d-block"></i>
+                            <p>No pending reviews</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recently Approved -->
+        <div class="col-lg-6">
+            <div class="ad-section">
+                <div class="ad-section-head">
+                    <p class="ad-section-title"><i class="fas fa-history"></i> Recently Approved</p>
+                    {% if recent_approved %}
+                    <a href="{% url 'admin_assessments' %}?status=approved" class="ad-section-link">View All <i class="fas fa-arrow-right" style="font-size:.6rem;"></i></a>
+                    {% endif %}
+                </div>
+                <div class="ad-table-card">
+                    <div class="card-body">
+                        {% if recent_approved %}
+                        <div class="table-responsive">
+                            <table class="table ad-table">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th>Uploaded By</th>
+                                        <th>Approved</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for a in recent_approved %}
+                                    <tr>
+                                        <td>
+                                            <div class="ad-name">{{ a.barangay.name }}</div>
+                                            <div class="ad-sub">{{ a.municipality.name }}</div>
+                                        </td>
+                                        <td><small>{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</small></td>
+                                        <td class="ad-date">{{ a.approved_at|date:"M d, Y" }}</td>
+                                        <td class="text-end">
+                                            <a href="{% url 'admin_assessment_detail' a.id %}" class="ad-view-btn"><i class="fas fa-eye"></i> View</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="ad-empty">
+                            <i class="fas fa-clipboard d-block"></i>
+                            <p>No approved assessments yet</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-{% endif %}
 {% endblock %}

@@ -1,13 +1,20 @@
 {% extends 'admin/base_admin.html' %}
 
-{% block title %}Locations - Admin - ReefTrack{% endblock %}
+{% block title %}{{ province.name }} Municipalities - Admin - ReefTrack{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-12 d-flex justify-content-between align-items-center">
-        <h4 class="mb-0"><i class="fas fa-map-marker-alt"></i> Provinces</h4>
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProvinceModal">
-            <i class="fas fa-plus"></i> Add Province
+        <div>
+            <h4 class="mb-0">
+                <a href="{% url 'admin_manage_locations' %}" class="text-decoration-none text-muted">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <i class="fas fa-map-marker-alt"></i> {{ province.name }} — Municipalities
+            </h4>
+        </div>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addMunicipalityModal">
+            <i class="fas fa-plus"></i> Add Municipality
         </button>
     </div>
 </div>
@@ -18,14 +25,14 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" id="provSearch" class="form-control" placeholder="Search province...">
+                    <input type="text" id="muniSearch" class="form-control" placeholder="Search municipality...">
                 </div>
             </div>
             <div class="col-md-6 text-end d-flex justify-content-end align-items-center gap-2">
                 <button class="btn btn-sm btn-danger d-none" id="bulkDeleteBtn" onclick="confirmBulkDelete()">
                     <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
                 </button>
-                    <small class="text-muted" id="provCount">{{ provinces|length }} province{{ provinces|length|pluralize }}</small>
+                <small class="text-muted" id="muniCount">{{ municipalities|length }} municipality{{ municipalities|length|pluralize }}</small>
             </div>
         </div>
         <div class="table-responsive">
@@ -35,47 +42,45 @@
                         <th style="width:40px;">
                             <input type="checkbox" id="selectAll" class="form-check-input" title="Select all">
                         </th>
-                        <th>Province</th>
-                        <th>Municipalities</th>
+                        <th>Municipality</th>
                         <th>Barangays</th>
                         <th>Assessments</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody id="provTableBody">
-                    {% for p in provinces %}
-                    <tr class="prov-row" data-id="{{ p.id }}" data-municipalities="{{ p.municipality_count }}">
+                <tbody id="muniTableBody">
+                    {% for m in municipalities %}
+                    <tr class="muni-row" data-id="{{ m.id }}" data-assessments="{{ m.total_assessment_count }}">
                         <td>
-                            <input type="checkbox" class="form-check-input prov-check" value="{{ p.id }}">
+                            <input type="checkbox" class="form-check-input muni-check" value="{{ m.id }}">
                         </td>
-                        <td><strong>{{ p.name }}</strong></td>
+                        <td><strong>{{ m.name }}</strong></td>
                         <td>
-                            <a href="{% url 'admin_manage_municipalities' p.id %}" class="badge bg-info text-decoration-none">
-                                {{ p.municipality_count }} {{ p.municipality_count|pluralize:"municipality,municipalities" }}
+                            <a href="{% url 'admin_manage_barangays' m.id %}" class="badge bg-info text-decoration-none">
+                                {{ m.barangay_count }} barangay{{ m.barangay_count|pluralize }}
                             </a>
                         </td>
-                        <td>{{ p.barangay_count }}</td>
-                        <td>{{ p.approved_assessment_count }}</td>
+                        <td>{{ m.approved_assessment_count }}</td>
                         <td>
-                            <a href="{% url 'admin_manage_municipalities' p.id %}" class="btn btn-sm btn-outline-info" title="Manage Municipalities">
+                            <a href="{% url 'admin_manage_barangays' m.id %}" class="btn btn-sm btn-outline-info" title="Manage Barangays">
                                 <i class="fas fa-map-pin"></i>
                             </a>
                             <button class="btn btn-sm btn-outline-primary" title="Edit"
-                                    data-bs-toggle="modal" data-bs-target="#editProv{{ p.id }}">
+                                    data-bs-toggle="modal" data-bs-target="#editMuni{{ m.id }}">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-danger" title="Delete"
-                                    data-bs-toggle="modal" data-bs-target="#deleteProv{{ p.id }}">
+                                    data-bs-toggle="modal" data-bs-target="#deleteMuni{{ m.id }}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-4">
+                        <td colspan="5" class="text-center py-4">
                             <i class="fas fa-map-marker-alt fa-3x text-muted mb-3 d-block"></i>
-                            <h5>No provinces</h5>
-                            <p class="text-muted">Add a province to get started.</p>
+                            <h5>No municipalities</h5>
+                            <p class="text-muted">Add a municipality to get started.</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -89,14 +94,15 @@
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="bulkDeleteForm" method="POST" action="{% url 'admin_bulk_delete_provinces' %}">
+            <form id="bulkDeleteForm" method="POST" action="{% url 'admin_bulk_delete_municipalities' province_id=province.id %}">
                 {% csrf_token %}
+                <input type="hidden" name="province_id" value="{{ province.id }}">
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Delete Selected Provinces</h5>
+                    <h5 class="modal-title">Delete Selected Municipalities</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>You are about to delete <strong id="bulkDeleteCount">0</strong> province(s).</p>
+                    <p>You are about to delete <strong id="bulkDeleteCount">0</strong> municipality(s).</p>
                     <div id="bulkDeleteList" class="mb-2"></div>
                     <div id="bulkSkipAlert" class="alert alert-warning py-2 mb-0 d-none">
                         <i class="fas fa-exclamation-triangle"></i>
@@ -113,20 +119,20 @@
 </div>
 
 <!-- Modals (outside table) -->
-{% for p in provinces %}
+{% for m in municipalities %}
 <!-- Edit Modal -->
-<div class="modal fade" id="editProv{{ p.id }}" tabindex="-1">
+<div class="modal fade" id="editMuni{{ m.id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'admin_edit_province' p.id %}">
+            <form method="POST" action="{% url 'admin_edit_municipality' m.id %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Province</h5>
+                    <h5 class="modal-title">Edit Municipality</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <label class="form-label fw-bold">Name</label>
-                    <input type="text" class="form-control" name="name" value="{{ p.name }}" required>
+                    <input type="text" class="form-control" name="name" value="{{ m.name }}" required>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -138,27 +144,27 @@
 </div>
 
 <!-- Delete Modal -->
-<div class="modal fade" id="deleteProv{{ p.id }}" tabindex="-1">
+<div class="modal fade" id="deleteMuni{{ m.id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'admin_delete_province' p.id %}">
+            <form method="POST" action="{% url 'admin_delete_municipality' m.id %}">
                 {% csrf_token %}
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Delete Province</h5>
+                    <h5 class="modal-title">Delete Municipality</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete <strong>{{ p.name }}</strong>?</p>
-                    {% if p.municipality_count > 0 %}
+                    <p>Are you sure you want to delete <strong>{{ m.name }}</strong>?</p>
+                    {% if m.approved_assessment_count > 0 %}
                     <div class="alert alert-danger py-2 mb-0">
                         <i class="fas fa-exclamation-triangle"></i>
-                        This province contains {{ p.municipality_count }} municipality/municipalities and cannot be deleted.
+                        This municipality has {{ m.approved_assessment_count }} approved assessment(s) and cannot be deleted.
                     </div>
                     {% endif %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    {% if p.municipality_count == 0 %}
+                    {% if m.approved_assessment_count == 0 %}
                     <button type="submit" class="btn btn-danger">Delete</button>
                     {% endif %}
                 </div>
@@ -168,23 +174,23 @@
 </div>
 {% endfor %}
 
-<!-- Add Province Modal -->
-<div class="modal fade" id="addProvinceModal" tabindex="-1">
+<!-- Add Municipality Modal -->
+<div class="modal fade" id="addMunicipalityModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'admin_add_province' %}">
+            <form method="POST" action="{% url 'admin_add_municipality' province_id=province.id %}">
                 {% csrf_token %}
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Add Province</h5>
+                    <h5 class="modal-title">Add Municipality</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <label class="form-label fw-bold">Province Name</label>
-                    <input type="text" class="form-control" name="name" required placeholder="e.g. Sarangani">
+                    <label class="form-label fw-bold">Municipality Name</label>
+                    <input type="text" class="form-control" name="name" required placeholder="e.g. General Santos">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Add Province</button>
+                    <button type="submit" class="btn btn-success">Add Municipality</button>
                 </div>
             </form>
         </div>
@@ -192,9 +198,9 @@
 </div>
 
 <script>
-document.getElementById('provSearch').addEventListener('input', function() {
+document.getElementById('muniSearch').addEventListener('input', function() {
     var q = this.value.toLowerCase();
-    var rows = document.querySelectorAll('.prov-row');
+    var rows = document.querySelectorAll('.muni-row');
     var visible = 0;
     rows.forEach(function(row) {
         var text = row.textContent.toLowerCase();
@@ -202,18 +208,18 @@ document.getElementById('provSearch').addEventListener('input', function() {
         row.style.display = show ? '' : 'none';
         if (show) visible++;
     });
-    document.getElementById('provCount').textContent = visible + ' province' + (visible !== 1 ? 's' : '');
+    document.getElementById('muniCount').textContent = visible + ' municipality' + (visible !== 1 ? 's' : '');
 });
 
 var selectAll = document.getElementById('selectAll');
-var checks = document.querySelectorAll('.prov-check');
+var checks = document.querySelectorAll('.muni-check');
 var bulkBtn = document.getElementById('bulkDeleteBtn');
 var countSpan = document.getElementById('selectedCount');
 
 selectAll.addEventListener('change', function() {
     var checked = this.checked;
     checks.forEach(function(c) {
-        var row = c.closest('.prov-row');
+        var row = c.closest('.muni-row');
         if (row.style.display !== 'none') c.checked = checked;
     });
     updateBulkBtn();
@@ -224,7 +230,7 @@ checks.forEach(function(c) {
 });
 
 function updateBulkBtn() {
-    var sel = document.querySelectorAll('.prov-check:checked').length;
+    var sel = document.querySelectorAll('.muni-check:checked').length;
     countSpan.textContent = sel;
     bulkBtn.classList.toggle('d-none', sel === 0);
 }
@@ -232,12 +238,12 @@ function updateBulkBtn() {
 function confirmBulkDelete() {
     var selected = [];
     var skippable = [];
-    document.querySelectorAll('.prov-check:checked').forEach(function(c) {
-        var row = c.closest('.prov-row');
+    document.querySelectorAll('.muni-check:checked').forEach(function(c) {
+        var row = c.closest('.muni-row');
         var name = row.querySelector('strong').textContent;
-        var muniCount = parseInt(row.getAttribute('data-municipalities')) || 0;
-        if (muniCount > 0) {
-            skippable.push(name + ' (' + muniCount + ' municipality/municipalities)');
+        var assessments = parseInt(row.getAttribute('data-assessments')) || 0;
+        if (assessments > 0) {
+            skippable.push(name + ' (' + assessments + ' assessment(s))');
         } else {
             selected.push(name);
             var input = document.createElement('input');
@@ -258,7 +264,7 @@ function confirmBulkDelete() {
     var skipAlert = document.getElementById('bulkSkipAlert');
     if (skippable.length > 0) {
         skipAlert.classList.remove('d-none');
-        document.getElementById('bulkSkipText').textContent = skippable.length + ' will be skipped (contain municipalities): ' + skippable.join(', ');
+        document.getElementById('bulkSkipText').textContent = skippable.length + ' will be skipped (used in assessments): ' + skippable.join(', ');
     } else {
         skipAlert.classList.add('d-none');
     }

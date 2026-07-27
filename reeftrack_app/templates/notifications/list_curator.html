@@ -1,0 +1,128 @@
+{% extends 'curator/base_curator.html' %}
+
+{% block title %}Notifications - Curator - ReefTrack{% endblock %}
+
+{% block content %}
+<style>
+    .notif-page-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1.25rem 1.5rem; border-radius: 10px;
+        background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+        border-left: 4px solid var(--rt-primary); margin-bottom: 1.5rem;
+    }
+    .notif-page-header h4 { margin: 0; font-weight: 700; color: var(--rt-navy); font-size: 1.15rem; }
+    .notif-page-header small { color: #64748b; font-size: 0.82rem; }
+
+    .notif-item {
+        display: flex; align-items: flex-start; gap: 1rem;
+        padding: 1rem 1.25rem; border-radius: 10px; margin-bottom: 0.5rem;
+        border: 1px solid #e5e7eb; background: #fff;
+        transition: all 0.2s; cursor: default;
+    }
+    .notif-item:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .notif-item.unread { background: linear-gradient(135deg, #f0f7ff, #e8f1ff); border-color: #bfdbfe; }
+    .notif-icon {
+        width: 40px; height: 40px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; flex-shrink: 0;
+    }
+    .notif-icon.approved { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #166534; }
+    .notif-icon.rejected { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
+    .notif-icon.returned { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; }
+    .notif-icon.info { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.2rem; }
+    .notif-message { font-size: 0.82rem; color: #64748b; line-height: 1.4; }
+    .notif-time { font-size: 0.72rem; color: #94a3b8; margin-top: 0.3rem; }
+    .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; flex-shrink: 0; margin-top: 0.4rem; }
+
+    .notif-empty {
+        text-align: center; padding: 3rem 1rem; color: #94a3b8;
+    }
+    .notif-empty i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+
+    .notif-actions { display: flex; gap: 0.5rem; }
+    .notif-btn {
+        padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #e2e8f0;
+        background: #fff; color: #475569; font-size: 0.78rem; font-weight: 500;
+        cursor: pointer; transition: all 0.2s; text-decoration: none;
+    }
+    .notif-btn:hover { background: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
+    .notif-btn.primary { background: var(--rt-primary); color: #fff; border-color: var(--rt-primary); }
+    .notif-btn.primary:hover { background: var(--rt-navy); border-color: var(--rt-navy); color: #fff; }
+
+    @media (max-width: 576px) {
+        .notif-page-header { flex-direction: column; gap: 0.5rem; }
+        .notif-item { padding: 0.75rem; }
+    }
+</style>
+
+<div class="notif-page-header">
+    <div>
+        <h4><i class="fas fa-bell"></i> Notifications</h4>
+        <small>{% if unread_count %}{{ unread_count }} unread notification{{ unread_count|pluralize }}{% else %}You're all caught up{% endif %}</small>
+    </div>
+    {% if unread_count %}
+    <form method="POST" action="{% url 'notifications_mark_all_read' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="mark_all_read">
+        <button type="submit" class="notif-btn primary">
+            <i class="fas fa-check-double"></i> Mark All Read
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+{% if notifications %}
+    {% for notif in notifications %}
+    <div class="notif-item {% if not notif.is_read %}unread{% endif %}">
+        <div class="notif-icon {{ notif.notification_type }}">
+            {% if notif.notification_type == 'approved' %}
+            <i class="fas fa-check-circle"></i>
+            {% elif notif.notification_type == 'rejected' %}
+            <i class="fas fa-times-circle"></i>
+            {% elif notif.notification_type == 'returned' %}
+            <i class="fas fa-undo"></i>
+            {% else %}
+            <i class="fas fa-info-circle"></i>
+            {% endif %}
+        </div>
+        <div class="notif-body">
+            <div class="notif-title">{{ notif.title }}</div>
+            <div class="notif-message">{{ notif.message }}</div>
+            <div class="notif-time">
+                <i class="fas fa-clock"></i> {{ notif.created_at|timesince }} ago
+                {% if notif.assessment %} — Assessment #{{ notif.assessment.id }}{% endif %}
+            </div>
+        </div>
+        {% if not notif.is_read %}
+        <div class="notif-dot" title="Unread"></div>
+        {% endif %}
+        <div class="notif-actions">
+            {% if notif.assessment %}
+            <a href="{% url 'curator_assessment_detail' notif.assessment.id %}" class="notif-btn" title="View Assessment">
+                <i class="fas fa-eye"></i>
+            </a>
+            {% endif %}
+            {% if not notif.is_read %}
+            <form method="POST" action="{% url 'notifications_list' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="mark_read">
+                <input type="hidden" name="notification_id" value="{{ notif.id }}">
+                <button type="submit" class="notif-btn" title="Mark as Read">
+                    <i class="fas fa-check"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="notif-empty">
+    <i class="fas fa-bell-slash"></i>
+    <h5>No Notifications Yet</h5>
+    <p>You'll see notifications here when your assessments are reviewed.</p>
+</div>
+{% endif %}
+
+{% endblock %}

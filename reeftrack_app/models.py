@@ -6,13 +6,26 @@ from django.dispatch import receiver
 
 # ==================== LOOKUP TABLES ====================
 
-class Municipality(models.Model):
+class Province(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
 
     class Meta:
+        verbose_name_plural = "Provinces"
+        ordering = ['name']
+
+
+class Municipality(models.Model):
+    name = models.CharField(max_length=100)
+    province = models.ForeignKey(Province, on_delete=models.CASCADE, related_name='municipalities')
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        unique_together = ['name', 'province']
         verbose_name_plural = "Municipalities"
         ordering = ['name']
 
@@ -44,6 +57,7 @@ class BarangayTransect(models.Model):
         ('assessment', 'Created from Assessment'),
     ], default='manual')
     assessment = models.ForeignKey('Assessment', null=True, blank=True, on_delete=models.SET_NULL, related_name='saved_transect_coords')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def __str__(self):
         return f"Coords for {self.barangay.name} (#{self.pk})"
@@ -168,6 +182,64 @@ class Transect(models.Model):
 
     def __str__(self):
         return f"Transect {self.transect_number} ({self.assessment})"
+
+    @property
+    def depth_health(self):
+        """Return per-depth health dict: {shallow: {label, color, avg}, deep: {label, color, avg}}."""
+        result = {}
+        for depth_label in ('shallow', 'deep'):
+            records = self.species_data.filter(depth=depth_label)
+            if not records.exists():
+                result[depth_label] = {'label': 'Unknown', 'color': '#6b7280', 'avg': 0}
+                continue
+            avg = sum(float(r.cover) for r in records) / records.count()
+            if avg >= 65:
+                result[depth_label] = {'label': 'Excellent', 'color': '#16a34a', 'avg': avg}
+            elif avg >= 45:
+                result[depth_label] = {'label': 'Good', 'color': '#2563eb', 'avg': avg}
+            elif avg >= 25:
+                result[depth_label] = {'label': 'Fair', 'color': '#d97706', 'avg': avg}
+            else:
+                result[depth_label] = {'label': 'Poor', 'color': '#dc2626', 'avg': avg}
+        return result
+
+    def _health_for_depth(self, depth_label):
+        records = self.species_data.filter(depth=depth_label)
+        if not records.exists():
+            return {'label': 'Unknown', 'color': '#6b7280', 'avg': 0}
+        avg = sum(float(r.cover) for r in records) / records.count()
+        if avg >= 65:
+            return {'label': 'Excellent', 'color': '#16a34a', 'avg': avg}
+        elif avg >= 45:
+            return {'label': 'Good', 'color': '#2563eb', 'avg': avg}
+        elif avg >= 25:
+            return {'label': 'Fair', 'color': '#d97706', 'avg': avg}
+        return {'label': 'Poor', 'color': '#dc2626', 'avg': avg}
+
+    @property
+    def shallow_health(self):
+        return self._health_for_depth('shallow')
+
+    @property
+    def deep_health(self):
+        return self._health_for_depth('deep')
+
+    @property
+    def overall_health(self):
+        """Return overall health for this transect combining both depth zones."""
+        info = self.depth_health
+        values = [v for v in info.values() if v['label'] != 'Unknown']
+        if not values:
+            return {'label': 'Unknown', 'color': '#6b7280', 'avg': 0}
+        avg = sum(v['avg'] for v in values) / len(values)
+        if avg >= 65:
+            return {'label': 'Excellent', 'color': '#16a34a', 'avg': avg}
+        elif avg >= 45:
+            return {'label': 'Good', 'color': '#2563eb', 'avg': avg}
+        elif avg >= 25:
+            return {'label': 'Fair', 'color': '#d97706', 'avg': avg}
+        else:
+            return {'label': 'Poor', 'color': '#dc2626', 'avg': avg}
 
     class Meta:
         unique_together = ['assessment', 'transect_number']
@@ -328,6 +400,33 @@ def create_user_profile(sender, instance, created, **kwargs):
         
         UserProfile.objects.create(user=instance, role=role, status=status)
 
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('returned', 'Returned to Pending'),
+        ('info', 'Information'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='info')
+    assessment = models.ForeignKey('Assessment', on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username}: {self.title}"
+
+    def mark_read(self):
+        self.is_read = True
+        self.save(update_fields=['is_read'])
+
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     """
@@ -339,3 +438,47 @@ def save_user_profile(sender, instance, **kwargs):
             instance.profile.status = 'approved'
             instance.profile.save()
         instance.profile.save()
+
+
+class SecurityAuditLog(models.Model):
+    """Immutable audit trail for security-relevant events."""
+
+    EVENT_CHOICES = [
+        ('login_success', 'Login Success'),
+        ('login_failed', 'Login Failed'),
+        ('login_locked', 'Login Locked Out'),
+        ('logout', 'Logout'),
+        ('password_change', 'Password Change'),
+        ('account_created', 'Account Created'),
+        ('account_approved', 'Account Approved'),
+        ('account_rejected', 'Account Rejected'),
+        ('account_deactivated', 'Account Deactivated'),
+        ('assessment_approved', 'Assessment Approved'),
+        ('assessment_rejected', 'Assessment Rejected'),
+        ('assessment_deleted', 'Assessment Deleted'),
+        ('user_role_changed', 'User Role Changed'),
+    ]
+
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='audit_logs'
+    )
+    event = models.CharField(max_length=50, choices=EVENT_CHOICES)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default='')
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['event', '-created_at']),
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['ip_address', '-created_at']),
+        ]
+
+    def __str__(self):
+        user_str = self.user.email if self.user else 'anonymous'
+        return f'[{self.event}] {user_str} @ {self.created_at:%Y-%m-%d %H:%M}'

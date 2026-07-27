@@ -4,91 +4,154 @@
 {% block title %}My Assessments - ReefTrack{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="fas fa-clipboard-list"></i> My Assessments</h4>
-                <a href="{% url 'upload_assessment' %}" class="btn btn-light btn-sm">
-                    <i class="fas fa-upload"></i> Upload New
-                </a>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover" id="assessmentsTable">
-                        <thead>
-                            <tr>
-                                <th>Location</th>
-                                <th>Date</th>
-                                <th>Transects</th>
-                                <th>Coral Cover</th>
-                                <th>Condition</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for a in assessments %}
-                            <tr>
-                                <td>
-                                    <strong>{{ a.barangay }}</strong>
-                                    <br><small class="text-muted">{{ a.municipality }}</small>
-                                </td>
-                                <td>{{ a.assessment_date|date:"M d, Y" }}</td>
-                                <td>{{ a.transects.count }}</td>
-                                <td>{% if a.overall_coral_cover %}{{ a.overall_coral_cover }}%{% else %}-{% endif %}</td>
-                                <td>
-                                    {% if a.condition %}
-                                        <span class="badge
-                                            {% if a.condition == 'excellent' %}bg-success
-                                            {% elif a.condition == 'good' %}bg-primary
-                                            {% elif a.condition == 'fair' %}bg-warning text-dark
-                                            {% else %}bg-danger{% endif %}">
-                                            {{ a.get_condition_display }}
-                                        </span>
-                                    {% else %}-{% endif %}
-                                </td>
-                                <td>
-                                    <span class="badge
-                                        {% if a.status == 'approved' %}bg-success
-                                        {% elif a.status == 'submitted' %}bg-info
-                                        {% elif a.status == 'rejected' %}bg-danger
-                                        {% else %}bg-secondary{% endif %}">
-                                        {{ a.get_status_display }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="{% url 'contributor_assessment_detail' a.id %}" class="btn btn-sm btn-outline-primary me-1">
-                                        <i class="fas fa-eye"></i> View
-                                    </a>
-                                    {% if a.status == 'submitted' or a.status == 'rejected' %}
-                                    <form method="POST" action="{% url 'delete_assessment' a.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                onclick="return confirm('Are you sure you want to delete Assessment #{{ a.id }}? This cannot be undone.')">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                    </form>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="text-center py-4">
-                                    <i class="fas fa-clipboard fa-3x text-muted mb-3 d-block"></i>
-                                    <h5>No assessments yet</h5>
-                                    <p class="text-muted">Upload your first assessment to get started.</p>
-                                    <a href="{% url 'upload_assessment' %}" class="btn btn-sm btn-success">
-                                        <i class="fas fa-upload"></i> Upload Assessment
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+<div class="rt-page-header">
+    <h4><i class="fas fa-clipboard-list"></i> My Assessments</h4>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4" id="statsRow">
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #6b7280, #4b5563);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value">{{ stats.total }}</div>
                 </div>
+                <div class="stat-icon"><i class="fas fa-folder-open"></i></div>
             </div>
         </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #d97706, #b45309);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Pending Review</div>
+                    <div class="stat-value">{{ stats.submitted }}</div>
+                </div>
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #059669, #047857);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Approved</div>
+                    <div class="stat-value">{{ stats.approved }}</div>
+                </div>
+                <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #dc2626, #b91c1c);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Rejected</div>
+                    <div class="stat-value">{{ stats.rejected }}</div>
+                </div>
+                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg">
+        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #6b7280, #9ca3af);">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Draft</div>
+                    <div class="stat-value">{{ stats.draft }}</div>
+                </div>
+                <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions Bar -->
+<div class="text-end mb-3">
+    <a href="{% url 'upload_assessment' %}" class="btn btn-sm btn-success">
+        <i class="fas fa-upload"></i> Upload New
+    </a>
+</div>
+
+<!-- Assessments Table -->
+<div class="rt-table-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle" id="assessmentsTable">
+            <thead>
+                <tr>
+                    <th>Location</th>
+                    <th>Date</th>
+                    <th>Transects</th>
+                    <th>Coral Cover</th>
+                    <th>Condition</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in assessments %}
+                <tr>
+                    <td>
+                        <strong>{{ a.barangay.name }}</strong>
+                        <br><small class="text-muted">{{ a.municipality.name }}, {{ a.municipality.province.name }}</small>
+                    </td>
+                    <td>{{ a.assessment_date|date:"M d, Y" }}</td>
+                    <td>{{ a.transects.count }}</td>
+                    <td>{% if a.overall_coral_cover %}{{ a.overall_coral_cover }}%{% else %}—{% endif %}</td>
+                    <td>
+                        {% if a.condition %}
+                            <span class="rt-badge
+                                {% if a.condition == 'excellent' %}rt-badge-approved
+                                {% elif a.condition == 'good' %}rt-badge-submitted
+                                {% elif a.condition == 'fair' %}rt-badge-submitted
+                                {% else %}rt-badge-rejected{% endif %}">
+                                {{ a.get_condition_display }}
+                            </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <span class="rt-badge
+                            {% if a.status == 'approved' %}rt-badge-approved
+                            {% elif a.status == 'submitted' %}rt-badge-submitted
+                            {% elif a.status == 'rejected' %}rt-badge-rejected
+                            {% else %}rt-badge-draft{% endif %}">
+                            {{ a.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="rt-action-group">
+                            <a href="{% url 'contributor_assessment_detail' a.id %}" class="rt-action-btn rt-action-btn-view" title="View assessment">
+                                <i class="fas fa-eye"></i> <span class="btn-label">View</span>
+                            </a>
+                            {% if a.status == 'submitted' or a.status == 'rejected' %}
+                            <form method="POST" action="{% url 'delete_assessment' a.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="rt-action-btn rt-action-btn-delete" title="Delete assessment"
+                                        onclick="return confirm('Are you sure you want to delete Assessment #{{ a.id }}? This cannot be undone.')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="rt-empty-state">
+                            <div class="rt-empty-icon"><i class="fas fa-clipboard"></i></div>
+                            <h5>No assessments yet</h5>
+                            <p>Upload your first assessment to get started.</p>
+                            <a href="{% url 'upload_assessment' %}" class="btn btn-sm btn-success">
+                                <i class="fas fa-upload"></i> Upload Assessment
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 

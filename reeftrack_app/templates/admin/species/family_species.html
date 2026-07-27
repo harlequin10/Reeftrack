@@ -3,147 +3,219 @@
 {% block title %}{{ family_name }} Species - Admin - ReefTrack{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <a href="{% url 'admin_manage_species' %}" class="text-decoration-none" style="color:var(--rt-primary);">
-            <i class="fas fa-arrow-left"></i> Back to Families
-        </a>
-    </div>
-</div>
+<style>
+    .sp-page{margin-bottom:2rem;}
 
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-        <h4 class="mb-0">
-            <i class="fas fa-fish"></i> {{ family_name }}
-            <span class="badge bg-info ms-2">{{ species_count }} species</span>
-        </h4>
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSpeciesModal">
-            <i class="fas fa-plus"></i> Add Species
-        </button>
-    </div>
-</div>
+    .sp-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
+    .sp-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
+    .sp-breadcrumb a:hover{color:var(--rt-primary);}
+    .sp-breadcrumb .sep{color:#d1d5db;}
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Sub Category (Species)</th>
-                        <th>Code</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for s in species_list %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>
-                            <strong style="color:var(--rt-primary);">{{ s.sub_category }}</strong>
-                        </td>
-                        <td><code>{{ s.code|default:"—" }}</code></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" title="Edit"
+    .sp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;}
+    .sp-header-left{display:flex;align-items:center;gap:.75rem;}
+    .sp-header-left h3{margin:0;font-weight:800;color:var(--rt-navy);font-size:1.5rem;letter-spacing:-.02em;}
+    .sp-header-left h3 i{color:var(--rt-primary);font-size:1.2rem;}
+    .sp-header-left .sp-badge{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:20px;font-size:.75rem;font-weight:600;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;}
+    .sp-header-left p{margin:.2rem 0 0;color:#64748b;font-size:.85rem;}
+    .sp-header-right{display:flex;gap:.5rem;align-items:center;}
+    .sp-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem 1rem;border-radius:10px;font-size:.82rem;font-weight:600;border:1px solid transparent;cursor:pointer;transition:all .2s ease;white-space:nowrap;text-decoration:none;line-height:1.4;}
+    .sp-btn i{font-size:.78rem;}
+    .sp-btn-outline{background:#fff;color:#475569;border-color:#e2e8f0;}
+    .sp-btn-outline:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
+    .sp-btn-success{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-color:#16a34a;box-shadow:0 2px 8px rgba(22,163,74,.25);}
+    .sp-btn-success:hover{background:linear-gradient(135deg,#15803d,#166534);box-shadow:0 4px 14px rgba(22,163,74,.35);transform:translateY(-1px);color:#fff;}
+
+    .sp-table-card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .sp-tbl{width:100%;border-collapse:collapse;}
+    .sp-tbl thead{position:sticky;top:0;z-index:2;}
+    .sp-tbl th{background:#f8fafc;padding:.7rem .85rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.6px;color:#64748b;font-weight:700;border-bottom:2px solid #e5e7eb;white-space:nowrap;}
+    .sp-tbl td{padding:.7rem .85rem;font-size:.85rem;color:#334155;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+    .sp-tbl tbody tr{transition:background .1s;}
+    .sp-tbl tbody tr:hover{background:#f8fafc;}
+    .sp-tbl tbody tr:last-child td{border-bottom:none;}
+
+    .sp-species-cell{display:flex;align-items:center;gap:.65rem;}
+    .sp-species-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#16a34a,#15803d);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem;font-weight:700;flex-shrink:0;}
+    .sp-species-name{font-weight:600;color:var(--rt-navy);font-size:.88rem;}
+    .sp-species-code{font-size:.75rem;color:#94a3b8;font-family:monospace;background:#f1f5f9;padding:.15rem .4rem;border-radius:4px;display:inline-block;margin-top:.1rem;}
+    .sp-species-code.empty{color:#d1d5db;background:none;font-style:italic;}
+
+    .sp-act{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;transition:all .15s;font-size:.72rem;}
+    .sp-act:hover{background:#f1f5f9;border-color:#cbd5e1;color:#334155;}
+    .sp-act.edit{color:#0ea5e9;border-color:#bae6fd;}
+    .sp-act.edit:hover{background:#f0f9ff;border-color:#7dd3fc;}
+    .sp-act.delete{color:#dc2626;border-color:#fecaca;}
+    .sp-act.delete:hover{background:#fef2f2;border-color:#fca5a5;}
+
+    .sp-empty{text-align:center;padding:3rem 1rem;}
+    .sp-empty i{font-size:3rem;color:#d1d5db;margin-bottom:1rem;display:block;}
+    .sp-empty h5{color:#64748b;font-weight:600;margin-bottom:.25rem;}
+    .sp-empty p{color:#94a3b8;font-size:.85rem;}
+
+    .sp-modal .modal-content{border-radius:14px;border:none;overflow:hidden;}
+    .sp-modal .modal-header{padding:1rem 1.25rem;border-bottom:none;}
+    .sp-modal .modal-header .modal-title{font-weight:700;font-size:1rem;}
+    .sp-modal .modal-body{padding:0 1.25rem 1.25rem;}
+    .sp-modal .modal-footer{padding:.85rem 1.25rem;border-top:1px solid #f1f5f9;}
+</style>
+
+<div class="sp-page">
+    <div class="sp-breadcrumb">
+        <a href="{% url 'admin_dashboard' %}"><i class="fas fa-home"></i></a>
+        <span class="sep">/</span>
+        <a href="{% url 'admin_manage_species' %}">Species</a>
+        <span class="sep">/</span>
+        <span>{{ family_name }}</span>
+    </div>
+
+    <div class="sp-header">
+        <div class="sp-header-left">
+            <a href="{% url 'admin_manage_species' %}" class="sp-btn sp-btn-outline" style="padding:.45rem .7rem;">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h3><i class="fas fa-fish"></i> {{ family_name }}</h3>
+                <p>{{ species_count }} species record{{ species_count|pluralize }} in this family</p>
+            </div>
+        </div>
+        <div class="sp-header-right">
+            <button class="sp-btn sp-btn-success" data-bs-toggle="modal" data-bs-target="#addSpeciesModal">
+                <i class="fas fa-plus"></i> Add Species
+            </button>
+        </div>
+    </div>
+
+    <div class="sp-table-card">
+        <div style="overflow-x:auto;">
+        <table class="sp-tbl">
+            <thead>
+                <tr>
+                    <th>Species</th>
+                    <th>Code</th>
+                    <th style="width:100px;text-align:center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in species_list %}
+                <tr>
+                    <td>
+                        <div class="sp-species-name">{{ s.sub_category }}</div>
+                    </td>
+                    <td>
+                        {% if s.code %}
+                            <span class="sp-species-code">{{ s.code }}</span>
+                        {% else %}
+                            <span class="sp-species-code empty">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display:flex;gap:.35rem;justify-content:center;">
+                            <button class="sp-act edit" title="Edit species"
                                     data-bs-toggle="modal" data-bs-target="#editSpecies{{ s.id }}">
-                                <i class="fas fa-edit"></i>
+                                <i class="fas fa-pen"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" title="Delete"
+                            <button class="sp-act delete" title="Delete species"
                                     data-bs-toggle="modal" data-bs-target="#deleteSpecies{{ s.id }}">
                                 <i class="fas fa-trash"></i>
                             </button>
+                        </div>
 
-                            <div class="modal fade" id="editSpecies{{ s.id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content rt-card">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" style="color:var(--accent-coral);"><i class="fas fa-edit"></i> Edit Species</h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        <!-- Edit Modal -->
+                        <div class="modal fade sp-modal" id="editSpecies{{ s.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;">
+                                        <h5 class="modal-title"><i class="fas fa-pen"></i> Edit Species</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form method="post" action="{% url 'admin_edit_species' s.id %}">
+                                        {% csrf_token %}
+                                        <div class="modal-body" style="padding-top:1.25rem;">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold" style="font-size:.85rem;">Species Name <span class="text-danger">*</span></label>
+                                                <input type="text" name="sub_category" class="form-control"
+                                                       value="{{ s.sub_category }}" required style="border-radius:8px;">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold" style="font-size:.85rem;">Code</label>
+                                                <input type="text" name="code" class="form-control"
+                                                       value="{{ s.code|default:'' }}" placeholder="e.g. ACRO-01" style="border-radius:8px;">
+                                            </div>
                                         </div>
-                                        <form method="post" action="{% url 'admin_edit_species' s.id %}">
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Delete Modal -->
+                        <div class="modal fade sp-modal" id="deleteSpecies{{ s.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Delete Species</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body" style="padding-top:1rem;">
+                                        <p style="color:#475569;">Delete <strong>{{ s.sub_category }}</strong> from <strong>{{ family_name }}</strong>?</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                        <form action="{% url 'admin_delete_species' s.id %}" method="post" style="display:inline;">
                                             {% csrf_token %}
-                                            <div class="modal-body">
-                                                <div class="mb-3">
-                                                    <label class="form-label">Sub Category <span class="text-danger">*</span></label>
-                                                    <input type="text" name="sub_category" class="form-control rt-form-control"
-                                                           value="{{ s.sub_category }}" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label">Code</label>
-                                                    <input type="text" name="code" class="form-control rt-form-control"
-                                                           value="{{ s.code|default:'' }}">
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
-                                            </div>
+                                            <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
                                         </form>
                                     </div>
                                 </div>
                             </div>
-
-                            <div class="modal fade" id="deleteSpecies{{ s.id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content rt-card">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" style="color:var(--accent-coral);">
-                                                <i class="fas fa-exclamation-triangle"></i> Delete Species
-                                            </h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Delete <strong>{{ s.sub_category }}</strong> from <strong>{{ family_name }}</strong>?</p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <form action="{% url 'admin_delete_species' s.id %}" method="post">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center text-muted py-4">
-                            <i class="fas fa-fish fa-2x mb-3 d-block" style="color:var(--rt-muted);"></i>
-                            No species in this family yet.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">
+                        <div class="sp-empty">
+                            <i class="fas fa-fish"></i>
+                            <h5>No species found</h5>
+                            <p>Click <strong>Add Species</strong> to add the first species to this family.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="addSpeciesModal" tabindex="-1">
+<!-- Add Species Modal -->
+<div class="modal fade sp-modal" id="addSpeciesModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content rt-card">
-            <div class="modal-header">
-                <h5 class="modal-title" style="color:var(--accent-coral);"><i class="fas fa-plus-circle"></i> Add Species to {{ family_name }}</h5>
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;">
+                <h5 class="modal-title"><i class="fas fa-plus-circle"></i> Add Species to {{ family_name }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="{% url 'admin_add_species_in_family' family_name|urlencode %}">
                 {% csrf_token %}
-                <div class="modal-body">
+                <div class="modal-body" style="padding-top:1.25rem;">
                     <div class="mb-3">
-                        <label class="form-label">Sub Category (Species Name) <span class="text-danger">*</span></label>
-                        <input type="text" name="sub_category" class="form-control rt-form-control" required
-                               placeholder="e.g. ACROPORA BRIDGESI">
+                        <label class="form-label fw-bold" style="font-size:.85rem;">Species Name <span class="text-danger">*</span></label>
+                        <input type="text" name="sub_category" class="form-control" required
+                               placeholder="e.g. ACROPORA BRIDGESI" style="border-radius:8px;">
+                        <div class="form-text">Full species sub-category name</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Code</label>
-                        <input type="text" name="code" class="form-control rt-form-control"
-                               placeholder="e.g. ACRO-01">
+                        <label class="form-label fw-bold" style="font-size:.85rem;">Code</label>
+                        <input type="text" name="code" class="form-control"
+                               placeholder="e.g. ACRO-01" style="border-radius:8px;">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add Species</button>
                 </div>
             </form>

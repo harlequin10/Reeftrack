@@ -129,8 +129,8 @@
                         {% for a in my_assessments %}
                         <tr>
                             <td>
-                                <strong>{{ a.barangay }}</strong>
-                                <br><small class="text-muted">{{ a.municipality }}</small>
+                                <strong>{{ a.barangay.name }}</strong>
+                                <br><small class="text-muted">{{ a.municipality.name }}, {{ a.municipality.province.name }}</small>
                             </td>
                             <td>{{ a.assessment_date|date:"M d, Y" }}</td>
                             <td>

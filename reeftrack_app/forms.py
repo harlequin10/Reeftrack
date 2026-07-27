@@ -110,6 +110,16 @@ class AdminCreateUserForm(forms.ModelForm):
             mi = mi.strip()[0].upper()
         return mi
 
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        if password:
+            from django.contrib.auth.password_validation import validate_password
+            try:
+                validate_password(password, user=None)
+            except forms.ValidationError as e:
+                raise forms.ValidationError(e.messages)
+        return password
+
     def save(self, commit=True):
         user = super(AdminCreateUserForm, self).save(commit=False)
         user.email = self.cleaned_data['email']

@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
 <style>
-body{overflow:hidden!important;height:100vh!important;display:grid!important;grid-template-rows:auto 1fr auto!important;}
+body{visibility:visible!important;overflow:hidden!important;height:100vh!important;display:grid!important;grid-template-rows:auto 1fr auto!important;}
 .rt-back-to-top{display:none!important;}
 .rt-dash-subbar{background:linear-gradient(135deg,var(--rt-navy),var(--rt-teal));color:#fff;padding:.65rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;position:relative;z-index:1000;flex-shrink:0;}
 .rt-dash-subbar h6{margin:0;font-size:.85rem;font-weight:700;white-space:nowrap;color:#fff !important;}
@@ -51,8 +51,9 @@ body{overflow:hidden!important;height:100vh!important;display:grid!important;gri
 .rt-dash-empty{text-align:center;padding:2rem 1rem;color:var(--rt-ink-soft);}
 .rt-dash-empty i{font-size:2rem;margin-bottom:.5rem;display:block;opacity:.4;}
 .rt-dash-empty p{font-size:.78rem;margin:0;}
-.rt-dash-bh{margin-bottom:.75rem;}
+.rt-dash-bh{margin-bottom:.75rem;text-align:center;padding:.8rem;background:linear-gradient(135deg,#e0f2fe,#bae6fd);border-radius:12px;}
 .rt-dash-bn{font-size:1.05rem;font-weight:800;color:var(--rt-navy);}
+.rt-dash-bmtag{display:inline-block;padding:.2rem .8rem;border-radius:20px;background:var(--rt-teal);color:#fff;font-size:.7rem;margin-top:.3rem;}
 .rt-dash-bmname{font-size:.72rem;color:var(--rt-ink-soft);}
 .rt-dash-dr{display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--rt-border);font-size:.78rem;}
 .rt-dash-dr:last-child{border-bottom:none;}
@@ -73,9 +74,9 @@ body{overflow:hidden!important;height:100vh!important;display:grid!important;gri
 .rt-dash-pop button:hover{background:var(--rt-navy-light);}
 .rt-dash-mm{width:36px;height:36px;border-radius:50%;background:var(--rt-teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;box-shadow:0 2px 8px rgba(14,124,134,.4);border:2px solid rgba(255,255,255,.6);}
 .rt-dash-bm{width:26px;height:26px;border-radius:50%;background:var(--rt-white);border:3px solid;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:var(--rt-navy);box-shadow:0 1px 4px rgba(0,0,0,.15);}
-.rt-dash-ttl{background:transparent!important;border:none!important;box-shadow:none!important;font-size:.6rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);pointer-events:none;}
-.rt-dash-ttl-s{color:#0891b2;}
-.rt-dash-ttl-d{color:#2563eb;}
+.rt-dash-ttl{background:rgba(15,23,42,.9)!important;border:none!important;box-shadow:0 2px 10px rgba(0,0,0,.4)!important;border-radius:8px!important;padding:4px 10px!important;font-size:.7rem;font-weight:600;color:#fff!important;white-space:nowrap;pointer-events:none;}
+.rt-dash-ttl-s{font-style:normal;}
+.rt-dash-ttl-d{font-style:italic;}
 .rt-dash-tc{margin-bottom:.5rem;}
 .rt-dash-tch{display:flex;justify-content:space-between;align-items:center;padding:.4rem .5rem;border-radius:var(--rt-radius-sm);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--rt-navy);transition:background .15s;}
 .rt-dash-tch:hover{background:var(--rt-sand-light);}
@@ -123,6 +124,36 @@ body{overflow:hidden!important;height:100vh!important;display:grid!important;gri
 .rt-tour-btn-done:hover{background:#15704a;}
 .rt-tour-replay{margin-left:auto;padding:.25rem .7rem;border-radius:16px;background:var(--rt-white);border:1px solid var(--rt-border);box-shadow:var(--rt-shadow);display:inline-flex;align-items:center;gap:.35rem;cursor:pointer;color:var(--rt-teal);font-size:.7rem;font-weight:500;font-family:var(--rt-font-body);transition:all .2s;flex-shrink:0;white-space:nowrap;}
 .rt-tour-replay:hover{background:var(--rt-teal);color:#fff;border-color:var(--rt-teal);}
+.rt-dash-back-btn{width:100%;padding:.4rem;border-radius:var(--rt-radius-sm);border:1px solid var(--rt-border);background:var(--rt-sand-light);cursor:pointer;font-size:.72rem;font-weight:600;font-family:var(--rt-font-body);display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:.75rem;transition:all .15s;}
+.rt-dash-back-btn:hover{background:#e2e8f0;border-color:var(--rt-teal);}
+.rt-dash-yf{background:var(--rt-sand-light);padding:.4rem .5rem;border-radius:8px;margin:.5rem 0;display:flex;align-items:center;gap:.5rem;border:1px solid var(--rt-border);font-size:.7rem;}
+.rt-dash-yf label{font-weight:500;color:var(--rt-ink-soft);}
+.rt-dash-yf select{padding:.2rem .4rem;font-size:.7rem;border-radius:6px;border:1px solid var(--rt-border);background:var(--rt-white);}
+.rt-dash-yf-btn{background:var(--rt-sand);border:none;padding:.2rem .5rem;border-radius:6px;font-size:.65rem;cursor:pointer;}
+.rt-dash-yf-btn:hover{background:var(--rt-border);}
+.rt-dash-trsp{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--rt-border);font-size:.72rem;cursor:pointer;transition:background .15s;}
+.rt-dash-trsp:hover{background:#e8f0fe;}
+.rt-dash-trsp:last-child{border-bottom:none;}
+.rt-dash-ti{background:var(--rt-sand-light);padding:.6rem;border-radius:8px;margin-bottom:.5rem;cursor:pointer;transition:background .15s;border-left:4px solid var(--rt-teal);}
+.rt-dash-ti:hover{background:#e2e8f0;}
+.rt-dash-ticoord{font-size:.68rem;color:var(--rt-ink-soft);margin:.2rem 0;}
+.rt-dash-tisum{display:flex;gap:.5rem;margin-top:.3rem;}
+.rt-dash-tids{flex:1;padding:.35rem;border-radius:6px;font-size:.68rem;}
+.rt-dash-tids.deep{background:rgba(14,116,144,.1);border-left:3px solid #0e7490;}
+.rt-dash-tids.shallow{background:rgba(8,145,178,.1);border-left:3px solid #0891b2;}
+.rt-dash-cvbar{height:5px;background:var(--rt-sand);border-radius:3px;margin-top:.3rem;overflow:hidden;}
+.rt-dash-cvfill{height:100%;border-radius:3px;}
+.rt-dash-ep{display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:auto;}
+.rt-dash-stag{display:inline-block;padding:.15rem .45rem;border-radius:10px;font-size:.65rem;cursor:pointer;margin:.15rem .1rem 0 0;transition:transform .15s;}
+.rt-dash-stag:hover{transform:scale(1.05);}
+.rt-dash-stag-e{background:#d1fae5;color:#065f46;}
+.rt-dash-stag-p{background:#fee2e2;color:#991b1b;}
+.tl-wrap{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;padding:.5rem 0;}
+.tl-yr{padding:.2rem .55rem;border-radius:14px;font-size:.68rem;font-weight:600;border:1.5px solid var(--rt-border);background:var(--rt-white);color:var(--rt-ink-soft);cursor:pointer;transition:all .2s;line-height:1.5;}
+.tl-yr:hover{border-color:var(--rt-teal);color:var(--rt-teal);}
+.tl-yr.active{background:var(--rt-teal);color:#fff;border-color:var(--rt-teal);}
+.tl-label{font-size:.65rem;color:var(--rt-ink-soft);font-weight:500;}
+.tl-info{font-size:.68rem;color:var(--rt-navy);font-weight:600;margin-top:.25rem;min-height:1.2em;}
 @media(max-width:1024px){.rt-dash-root{flex-direction:column;}.rt-dash-sidecol{width:100%;max-height:45vh;border-left:none;border-top:1px solid var(--rt-border);}}
 @media(max-width:576px){.rt-dash-filters{flex-direction:column;gap:.35rem;}.rt-dash-fg{min-width:100%;}.rt-dash-yr input{width:60px;}.rt-dash-subbar{flex-direction:column;align-items:flex-start;gap:.35rem;}.rt-tour-replay span{display:none;}.rt-tour-replay{padding:.35rem;}}
 </style>
@@ -145,6 +176,7 @@ body{overflow:hidden!important;height:100vh!important;display:grid!important;gri
       <div class="rt-dash-fg"><label><i class="fas fa-heartbeat"></i> Health</label><select id="fHealth"><option value="all">All</option><option value="excellent">Excellent &gt;65%</option><option value="good">Good 45-65%</option><option value="fair">Fair 25-45%</option><option value="poor">Poor &lt;25%</option></select></div>
       <button id="btnMapFilter" class="rt-dash-tbtn"><i class="fas fa-crosshairs"></i> Map Filter</button>
       <button id="btnTransects" class="rt-dash-tbtn rt-dash-tbtn-green"><i class="fas fa-draw-polygon"></i> Transects</button>
+      <button id="btnResetFilters" class="rt-dash-tbtn" style="color:#dc2626;border-color:#fecaca;" onclick="resetFilters()"><i class="fas fa-times"></i> Reset</button>
     </div>
     <div id="dashMap"></div>
     <div class="rt-dash-legendbar">
@@ -153,15 +185,43 @@ body{overflow:hidden!important;height:100vh!important;display:grid!important;gri
       <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#2563eb"></span>Good</span>
       <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#d97706"></span>Fair</span>
       <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#dc2626"></span>Poor</span>
-      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#0891b2"></span>Shallow</span>
-      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#2563eb;border:1px solid #1d4ed8"></span>Deep</span>
+      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#6b7280"></span>Unknown</span>
+      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#8b5cf6"></span>Start</span>
+      <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#f472b6"></span>End</span>
+      <span class="rt-dash-leg"><span style="display:inline-block;width:18px;height:2px;background:#6b7280;vertical-align:middle;"></span>Shallow</span>
+      <span class="rt-dash-leg"><span style="display:inline-block;width:18px;height:2px;background:#6b7280;vertical-align:middle;border-top:2px dashed #6b7280;background:none;"></span>Deep</span>
     </div>
   </div>
   <div class="rt-dash-sidecol">
     <div class="rt-dash-card">
-      <div class="rt-dash-card-h"><i class="fas fa-map-marked-alt"></i> Barangay Details</div>
+      <div class="rt-dash-card-h"><i class="fas fa-chart-bar"></i> Data Summary</div>
+      <div class="rt-dash-card-b">
+        <div class="rt-dash-hgrid">
+          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:var(--rt-teal)" id="sTotalAssess">0</div><div class="rt-dash-hl">Assessments</div></div>
+          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#8b5cf6" id="sTotalTran">0</div><div class="rt-dash-hl">Transects</div></div>
+          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#0ea5e9" id="sAvgCover">0%</div><div class="rt-dash-hl">Avg Cover</div></div>
+          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#16a34a" id="sTotalSpecies">0</div><div class="rt-dash-hl">Species</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="rt-dash-card">
+      <div class="rt-dash-card-h"><i class="fas fa-map-marked-alt"></i> Barangay Details <button id="backToMuniBtn" class="rt-dash-tbtn" style="display:none;margin-left:auto;font-size:.65rem;padding:.15rem .5rem;" onclick="backToMuni()"><i class="fas fa-arrow-left"></i> Back</button></div>
       <div class="rt-dash-card-b" id="pDetails">
         <div class="rt-dash-empty"><i class="fas fa-map-marker-alt"></i><p>Click a marker on the map to view barangay details</p></div>
+      </div>
+    </div>
+    <div class="rt-dash-card" id="timelineCard" style="display:none;">
+      <div class="rt-dash-card-h"><i class="fas fa-clock-rotate-left"></i> Transect Timeline</div>
+      <div class="rt-dash-card-b">
+        <div class="rt-dash-yf" style="margin:0 0 .5rem;">
+          <label><i class="fas fa-filter"></i> Year:</label>
+          <select id="tlFrom" onchange="tlRangeFilter()" style="padding:.2rem .4rem;font-size:.7rem;border-radius:6px;border:1px solid var(--rt-border);background:var(--rt-white);"></select>
+          <span style="color:var(--rt-ink-soft);font-size:.7rem;">—</span>
+          <select id="tlTo" onchange="tlRangeFilter()" style="padding:.2rem .4rem;font-size:.70rem;border-radius:6px;border:1px solid var(--rt-border);background:var(--rt-white);"></select>
+          <button class="rt-dash-yf-btn" onclick="resetTimeline()" title="Reset filter"><i class="fas fa-undo"></i> Reset</button>
+        </div>
+        <div class="tl-wrap" id="tlWrap"></div>
+        <div class="tl-info" id="tlInfo"></div>
       </div>
     </div>
     <div class="rt-dash-card">
@@ -198,36 +258,7 @@ body{overflow:hidden!important;height:100vh!important;display:grid!important;gri
 {% endblock %}
 
 {% block back_to_top %}{% endblock %}
-{% block footer %}
-<footer class="footer py-3 rt-footer" style="margin-top:0;flex-shrink:0;">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4 mb-3 mb-md-0">
-                <h5><i class="fas fa-water"></i> ReefTrack</h5>
-                <p class="small">A web-based coral reef assessment and monitoring information system with geospatial mapping and time-series analytics.</p>
-            </div>
-            <div class="col-md-4 mb-3 mb-md-0">
-                <h6>Quick Links</h6>
-                <ul class="list-unstyled small">
-                    <li><a href="{% url 'home' %}" class="text-decoration-none">Home</a></li>
-                    <li><a href="{% url 'about' %}" class="text-decoration-none">About</a></li>
-                    <li><a href="{% url 'login' %}" class="text-decoration-none">Login</a></li>
-                    <li><a href="{% url 'register' %}" class="text-decoration-none">Register</a></li>
-                </ul>
-            </div>
-            <div class="col-md-4">
-                <h6>Contact</h6>
-                <ul class="list-unstyled small">
-                    <li><i class="fas fa-envelope me-2"></i>info@reeftrack.org</li>
-                    <li><i class="fas fa-map-marker-alt me-2"></i>Coral Reef Research Center</li>
-                </ul>
-            </div>
-        </div>
-        <hr style="border-color: rgba(255,255,255,0.15);">
-        <p class="text-center small mb-0">&copy; {% now "Y" %} ReefTrack. All rights reserved.</p>
-    </div>
-</footer>
-{% endblock %}
+{% block footer %}{% endblock %}
 
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -265,7 +296,7 @@ function init(){
   document.getElementById('fHealth').onchange=function(){load(gf());};
   document.getElementById('fYearFrom').onchange=function(){load(gf());};
   document.getElementById('fYearTo').onchange=function(){load(gf());};
-  var st;document.getElementById('fBrgy').oninput=function(){clearTimeout(st);st.setTimeout(fB,300);};
+  var st;document.getElementById('fBrgy').oninput=function(){clearTimeout(st);st=setTimeout(fB,300);};
 }
 
 function gf(){
@@ -293,7 +324,7 @@ function load(f){
     dispMarkers(d);
     updStats(d.s);
     updChart(d.t);
-    updHealth(d.s,d.m);
+    updHealth(d.m);
   }).catch(function(e){console.error(e);});
 }
 
@@ -304,22 +335,25 @@ function popMuniSel(ms){
 }
 
 function dispMarkers(d){
-  mCluster.clearLayers();bLayer.clearLayers();tLayer.clearLayers();
-  map.removeLayer(bLayer);map.removeLayer(tLayer);
+  mCluster.clearLayers();bLayer.clearLayers();
+  if(map.hasLayer(bLayer))map.removeLayer(bLayer);
   d.m.forEach(function(m){
     if(!m.lat||!m.lng)return;
     var ta=0;m.b.forEach(function(b){ta+=b.ac;});
     var ic=L.divIcon({className:'',html:'<div class="rt-dash-mm"><span>'+ta+'</span></div>',iconSize:[36,36],iconAnchor:[18,18]});
     var mk=L.marker([m.lat,m.lng],{icon:ic});
-    mk.bindPopup('<div class="rt-dash-pop"><b>'+m.name+'</b><br><small>'+m.b.length+' barangays &middot; '+ta+' assessments</small><br><button onclick="window.ZM('+m.id+')">Zoom In &rarr;</button></div>');
+    mk.bindTooltip('<b>'+m.name+'</b><br>'+m.province+'<br>'+m.b.length+' barangays · '+ta+' assessments',{direction:'top',offset:[0,-10],className:'rt-dash-ttl'});
+    mk.on('click',function(){window.ZM(m.id);});
     mCluster.addLayer(mk);
   });
+  if(showT)showLines();
 }
 
 window.ZM=function(mid){
   var m=null;D.m.forEach(function(x){if(x.id===mid)m=x;});
   if(!m)return;
   selMuni=m;map.closePopup();
+  document.getElementById('backToMuniBtn').style.display='';
   var vb=m.b.filter(function(b){return b.lat&&b.lng;});
   if(!vb.length)return;
   map.fitBounds(L.latLngBounds(vb.map(function(b){return[b.lat,b.lng];})),{padding:[40,40],maxZoom:14});
@@ -329,25 +363,48 @@ window.ZM=function(mid){
     var ic=L.divIcon({className:'',html:'<div class="rt-dash-bm" style="border-color:'+c+'"><i class="fas fa-water"></i></div>',iconSize:[26,26],iconAnchor:[13,13]});
     var mk=L.marker([b.lat,b.lng],{icon:ic});
     var ct=b.lc!==null?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A';
-    mk.bindPopup('<div class="rt-dash-pop"><b>'+b.name+'</b><br><small>'+m.name+'</small><br><span style="color:'+c+';font-weight:700">'+(b.lcv!==null?b.lcv+'%':'No data')+'</span> '+ct+'<br><small>'+b.ac+' assessment(s)</small></div>');
-    mk.on('click',function(){selBrgy=b;showBDetails(b,m);if(showT)showBLines(b);});
+    mk.bindPopup('<div class="rt-dash-pop"><b>'+b.name+'</b><br><small>'+m.name+', '+m.province+'</small><br><span style="color:'+c+';font-weight:700">'+(b.lcv!==null?b.lcv+'%':'No data')+'</span> '+ct+'<br><small>'+b.ac+' assessment(s)</small></div>');
+    mk.on('click',function(){selBrgy=b;showBDetails(b,m);buildTimeline(b);});
     bLayer.addLayer(mk);
   });
   updChartM(m);
+  updScopeStats([m]);
+  updHealth([m]);
 };
 
 function showBDetails(b,m){
+  document.getElementById('backToMuniBtn').style.display='';
   var el=document.getElementById('pDetails');
   var c=HC[b.lc]||'#6b7280';
-  var ah='';b.a.forEach(function(a){
+  var allA=b.a.slice().sort(function(x,y){return new Date(y.d)-new Date(x.d);});
+  var avgCover=0,scov=0,scnt=0;
+  allA.forEach(function(a){if(a.cc!==null){scov+=a.cc;scnt++;}});
+  if(scnt>0)avgCover=(scov/scnt).toFixed(1);
+  var spCount=0;
+  allA.forEach(function(a){a.tr.forEach(function(t){spCount+=(t.sc||0);});});
+  var dates=allA.map(function(a){return a.d;}).sort();
+  var years={};allA.forEach(function(a){var y=parseInt(a.d.split('-')[0]);years[y]=true;});
+  var yearList=Object.keys(years).sort(function(a,b){return b-a;});
+  var yearOpts=yearList.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
+  var condText=b.lc?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A';
+  var ah='';allA.forEach(function(a){
     var ac=HC[a.c]||'#6b7280';
-    ah+='<div class="rt-dash-ab" onclick="window.SA('+a.id+')"><span><i class="fas fa-calendar-alt"></i> '+a.d+'</span><span class="rt-dash-badge" style="background:'+ac+'">'+(a.cc!==null?a.cc+'%':'N/A')+'</span></div>';
+    ah+='<div class="rt-dash-ab" onclick="window.SA('+a.id+')"><span><i class="fas fa-calendar-alt"></i> '+a.d+'</span><span class="rt-dash-badge" style="background:'+ac+';color:#fff">'+(a.cc!==null?a.cc+'%':'N/A')+'</span><i class="fas fa-chevron-right" style="font-size:.6rem;color:var(--rt-ink-soft);"></i></div>';
   });
-  el.innerHTML='<div class="rt-dash-bh"><div class="rt-dash-bn">'+b.name+'</div><div class="rt-dash-bmname">'+m.name+'</div></div>'+
-    '<div class="rt-dash-dr"><span>Assessments</span><span>'+b.ac+'</span></div>'+
-    (b.lcv!==null?'<div class="rt-dash-dr"><span>Coral Cover</span><span style="color:'+c+';font-weight:700">'+b.lcv+'%</span></div><div class="rt-dash-cbar"><div class="rt-dash-cfill" style="width:'+Math.min(b.lcv,100)+'%;background:'+c+'"></div></div>':'')+
-    '<div class="rt-dash-dr"><span>Condition</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(b.lc?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A')+'</span></div>'+
-    '<div style="margin-top:.75rem"><div class="rt-dash-ddh" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span>Assessment History</span><i class="fas fa-chevron-down"></i></div><div class="rt-dash-ddc">'+ah+'</div></div>';
+  el.innerHTML='<div class="rt-dash-bh"><div class="rt-dash-bn">'+b.name+'</div><div class="rt-dash-bmtag"><i class="fas fa-city"></i> '+m.name+', '+m.province+'</div></div>'+
+    '<div class="rt-dash-dr"><span>🏝️ Latest coral cover</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(b.lcv!==null?b.lcv+'% ('+condText+')':'No data')+'</span></div>'+
+    '<div class="rt-dash-dr"><span>📊 Mean cover (all years)</span><span><strong>'+avgCover+'%</strong></span></div>'+
+    '<div class="rt-dash-dr"><span>🧪 Total assessments</span><span><strong>'+b.ac+'</strong> surveys</span></div>'+
+    '<div class="rt-dash-dr"><span>🐠 Coral species found</span><span><strong>'+spCount+'</strong> unique</span></div>'+
+    '<div class="rt-dash-dr"><span>📅 First assessment</span><span>'+dates[0]+'</span></div>'+
+    '<div class="rt-dash-dr"><span>🔄 Last assessment</span><span>'+dates[dates.length-1]+'</span></div>'+
+    '<div class="rt-dash-ddh" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span><i class="fas fa-list"></i> All Assessments ('+b.ac+')</span><i class="fas fa-chevron-down"></i></div>'+
+    '<div class="rt-dash-ddc">'+
+    '<div class="rt-dash-yf"><label><i class="fas fa-filter"></i> Year:</label><select id="brgyYearFilter" onchange="filterBrgyAssessments(this.value)"><option value="all">All Years</option>'+yearOpts+'</select><button class="rt-dash-yf-btn" onclick="document.getElementById(\'brgyYearFilter\').value=\'all\';filterBrgyAssessments(\'all\');">Clear</button></div>'+
+    '<div id="brgyAssessList">'+ah+'</div>'+
+    '</div>'+
+    '<button class="rt-dash-back-btn" onclick="backToMuni()"><i class="fas fa-globe"></i> Back to All Barangays</button>';
+  updChartBrgy(b);
 }
 
 window.SA=function(aid){
@@ -355,39 +412,205 @@ window.SA=function(aid){
   D.m.forEach(function(m){m.b.forEach(function(b){b.a.forEach(function(a){if(a.id===aid)f={a:a,b:b,m:m};});});});
   if(!f)return;
   var a=f.a,c=HC[a.c]||'#6b7280';
-  var th='';a.tr.forEach(function(t){
-    var sh=t.sp.filter(function(s){return s.dp==='shallow';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
-    var dp=t.sp.filter(function(s){return s.dp==='deep';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
-    th+='<div class="rt-dash-tc"><div class="rt-dash-tch" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span>Transect '+t.n+' <small>('+t.sc+' species)</small></span><i class="fas fa-chevron-down"></i></div><div class="rt-dash-ddc"><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0891b2">Shallow</div>'+(sh||'<div class="rt-dash-es">No shallow species data</div>')+'</div><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0e7490">Deep</div>'+(dp||'<div class="rt-dash-es">No deep species data</div>')+'</div></div></div>';
-  });
-  document.getElementById('modalTitle').textContent=f.m.name+' - '+f.b.name+' ('+a.d+')';
-  document.getElementById('modalBody').innerHTML='<div class="rt-dash-minfo"><div class="rt-dash-dr"><span>Date</span><span>'+a.d+'</span></div><div class="rt-dash-dr"><span>Condition</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(a.c?a.c.charAt(0).toUpperCase()+a.c.slice(1):'N/A')+'</span></div><div class="rt-dash-dr"><span>Coral Cover</span><span style="font-weight:700">'+(a.cc!==null?a.cc+'%':'N/A')+'</span></div><div class="rt-dash-dr"><span>Methodology</span><span>'+a.mt+'</span></div><div class="rt-dash-dr"><span>Uploaded By</span><span>'+a.up+'</span></div></div><h4 style="margin:1rem 0 .5rem;color:#062E3f;font-size:.95rem"><i class="fas fa-draw-polygon"></i> Transects ('+a.tr.length+')</h4>'+th;
+  document.getElementById('modalTitle').textContent=f.m.name+', '+f.m.province+' - '+f.b.name+' ('+a.d+')';
+  document.getElementById('modalBody').innerHTML='<div class="rt-dash-minfo"><div class="rt-dash-dr"><span>Date</span><span>'+a.d+'</span></div><div class="rt-dash-dr"><span>Condition</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(a.c?a.c.charAt(0).toUpperCase()+a.c.slice(1):'N/A')+'</span></div><div class="rt-dash-dr"><span>Coral Cover</span><span style="font-weight:700">'+(a.cc!==null?a.cc+'%':'N/A')+'</span></div><div class="rt-dash-dr"><span>Methodology</span><span>'+a.mt+'</span></div><div class="rt-dash-dr"><span>Uploaded By</span><span>'+a.up+'</span></div></div><div style="text-align:center;padding:1.5rem;color:var(--rt-ink-soft)"><i class="fas fa-spinner fa-spin"></i> Loading transect data...</div>';
   document.getElementById('detailModal').classList.add('rt-dash-modal-show');
+  fetch('/api/public/assessment/'+aid+'/').then(function(r){if(!r.ok)throw new Error();return r.json();}).then(function(d){
+    var th='';d.tr.forEach(function(t){
+      var sh=t.sp.filter(function(s){return s.dp==='shallow';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
+      var dp=t.sp.filter(function(s){return s.dp==='deep';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
+      th+='<div class="rt-dash-tc"><div class="rt-dash-tch" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span>Transect '+t.n+' <small>('+t.sp.length+' species)</small></span><i class="fas fa-chevron-down"></i></div><div class="rt-dash-ddc"><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0891b2">Shallow</div>'+(sh||'<div class="rt-dash-es">No shallow species data</div>')+'</div><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0e7490">Deep</div>'+(dp||'<div class="rt-dash-es">No deep species data</div>')+'</div></div></div>';
+    });
+    document.getElementById('modalBody').innerHTML='<div class="rt-dash-minfo"><div class="rt-dash-dr"><span>Date</span><span>'+d.d+'</span></div><div class="rt-dash-dr"><span>Condition</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(d.c?d.c.charAt(0).toUpperCase()+d.c.slice(1):'N/A')+'</span></div><div class="rt-dash-dr"><span>Coral Cover</span><span style="font-weight:700">'+(d.cc!==null?d.cc+'%':'N/A')+'</span></div><div class="rt-dash-dr"><span>Methodology</span><span>'+d.mt+'</span></div><div class="rt-dash-dr"><span>Uploaded By</span><span>'+d.up+'</span></div></div><h4 style="margin:1rem 0 .5rem;color:#062E3f;font-size:.95rem"><i class="fas fa-draw-polygon"></i> Transects ('+d.tr.length+')</h4>'+th;
+  }).catch(function(){
+    document.getElementById('modalBody').innerHTML='<div style="text-align:center;padding:2rem;color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed to load species data. Please try again.</div>';
+  });
 };
 
 function showBLines(b){
   tLayer.clearLayers();map.addLayer(tLayer);
-  b.a.forEach(function(a){a.tr.forEach(function(t){drawLine(t,a,b.name);});});
+  var sorted=b.a.slice().sort(function(x,y){return new Date(y.d)-new Date(x.d);});
+  if(sorted.length>0){sorted[0].tr.forEach(function(t){drawLine(t,sorted[0],b.name);});}
+}
+
+function buildTimeline(b){
+  var card=document.getElementById('timelineCard');
+  var wrap=document.getElementById('tlWrap');
+  var info=document.getElementById('tlInfo');
+  if(!b||!b.a||b.a.length===0){card.style.display='none';return;}
+  var years={};
+  b.a.forEach(function(a){var y=parseInt(a.d.split('-')[0]);if(!years[y])years[y]=0;years[y]++;});
+  var yl=Object.keys(years).sort(Number);
+  card.style.display='';
+  var fromSel=document.getElementById('tlFrom');
+  var toSel=document.getElementById('tlTo');
+  var fromH='';var toH='';
+  yl.forEach(function(y){
+    fromH+='<option value="'+y+'">'+y+'</option>';
+    toH+='<option value="'+y+'">'+y+'</option>';
+  });
+  fromSel.innerHTML=fromH;
+  toSel.innerHTML=toH;
+  fromSel.value=yl[0];
+  toSel.value=yl[yl.length-1];
+  var h='';
+  yl.forEach(function(y){
+    h+='<span class="tl-yr" data-year="'+y+'" onclick="pickTlYear('+y+')">'+y+' ('+years[y]+')</span>';
+  });
+  wrap.innerHTML=h;
+  tLayer.clearLayers();
+  info.textContent='Select a year or range to view transects';
+}
+
+function tlRangeFilter(){
+  if(!selBrgy)return;
+  var from=parseInt(document.getElementById('tlFrom').value);
+  var to=parseInt(document.getElementById('tlTo').value);
+  if(from>to){var tmp=from;from=to;to=tmp;}
+  var years={};
+  selBrgy.a.forEach(function(a){years[parseInt(a.d.split('-')[0])]=true;});
+  var yl=Object.keys(years).sort(Number);
+  document.getElementById('tlWrap').querySelectorAll('.tl-yr').forEach(function(el){
+    var y=parseInt(el.dataset.year);
+    var inRange=y>=from&&y<=to;
+    el.classList.toggle('active',inRange);
+    el.style.display=inRange?'':'none';
+  });
+  showBLinesYear(selBrgy,null,from,to);
+  document.getElementById('tlInfo').textContent='Showing transects from '+from+' to '+to;
+  if(showT)showLines();
+}
+
+function pickTlYear(y){
+  if(!selBrgy)return;
+  document.getElementById('tlWrap').querySelectorAll('.tl-yr').forEach(function(el){
+    el.classList.toggle('active',el.dataset.year==y);
+  });
+  showBLinesYear(selBrgy,null,y,y);
+  document.getElementById('tlInfo').textContent='Showing transects for '+y;
+}
+
+function resetTimeline(){
+  if(!selBrgy)return;
+  var years={};
+  selBrgy.a.forEach(function(a){years[parseInt(a.d.split('-')[0])]=true;});
+  var yl=Object.keys(years).sort(Number);
+  var latest=yl[yl.length-1];
+  document.getElementById('tlFrom').value=latest;
+  document.getElementById('tlTo').value=latest;
+  document.getElementById('tlWrap').querySelectorAll('.tl-yr').forEach(function(el){
+    el.style.display='';
+    el.classList.toggle('active',el.dataset.year===latest);
+  });
+  showBLinesYear(selBrgy,null,latest,latest);
+  document.getElementById('tlInfo').textContent='Showing transects for '+latest;
+}
+
+function showBLinesYear(b,year,from,to){
+  tLayer.clearLayers();map.addLayer(tLayer);
+  var matched;
+  if(year!==null){matched=b.a.filter(function(a){return parseInt(a.d.split('-')[0])===year;});}
+  else{matched=b.a.filter(function(a){var y=parseInt(a.d.split('-')[0]);return y>=from&&y<=to;});}
+  matched.forEach(function(a){a.tr.forEach(function(t){drawLine(t,a,b.name);});});
 }
 
 function showLines(){
   tLayer.clearLayers();if(!showT)return;map.addLayer(tLayer);
-  D.m.forEach(function(m){m.b.forEach(function(b){b.a.forEach(function(a){a.tr.forEach(function(t){drawLine(t,a,b.name);});});});});
+  if(selBrgy){
+    var fromV=document.getElementById('tlFrom').value;
+    var toV=document.getElementById('tlTo').value;
+    var from=fromV?parseInt(fromV):null;
+    var to=toV?parseInt(toV):null;
+    var matched=selBrgy.a.filter(function(a){
+      var y=parseInt(a.d.split('-')[0]);
+      if(from!==null&&to!==null){return y>=from&&y<=to;}
+      return true;
+    });
+    matched.forEach(function(a){a.tr.forEach(function(t){drawLine(t,a,selBrgy.name);});});
+    return;
+  }
+  D.m.forEach(function(m){m.b.forEach(function(b){
+    var sorted=b.a.slice().sort(function(x,y){return new Date(y.d)-new Date(x.d);});
+    if(sorted.length>0){sorted[0].tr.forEach(function(t){drawLine(t,sorted[0],b.name);});}
+  });});
 }
 
+function depthLabel(hc){return hc&&hc.label?hc.label.charAt(0).toUpperCase()+hc.label.slice(1):'No data';}
 function drawLine(t,a,bn){
+  var sHC=t.sh||null;
+  var dHC=t.dh||null;
+  var scc=HC[sHC&&sHC.label?sHC.label:null]||'#6b7280';
+  var dcc=HC[dHC&&dHC.label?dHC.label:null]||'#6b7280';
+  var sCnt=sHC&&sHC.avg!==null?sHC.avg:'—';
+  var dCnt=dHC&&dHC.avg!==null?dHC.avg:'—';
   if(t.s.s&&t.s.e){
-    var sl=L.polyline([t.s.s,t.s.e],{color:'#0891b2',weight:3,opacity:.85});
-    sl.bindTooltip('T'+t.n+' (S)',{permanent:true,direction:'center',className:'rt-dash-ttl rt-dash-ttl-s'});
-    sl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Shallow</b><br><small>'+bn+' · '+a.d+'</small><br><small>'+t.sc+' species</small><br><button onclick="window.SA('+a.id+')">View Full Assessment</button></div>');
+    var glow=L.polyline([t.s.s,t.s.e],{color:scc,weight:8,opacity:.2,smoothFactor:1,lineCap:'round'});
+    tLayer.addLayer(glow);
+    var sl=L.polyline([t.s.s,t.s.e],{color:scc,weight:4,opacity:.92,smoothFactor:1,lineCap:'round'});
+    sl.bindTooltip('<b>T'+t.n+'</b> Shallow<br><span style="color:'+scc+'">'+depthLabel(sHC)+'</span> · '+sCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-s',sticky:true});
+    sl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Shallow</b><br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+scc+';font-weight:700">'+depthLabel(sHC)+'</span><br>Avg cover: <b>'+sCnt+'%</b><br>'+t.sc+' species<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
     tLayer.addLayer(sl);
+    var ep1=L.circleMarker(t.s.s,{radius:4,fillColor:'#8b5cf6',color:'#fff',weight:1.5,fillOpacity:1});
+    ep1.bindTooltip('Start · '+t.s.s[0].toFixed(5)+', '+t.s.s[1].toFixed(5),{direction:'top',offset:[0,-6]});
+    tLayer.addLayer(ep1);
+    var ep2=L.circleMarker(t.s.e,{radius:4,fillColor:'#f472b6',color:'#fff',weight:1.5,fillOpacity:1});
+    ep2.bindTooltip('End · '+t.s.e[0].toFixed(5)+', '+t.s.e[1].toFixed(5),{direction:'bottom',offset:[0,6]});
+    tLayer.addLayer(ep2);
   }
   if(t.d.s&&t.d.e){
-    var dl=L.polyline([t.d.s,t.d.e],{color:'#2563eb',weight:3,opacity:.85});
-    dl.bindTooltip('T'+t.n+' (D)',{permanent:true,direction:'center',className:'rt-dash-ttl rt-dash-ttl-d'});
-    dl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Deep</b><br><small>'+bn+' · '+a.d+'</small><br><small>'+t.sc+' species</small><br><button onclick="window.SA('+a.id+')">View Full Assessment</button></div>');
+    var dglow=L.polyline([t.d.s,t.d.e],{color:dcc,weight:8,opacity:.12,smoothFactor:1,lineCap:'round'});
+    tLayer.addLayer(dglow);
+    var dl=L.polyline([t.d.s,t.d.e],{color:dcc,weight:4,opacity:.55,smoothFactor:1,lineCap:'round',dashArray:'10,7'});
+    dl.bindTooltip('<b>T'+t.n+'</b> Deep<br><span style="color:'+dcc+'">'+depthLabel(dHC)+'</span> · '+dCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-d',sticky:true});
+    dl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Deep</b><br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+dcc+';font-weight:700">'+depthLabel(dHC)+'</span><br>Avg cover: <b>'+dCnt+'%</b><br>'+t.sc+' species<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
     tLayer.addLayer(dl);
+    var ep3=L.circleMarker(t.d.s,{radius:4,fillColor:'#8b5cf6',color:'#fff',weight:1.5,fillOpacity:1});
+    ep3.bindTooltip('Start · '+t.d.s[0].toFixed(5)+', '+t.d.s[1].toFixed(5),{direction:'top',offset:[0,-6]});
+    tLayer.addLayer(ep3);
+    var ep4=L.circleMarker(t.d.e,{radius:4,fillColor:'#f472b6',color:'#fff',weight:1.5,fillOpacity:1});
+    ep4.bindTooltip('End · '+t.d.e[0].toFixed(5)+', '+t.d.e[1].toFixed(5),{direction:'bottom',offset:[0,6]});
+    tLayer.addLayer(ep4);
   }
+}
+
+function backToMuni(){
+  selBrgy=null;
+  document.getElementById('timelineCard').style.display='none';
+  tLayer.clearLayers();
+  bLayer.clearLayers();
+  if(map.hasLayer(bLayer))map.removeLayer(bLayer);
+  if(map.hasLayer(tLayer))map.removeLayer(tLayer);
+  document.getElementById('backToMuniBtn').style.display='none';
+  mCluster.clearLayers();
+  D.m.forEach(function(m){
+    if(!m.lat||!m.lng)return;
+    var ta=0;m.b.forEach(function(b){ta+=b.ac;});
+    var ic=L.divIcon({className:'',html:'<div class="rt-dash-mm"><span>'+ta+'</span></div>',iconSize:[36,36],iconAnchor:[18,18]});
+    var mk=L.marker([m.lat,m.lng],{icon:ic});
+    mk.bindTooltip('<b>'+m.name+'</b><br>'+m.province+'<br>'+m.b.length+' barangays · '+ta+' assessments',{direction:'top',offset:[0,-10],className:'rt-dash-ttl'});
+    mk.on('click',function(){window.ZM(m.id);});
+    mCluster.addLayer(mk);
+  });
+  map.setView([6.05,125.25],10);
+  document.getElementById('pDetails').innerHTML='<div class="rt-dash-empty"><i class="fas fa-map-marker-alt"></i><p>Click a marker on the map to view barangay details</p></div>';
+  updChart(D.t);
+  updStats(D.s);
+  updHealth(D.m);
+}
+
+function filterBrgyAssessments(year){
+  if(!selBrgy)return;
+  var list=document.getElementById('brgyAssessList');
+  if(!list)return;
+  var filtered;
+  if(year==='all'){filtered=selBrgy.a;}
+  else{filtered=selBrgy.a.filter(function(a){return parseInt(a.d.split('-')[0])===parseInt(year);});}
+  var html='';filtered.sort(function(x,y){return new Date(y.d)-new Date(x.d);}).forEach(function(a){
+    var ac=HC[a.c]||'#6b7280';
+    html+='<div class="rt-dash-ab" onclick="window.SA('+a.id+')"><span><i class="fas fa-calendar-alt"></i> '+a.d+'</span><span class="rt-dash-badge" style="background:'+ac+';color:#fff">'+(a.cc!==null?a.cc+'%':'N/A')+'</span><i class="fas fa-chevron-right" style="font-size:.6rem;color:var(--rt-ink-soft);"></i></div>';
+  });
+  if(!html)html='<div style="text-align:center;color:var(--rt-ink-soft);font-size:.72rem;padding:.5rem;">No assessments for this year</div>';
+  list.innerHTML=html;
 }
 
 function fB(){
@@ -396,11 +619,61 @@ function fB(){
   bLayer.eachLayer(function(l){var p=l.getPopup();if(p){l.setOpacity(p.getContent().toLowerCase().indexOf(q)>-1?1:.12);}});
 }
 
+function resetFilters(){
+  document.getElementById('fMuni').value='all';
+  document.getElementById('fBrgy').value='';
+  document.getElementById('fYearFrom').value='';
+  document.getElementById('fYearTo').value='';
+  document.getElementById('fHealth').value='all';
+  if(mapF){mapF=false;document.getElementById('btnMapFilter').classList.remove('rt-dash-active');}
+  if(selBrgy||selMuni)backToMuni();
+  load({});
+}
+
 function updStats(s){
+  document.getElementById('sTotalAssess').textContent=s.total_assessments;
+  document.getElementById('sTotalTran').textContent=s.total_transects;
+  document.getElementById('sAvgCover').textContent=s.avg_cover+'%';
+  document.getElementById('sTotalSpecies').textContent=s.total_species;
   document.getElementById('hExc').textContent=s.excellent;
   document.getElementById('hGood').textContent=s.good;
   document.getElementById('hFair').textContent=s.fair;
   document.getElementById('hPoor').textContent=s.poor;
+}
+
+function calcScopeStats(ms){
+  var ta=0,tt=0,cs=0,cc=0,sp=0,ex=0,go=0,fa=0,po=0;
+  ms.forEach(function(m){m.b.forEach(function(b){b.a.forEach(function(a){
+    ta++;var cv=a.cc;if(cv!==null){cs+=cv;cc++;}
+    if(a.c==='excellent')ex++;else if(a.c==='good')go++;else if(a.c==='fair')fa++;else if(a.c==='poor')po++;
+    a.tr.forEach(function(t){tt++;sp+=(t.sc||0);});
+  });});});
+  return{ta:ta,tt:tt,avg:cc>0?Math.round(cs/cc*10)/10:0,sp:sp,ex:ex,go:go,fa:fa,po:po};
+}
+
+function updScopeStats(ms){
+  var ss=calcScopeStats(ms);
+  document.getElementById('sTotalAssess').textContent=ss.ta;
+  document.getElementById('sTotalTran').textContent=ss.tt;
+  document.getElementById('sAvgCover').textContent=ss.avg+'%';
+  document.getElementById('sTotalSpecies').textContent=ss.sp;
+  document.getElementById('hExc').textContent=ss.ex;
+  document.getElementById('hGood').textContent=ss.go;
+  document.getElementById('hFair').textContent=ss.fa;
+  document.getElementById('hPoor').textContent=ss.po;
+}
+
+function updHealth(ms){
+  var all=[];
+  ms.forEach(function(m){m.b.forEach(function(b){if(b.lcv!==null)all.push({name:b.name+', '+m.name+', '+m.province,cover:b.lcv,mid:m.id,bid:b.id});});});
+  var ex=all.filter(function(s){return s.cover>=65;}).sort(function(a,b){return b.cover-a.cover;}).slice(0,3);
+  var po=all.filter(function(s){return s.cover<25;}).sort(function(a,b){return a.cover-b.cover;}).slice(0,3);
+  var eh='<strong>Top Excellent Sites:</strong><br>';if(!ex.length)eh+='<small>None found</small>';
+  ex.forEach(function(s){eh+='<span class="rt-dash-stag rt-dash-stag-e" onclick="window.ZB('+s.mid+','+s.bid+')">'+s.name+' ('+s.cover+'%)</span>';});
+  document.getElementById('topExc').innerHTML=eh;
+  var ph='<strong>Most Vulnerable Sites:</strong><br>';if(!po.length)ph+='<small>None found</small>';
+  po.forEach(function(s){ph+='<span class="rt-dash-stag rt-dash-stag-p" onclick="window.ZB('+s.mid+','+s.bid+')">'+s.name+' ('+s.cover+'%)</span>';});
+  document.getElementById('topPoor').innerHTML=ph;
 }
 
 function updChart(td){
@@ -429,20 +702,32 @@ function updChartM(m){
   updChart(td);
 }
 
-function updHealth(s,ms){
-  var all=[];
-  ms.forEach(function(m){m.b.forEach(function(b){if(b.lcv!==null)all.push({name:b.name+', '+m.name,cover:b.lcv,mid:m.id,bid:b.id});});});
-  var ex=all.filter(function(s){return s.cover>=65;}).sort(function(a,b){return b.cover-a.cover;}).slice(0,3);
-  var po=all.filter(function(s){return s.cover<25;}).sort(function(a,b){return a.cover-b.cover;}).slice(0,3);
-  var eh='<strong>Top Excellent Sites:</strong><br>';if(!ex.length)eh+='<small>None found</small>';
-  ex.forEach(function(s){eh+='<span class="rt-dash-stag rt-dash-stag-e" onclick="window.ZB('+s.mid+','+s.bid+')">'+s.name+' ('+s.cover+'%)</span>';});
-  document.getElementById('topExc').innerHTML=eh;
-  var ph='<strong>Most Vulnerable Sites:</strong><br>';if(!po.length)ph+='<small>None found</small>';
-  po.forEach(function(s){ph+='<span class="rt-dash-stag rt-dash-stag-p" onclick="window.ZB('+s.mid+','+s.bid+')">'+s.name+' ('+s.cover+'%)</span>';});
-  document.getElementById('topPoor').innerHTML=ph;
+function updChartBrgy(b){
+  var ym={};b.a.forEach(function(a){
+    var y=parseInt(a.d.split('-')[0]);if(!ym[y])ym[y]={s:0,c:0};if(a.cc!==null){ym[y].s+=a.cc;ym[y].c++;}
+  });
+  var td=Object.keys(ym).sort().map(function(y){return{year:parseInt(y),avg_cover:ym[y].c>0?Math.round(ym[y].s/ym[y].c*10)/10:null,count:ym[y].c};});
+  updChart(td);
 }
 
-window.ZB=function(mid,bid){window.ZM(mid);};
+window.backToMuni=backToMuni;
+window.filterBrgyAssessments=filterBrgyAssessments;
+window.pickTlYear=pickTlYear;
+window.tlRangeFilter=tlRangeFilter;
+window.resetTimeline=resetTimeline;
+window.resetFilters=resetFilters;
+window.ZB=function(mid,bid){
+  window.ZM(mid);
+  setTimeout(function(){
+    var m=null;D.m.forEach(function(x){if(x.id===mid)m=x;});
+    if(!m)return;
+    var b=null;m.b.forEach(function(x){if(x.id===bid)b=x;});
+    if(!b||!b.lat||!b.lng)return;
+    selBrgy=b;showBDetails(b,m);
+    map.setView([b.lat,b.lng],15);
+    showBLines(b);buildTimeline(b);
+  },400);
+};
 })();
 </script>
 <script>
@@ -450,8 +735,8 @@ var tourSteps=[
   {el:null,title:'Welcome to Reef Explorer',text:'This interactive map lets you browse approved coral reef assessments across Sarangani Bay. Here\'s a quick tour to get you started.',pos:'center'},
   {el:'.rt-dash-filters',title:'Filter & Search',text:'Use these controls to filter by <b>municipality</b>, search a <b>barangay</b>, set a <b>year range</b>, or filter by <b>health condition</b>.',pos:'bottom'},
   {el:'#dashMap',title:'Interactive Map',text:'The map shows <b>municipality markers</b> (teal circles with assessment counts). Click a marker, then hit <b>Zoom In</b> to see individual <b>barangay markers</b> colored by health.',pos:'right'},
-  {el:'#btnTransects',title:'Transect Lines',text:'Toggle this button to show <b>shallow</b> (cyan) and <b>deep</b> (blue) transect lines on the map. Click any line to see species data.',pos:'bottom'},
-  {el:'.rt-dash-sidecol',title:'Sidebar Panel',text:'The sidebar shows <b>barangay details</b>, <b>coral cover trends</b> chart, and a <b>reef health summary</b>. Click a barangay marker to populate it.',pos:'left'},
+  {el:'#btnTransects',title:'Transect Lines',text:'Toggle this button to show transect lines on the map. Lines are <b>colored by coral health</b> (green=excellent, blue=good, orange=fair, red=poor). <b>Solid</b> = shallow, <b>dashed</b> = deep. <b>Click a line</b> to see its avg cover percentage and species info.',pos:'bottom'},
+  {el:'.rt-dash-sidecol',title:'Sidebar Panel',text:'The sidebar shows <b>barangay details</b> with stats, species count, year filter, and assessment history. Click a barangay marker to populate it. Click <b>View Assessment</b> for the full modal.',pos:'left'},
   {el:null,title:'You\'re All Set!',text:'Start by clicking a municipality marker on the map, or use the filters above to narrow down what you see. Enjoy exploring!',pos:'center'}
 ];
 var tourIdx=0,tourOverlay,tourBackdrop,tourSpot,tourTooltip;

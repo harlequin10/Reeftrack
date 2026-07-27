@@ -42,38 +42,44 @@
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Assessment Date *</label>
-                            <input type="date" class="form-control" name="assessment_date" id="assessment_date" max="" onfocus="this.showPicker()" onkeydown="return false" style="cursor:pointer;">
+                            <input type="date" class="form-control" name="assessment_date" id="assessment_date" max="" onfocus="this.showPicker()" onkeydown="return false" style="cursor:pointer;" value="{{ pending.assessment_date|default:'' }}">
                             <script>document.getElementById('assessment_date').max = new Date().toISOString().split('T')[0];</script>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Methodology</label>
                             <select class="form-select" name="methodology" id="methodology_select">
                                 {% for val, label in methodology_choices %}
-                                <option value="{{ val }}">{{ label }}</option>
+                                <option value="{{ val }}" {% if pending.methodology == val %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                                 {% for cm in custom_methodologies %}
-                                <option value="{{ cm.name }}">{{ cm.name }}</option>
+                                <option value="{{ cm.name }}" {% if pending.methodology == cm.name %}selected{% endif %}>{{ cm.name }}</option>
                                 {% endfor %}
-                                <option value="other">Other</option>
+                                <option value="other" {% if pending.is_custom_methodology %}selected{% endif %}>Other</option>
                             </select>
                             <input type="text" class="form-control mt-2" name="methodology_other" id="methodology_other"
-                                   placeholder="Specify methodology..." style="display:none;" maxlength="100">
+                                   placeholder="Specify methodology..." style="{% if not pending.is_custom_methodology %}display:none;{% endif %}" maxlength="100" value="{% if pending.is_custom_methodology %}{{ pending.methodology }}{% endif %}">
                             <script>
                                 document.getElementById('methodology_select').addEventListener('change', function() {
                                     document.getElementById('methodology_other').style.display = this.value === 'other' ? 'block' : 'none';
                                 });
                             </script>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Municipality *</label>
-                            <select class="form-select" id="municipality" name="municipality" required>
-                                <option value="">-- Select Municipality --</option>
-                                {% for m in municipalities %}
-                                    <option value="{{ m.id }}">{{ m.name }}</option>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Province *</label>
+                            <select class="form-select" id="province" name="province" required>
+                                <option value="">-- Select Province --</option>
+                                {% for p in provinces %}
+                                    <option value="{{ p.id }}" {% if pending.province_id|stringformat:"s" == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Municipality *</label>
+                            <select class="form-select" id="municipality" name="municipality" required>
+                                <option value="">-- Select Province first --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label fw-bold">Barangay *</label>
                             <select class="form-select" id="barangay" name="barangay" required>
                                 <option value="">-- Select Municipality first --</option>
@@ -92,13 +98,14 @@
                                 </div>
                                 <div id="contributor-dropdown" class="list-group mt-1" style="display:none; position:absolute; z-index:100; width:100%;"></div>
                                 <input type="hidden" name="contributors" id="contributor-ids" value="">
+                                <input type="hidden" name="contributor_names" id="contributor-names" value="{{ pending.contributor_names|default:'' }}">
                             </div>
                             <div class="form-text">Type a name to search system users, or type a full name to add an external contributor.</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-bold">Description</label>
                             <textarea class="form-control" name="description" rows="3"
-                                      placeholder="Brief description of the assessment (optional)"></textarea>
+                                      placeholder="Brief description of the assessment (optional)">{{ pending.description|default:'' }}</textarea>
                         </div>
                     </div>
 
@@ -115,9 +122,19 @@
                                     <label for="thesis_pdf" class="form-label fw-bold">
                                         <i class="fas fa-file-pdf text-danger"></i> Assessment Thesis (PDF)
                                     </label>
+                                    {% if has_thesis %}
+                                    <div class="d-flex align-items-center gap-2 p-2 mb-2 rounded" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+                                        <i class="fas fa-file-pdf text-danger fa-lg"></i>
+                                        <span class="flex-grow-1 small fw-medium">thesis.pdf</span>
+                                        <a href="{{ thesis_url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View PDF">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                    <div class="form-text mb-1">Upload a new file to replace it.</div>
+                                    {% endif %}
                                     <input type="file" class="form-control" id="thesis_pdf" name="thesis_pdf"
                                            accept=".pdf">
-                                    <div class="form-text">Full thesis or research document (optional)</div>
+                                    {% if not has_thesis %}<div class="form-text">Full thesis or research document (optional)</div>{% endif %}
                                 </div>
                             </div>
                         </div>
@@ -125,15 +142,32 @@
 
                     <!-- Assessment Images -->
                     <div class="mb-4">
-                        <label for="images" class="form-label fw-bold">
-                            <i class="fas fa-camera text-success"></i> Assessment Images
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-camera text-success"></i> Assessment Images *
                         </label>
+
+                        <!-- Uploaded image thumbnails -->
+                        <div id="uploadedImages" class="d-flex flex-wrap gap-2 mb-3">
+                            {% for img in image_info %}
+                            <div class="uploaded-image-thumb position-relative" data-path="{{ img.path }}">
+                                <img src="{{ img.url }}" alt="{{ img.name }}" class="rounded shadow-sm"
+                                     style="width:110px; height:110px; object-fit:cover; border:2px solid #e5e7eb;">
+                                <button type="button" class="btn-remove-image position-absolute"
+                                        title="Remove image" onclick="removeUploadedImage(this)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <div class="text-truncate small text-muted mt-1" style="max-width:110px; font-size:0.7rem;">{{ img.name }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
                         <input type="file" class="form-control" id="images" name="images"
                                accept="image/*" multiple>
                         <div class="form-text">Underwater photos from the assessment (hold Ctrl to select multiple)</div>
+                        <input type="hidden" name="removed_images" id="removed_images" value="">
 
-                        <!-- Image Preview -->
-                        <div id="imagePreview" class="row mt-3" style="display:none;"></div>
+                        <!-- New image preview -->
+                        <div id="imagePreview" class="d-flex flex-wrap gap-2 mt-3"></div>
                     </div>
 
                     <hr>
@@ -202,9 +236,61 @@
     max-height: 250px;
     overflow-y: auto;
 }
+.btn-remove-image {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #dc2626;
+    color: #fff;
+    border: 2px solid #fff;
+    font-size: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    transition: background 0.15s;
+    z-index: 2;
+}
+.btn-remove-image:hover {
+    background: #b91c1c;
+}
+#imagePreview .new-image-thumb {
+    position: relative;
+}
+#imagePreview .new-image-thumb .btn-remove-image {
+    top: -6px;
+    right: -6px;
+}
 </style>
 
 <script>
+document.getElementById('province').addEventListener('change', function() {
+    var provinceId = this.value;
+    var muniSelect = document.getElementById('municipality');
+    var brgySelect = document.getElementById('barangay');
+    muniSelect.innerHTML = '<option value="">Loading...</option>';
+    brgySelect.innerHTML = '<option value="">-- Select Municipality first --</option>';
+
+    if (!provinceId) {
+        muniSelect.innerHTML = '<option value="">-- Select Province first --</option>';
+        return;
+    }
+
+    fetch('/api/municipalities/?province_id=' + provinceId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            muniSelect.innerHTML = '<option value="">-- Select Municipality --</option>';
+            data.municipalities.forEach(function(m) {
+                muniSelect.innerHTML += '<option value="' + m.id + '">' + m.name + '</option>';
+            });
+        });
+});
+
 document.getElementById('municipality').addEventListener('change', function() {
     var muniId = this.value;
     var barangaySelect = document.getElementById('barangay');
@@ -225,33 +311,119 @@ document.getElementById('municipality').addEventListener('change', function() {
         });
 });
 
-// Image preview
+// Restore selections on page load (returning from step 2)
+(function() {
+    var province = document.getElementById('province');
+    if (province.value) {
+        province.dispatchEvent(new Event('change'));
+        // Delay municipality dispatch to wait for AJAX load
+        setTimeout(function() {
+            var muni = document.getElementById('municipality');
+            if (muni.value) {
+                muni.dispatchEvent(new Event('change'));
+                // Restore barangay selection after AJAX
+                setTimeout(function() {
+                    var brgy = document.getElementById('barangay');
+                    var selectedId = '{{ pending.barangay_id|default:'' }}';
+                    if (selectedId) {
+                        for (var i = 0; i < brgy.options.length; i++) {
+                            if (String(brgy.options[i].value) === String(selectedId)) {
+                                brgy.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                }, 300);
+            }
+        }, 300);
+    }
+})();
+
+// Image preview & removal
+var removedInput = document.getElementById('removed_images');
+
+function removeUploadedImage(btn) {
+    var thumb = btn.closest('.uploaded-image-thumb');
+    var path = thumb.getAttribute('data-path');
+
+    // Disable button while processing
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    fetch('/api/temp-file/remove/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+        body: 'path=' + encodeURIComponent(path)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            thumb.style.opacity = '0';
+            thumb.style.transition = 'opacity 0.2s';
+            setTimeout(function() { thumb.remove(); updateImageRequired(); }, 200);
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-times"></i>';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-times"></i>';
+    });
+}
+
+function updateImageRequired() {
+    var remaining = document.querySelectorAll('.uploaded-image-thumb').length;
+    var newFiles = document.getElementById('images').files.length;
+    document.getElementById('images').required = (remaining + newFiles) === 0;
+}
+
 document.getElementById('images').addEventListener('change', function(e) {
     var preview = document.getElementById('imagePreview');
     preview.innerHTML = '';
-    preview.style.display = 'none';
 
     var files = e.target.files;
-    if (!files.length) return;
+    if (!files.length) {
+        updateImageRequired();
+        return;
+    }
 
-    preview.style.display = 'flex';
-    Array.from(files).forEach(function(file) {
+    Array.from(files).forEach(function(file, idx) {
         if (!file.type.startsWith('image/')) return;
-        var col = document.createElement('div');
-        col.className = 'col-md-3 col-4 mb-2';
+        var wrapper = document.createElement('div');
+        wrapper.className = 'new-image-thumb position-relative';
+
         var img = document.createElement('img');
         img.src = URL.createObjectURL(file);
-        img.className = 'img-fluid rounded shadow-sm';
-        img.style.height = '120px';
-        img.style.objectFit = 'cover';
-        col.appendChild(img);
-        var name = document.createElement('small');
-        name.className = 'text-muted d-block text-truncate';
+        img.className = 'rounded shadow-sm';
+        img.style.cssText = 'width:110px; height:110px; object-fit:cover; border:2px solid #bbf7d0;';
+
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn-remove-image';
+        removeBtn.title = 'Remove image';
+        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        removeBtn.addEventListener('click', function() {
+            wrapper.remove();
+            updateImageRequired();
+        });
+
+        var name = document.createElement('div');
+        name.className = 'small text-muted mt-1 text-truncate';
+        name.style.cssText = 'max-width:110px; font-size:0.7rem;';
         name.textContent = file.name;
-        col.appendChild(name);
-        preview.appendChild(col);
+
+        wrapper.appendChild(removeBtn);
+        wrapper.appendChild(img);
+        wrapper.appendChild(name);
+        preview.appendChild(wrapper);
     });
+
+    updateImageRequired();
 });
+
+// Initial required check
+updateImageRequired();
 
 // ==================== CONTRIBUTOR TAG INPUT ====================
 (function() {
@@ -260,11 +432,13 @@ document.getElementById('images').addEventListener('change', function(e) {
     var tagsContainer = document.getElementById('contributor-tags');
     var dropdown = document.getElementById('contributor-dropdown');
     var hiddenInput = document.getElementById('contributor-ids');
+    var hiddenNames = document.getElementById('contributor-names');
     var addBtn = document.getElementById('add-contributor-btn');
     var searchTimeout = null;
 
     function updateHidden() {
         hiddenInput.value = contributors.map(function(c) { return c.id; }).join(',');
+        hiddenNames.value = contributors.map(function(c) { return c.name; }).join(',');
     }
 
     function renderTags() {
@@ -294,7 +468,6 @@ document.getElementById('images').addEventListener('change', function(e) {
     }
 
     function addContributor(c) {
-        // Prevent duplicates
         for (var i = 0; i < contributors.length; i++) {
             if (contributors[i].id === c.id) return;
         }
@@ -304,6 +477,14 @@ document.getElementById('images').addEventListener('change', function(e) {
         input.value = '';
         dropdown.style.display = 'none';
     }
+
+    // Restore saved contributors from session
+    var savedIds = (hiddenInput.value || '').split(',').filter(function(v) { return v.trim(); });
+    var savedNames = (hiddenNames.value || '').split(',').filter(function(v) { return v.trim(); });
+    for (var i = 0; i < savedIds.length; i++) {
+        contributors.push({id: savedIds[i], name: savedNames[i] || savedIds[i], is_user: false});
+    }
+    if (contributors.length > 0) renderTags();
 
     function showDropdown(results) {
         dropdown.innerHTML = '';

@@ -19,6 +19,7 @@
     var _currentFilters = '';
     var _reconnectTimer = null;
     var _usePolling = false;
+    var _initialHashCaptured = false;
 
     function getCookie(name) {
         var v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
@@ -31,6 +32,7 @@
         _syncUrl = opts.syncUrl || '/api/assessments/sync/';
         _currentFilters = opts.filters || '';
         _lastHash = null;
+        _initialHashCaptured = false;
 
         connectWebSocket();
     }
@@ -99,11 +101,16 @@
 
     /* ── Data fetch + render ───────────────────────────────── */
 
-    function fetchAndRender() {
+    function fetchAndRender(force) {
         var url = _syncUrl + (_currentFilters ? ('?' + _currentFilters) : '');
         fetch(url, { credentials: 'same-origin' })
             .then(function(r) { return r.json(); })
             .then(function(data) {
+                if (!_initialHashCaptured) {
+                    _lastHash = data.hash;
+                    _initialHashCaptured = true;
+                    return;
+                }
                 if (data.hash !== _lastHash) {
                     _lastHash = data.hash;
                     renderTable(data);
@@ -113,27 +120,32 @@
             .catch(function() {});
     }
 
+    function getBadgeClass(status) {
+        if (status === 'approved') return 'rt-badge-approved';
+        if (status === 'submitted') return 'rt-badge-submitted';
+        if (status === 'rejected') return 'rt-badge-rejected';
+        return 'rt-badge-draft';
+    }
+
     function renderTable(data) {
         var tbody = document.querySelector('#assessmentsTable tbody');
         if (!tbody) return;
 
         var rows = data.assessments;
         if (!rows || rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4">' +
-                '<i class="fas fa-clipboard fa-3x text-muted mb-3 d-block"></i>' +
+            tbody.innerHTML = '<tr><td colspan="10">' +
+                '<div class="rt-empty-state">' +
+                '<div class="rt-empty-icon"><i class="fas fa-clipboard"></i></div>' +
                 '<h5>No assessments found</h5>' +
-                '<p class="text-muted">No assessments match your filters.</p></td></tr>';
+                '<p>No assessments match your current filters.</p>' +
+                '</div></td></tr>';
             return;
         }
 
         var html = '';
         for (var i = 0; i < rows.length; i++) {
             var a = rows[i];
-            var statusClass = '';
-            if (a.status === 'approved') statusClass = 'bg-success';
-            else if (a.status === 'submitted') statusClass = 'bg-warning text-dark';
-            else if (a.status === 'rejected') statusClass = 'bg-danger';
-            else statusClass = 'bg-secondary';
+            var badgeClass = getBadgeClass(a.status);
 
             var canDelete = false;
             var canApprove = false;
@@ -154,42 +166,42 @@
                 html += '</td>';
             }
 
-            html += '<td><strong>' + a.id + '</strong></td>';
+            html += '<td><span class="badge bg-secondary">#' + a.id + '</span></td>';
             html += '<td><strong>' + escapeHtml(a.barangay) + '</strong><br><small class="text-muted">' + escapeHtml(a.municipality) + '</small></td>';
             html += '<td>' + a.date + '</td>';
-            html += '<td>' + escapeHtml(a.uploaded_by) + '</td>';
-            html += '<td>' + (a.reviewed_by ? '<small>' + escapeHtml(a.reviewed_by) + '</small>' : '<small class="text-muted">-</small>') + '</td>';
+            html += '<td><small>' + escapeHtml(a.uploaded_by) + '</small></td>';
+            html += '<td>' + (a.reviewed_by ? '<small>' + escapeHtml(a.reviewed_by) + '</small>' : '<small class="text-muted">\u2014</small>') + '</td>';
             html += '<td>' + a.transect_count + '</td>';
-            html += '<td>' + (a.coral_cover != null ? a.coral_cover + '%' : '-') + '</td>';
-            html += '<td><span class="badge ' + statusClass + '">' + a.status_display + '</span></td>';
+            html += '<td>' + (a.coral_cover != null ? a.coral_cover + '%' : '\u2014') + '</td>';
+            html += '<td><span class="rt-badge ' + badgeClass + '">' + escapeHtml(a.status_display) + '</span></td>';
 
-            html += '<td>';
+            html += '<td><div class="rt-action-group">';
             if (_role === 'admin') {
-                html += '<a href="/manage/assessments/' + a.id + '/" class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-eye"></i> View</a>';
+                html += '<a href="/manage/assessments/' + a.id + '/" class="rt-action-btn rt-action-btn-view" title="View assessment"><i class="fas fa-eye"></i> <span class="btn-label">View</span></a>';
                 if (canApprove) {
-                    html += '<a href="/manage/assessments/' + a.id + '/confirm-approval/" class="btn btn-sm btn-success me-1" title="Review & Approve"><i class="fas fa-check"></i></a>';
+                    html += '<a href="/manage/assessments/' + a.id + '/confirm-approval/" class="rt-action-btn rt-action-btn-review" title="Review & approve"><i class="fas fa-check"></i> <span class="btn-label">Review</span></a>';
                 }
                 if (canDelete) {
                     html += '<form method="POST" action="/assessment/' + a.id + '/delete/" class="d-inline">';
                     html += '<input type="hidden" name="csrfmiddlewaretoken" value="' + _csrfToken + '">';
-                    html += '<button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm(\'Delete Assessment #' + a.id + '? This cannot be undone.\')"><i class="fas fa-trash"></i></button>';
+                    html += '<button type="submit" class="rt-action-btn rt-action-btn-delete" title="Delete assessment" onclick="return confirm(\'Delete Assessment #' + a.id + '? This cannot be undone.\')"><i class="fas fa-trash"></i></button>';
                     html += '</form>';
                 }
             } else if (_role === 'curator') {
-                html += '<a href="/curator/assessments/' + a.id + '/" class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-eye"></i> View</a>';
+                html += '<a href="/curator/assessments/' + a.id + '/" class="rt-action-btn rt-action-btn-view" title="View assessment"><i class="fas fa-eye"></i> <span class="btn-label">View</span></a>';
                 if (canApprove) {
-                    html += '<a href="/curator/assessments/' + a.id + '/confirm-approval/" class="btn btn-sm btn-success" title="Review & Approve"><i class="fas fa-check"></i></a>';
+                    html += '<a href="/curator/assessments/' + a.id + '/confirm-approval/" class="rt-action-btn rt-action-btn-review" title="Review & approve"><i class="fas fa-check"></i> <span class="btn-label">Review</span></a>';
                 }
             } else {
-                html += '<a href="/assessment/' + a.id + '/detail/" class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-eye"></i> View</a>';
+                html += '<a href="/assessment/' + a.id + '/detail/" class="rt-action-btn rt-action-btn-view" title="View assessment"><i class="fas fa-eye"></i> <span class="btn-label">View</span></a>';
                 if (canDelete) {
                     html += '<form method="POST" action="/assessment/' + a.id + '/delete/" class="d-inline">';
                     html += '<input type="hidden" name="csrfmiddlewaretoken" value="' + _csrfToken + '">';
-                    html += '<button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm(\'Delete Assessment #' + a.id + '? This cannot be undone.\')"><i class="fas fa-trash"></i> Delete</button>';
+                    html += '<button type="submit" class="rt-action-btn rt-action-btn-delete" title="Delete assessment" onclick="return confirm(\'Delete Assessment #' + a.id + '? This cannot be undone.\')"><i class="fas fa-trash"></i></button>';
                     html += '</form>';
                 }
             }
-            html += '</td></tr>';
+            html += '</div></td></tr>';
         }
 
         tbody.innerHTML = html;
@@ -197,7 +209,7 @@
     }
 
     function updateStats(stats) {
-        var cards = document.querySelectorAll('#statsRow .card-body h5');
+        var cards = document.querySelectorAll('#statsRow .stat-value');
         if (cards.length >= 5) {
             cards[0].textContent = stats.total;
             cards[1].textContent = stats.submitted;

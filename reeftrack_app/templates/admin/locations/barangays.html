@@ -2,12 +2,16 @@
 
 {% block title %}{{ municipality.name }} Barangays - Admin - ReefTrack{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col-12 d-flex justify-content-between align-items-center">
         <div>
             <h4 class="mb-0">
-                <a href="{% url 'admin_manage_locations' %}" class="text-decoration-none text-muted">
+                <a href="{% url 'admin_manage_municipalities' municipality.province_id %}" class="text-decoration-none text-muted">
                     <i class="fas fa-arrow-left"></i>
                 </a>
                 <i class="fas fa-map-pin"></i> {{ municipality.name }} — Barangays &amp; Reference Coordinates
@@ -343,12 +347,10 @@
 {% endwith %}
 {% endfor %}
 
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{{ transect_data_json|json_script:"transect-data" }}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-var transectData = {{ transect_data_json|safe }};
+var transectData = JSON.parse(document.getElementById('transect-data').textContent);
 var mapInstances = {};
 
 function waitForVisible(el, cb) {
