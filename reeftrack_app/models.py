@@ -349,6 +349,10 @@ class UserProfile(models.Model):
     )
     approved_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True, null=True)
+    profile_completed = models.BooleanField(
+        default=True,
+        help_text='False for users who signed in with Google and still need to fill in their name details.'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

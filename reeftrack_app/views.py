@@ -11,13 +11,14 @@ from django.views.decorators.csrf import csrf_protect
 from django_ratelimit.decorators import ratelimit
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.urls import reverse
 from django.db.models import Count, Q
 from django.db import transaction
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
 from django.http import JsonResponse
-from .forms import RegisterForm, LoginForm, AdminCreateUserForm, UserProfileForm, CustomPasswordChangeForm
+from .forms import RegisterForm, LoginForm, AdminCreateUserForm, UserProfileForm, CustomPasswordChangeForm, GoogleProfileForm
 from .decorators import admin_required, curator_required, contributor_required
 from .models import (
     UserProfile, Province, Municipality, Barangay, Assessment,
@@ -223,7 +224,11 @@ def login_view(request):
     else:
         form = LoginForm()
 
-    return render(request, 'public/login.html', {'form': form})
+    return render(request, 'public/login.html', {
+        'form': form,
+        'status': request.GET.get('status', ''),
+        'google_oauth_configured': bool(settings.GOOGLE_OAUTH2_CLIENT_ID and settings.GOOGLE_OAUTH2_CLIENT_SECRET),
+    })
 
 @login_required
 def logout_view(request):
@@ -236,14 +241,65 @@ def logout_view(request):
 @login_required
 def dashboard(request):
     """Redirect to role-specific dashboard"""
-    user_role = request.user.profile.role if hasattr(request.user, 'profile') else 'contributor'
-    
+    profile = getattr(request.user, 'profile', None)
+    # Keep the approval workflow intact: pending/rejected users (e.g. fresh
+    # Google sign-ins) cannot enter the app yet.
+    if profile is not None and profile.status != 'approved':
+        logout(request)
+        return redirect(reverse('login') + '?status=pending')
+
+    user_role = profile.role if profile else 'contributor'
+
     if user_role == 'admin':
         return redirect('admin_dashboard')
     elif user_role == 'curator':
         return redirect('curator_dashboard')
     else:
         return redirect('contributor_dashboard')
+
+
+@login_required
+def complete_google_profile(request):
+    """Profile-completion step for users who signed in with Google."""
+    profile = getattr(request.user, 'profile', None)
+    if profile is None:
+        return redirect('dashboard')
+    if profile.profile_completed:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = GoogleProfileForm(request.POST)
+        if form.is_valid():
+            user = request.user
+            user.first_name = form.cleaned_data['first_name']
+            user.last_name = form.cleaned_data['last_name']
+            user.save(update_fields=['first_name', 'last_name'])
+            profile.middle_initial = form.cleaned_data.get('middle_initial', '')
+            profile.suffix = form.cleaned_data.get('suffix', '')
+            profile.profile_completed = True
+            profile.save()
+            if profile.status != 'approved':
+                logout(request)
+                return redirect(reverse('login') + '?status=pending')
+            messages.success(
+                request,
+                f'Welcome {profile.get_full_name() or user.email}! Your profile is complete.'
+            )
+            return redirect('dashboard')
+        else:
+            error_list = []
+            for field, errors in form.errors.items():
+                label = form[field].label if field in form.fields else field.replace('_', ' ').title()
+                for err in errors:
+                    error_list.append(f"{label}: {err}")
+            messages.error(request, '\n'.join(error_list) if error_list else 'Please correct the errors below.')
+    else:
+        form = GoogleProfileForm(initial={
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+        })
+
+    return render(request, 'profile/complete_google.html', {'form': form})
 
 @login_required
 @admin_required

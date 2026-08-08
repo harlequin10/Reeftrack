@@ -110,4 +110,5 @@ urlpatterns = [
     path('profile/upload-photo/', views.profile_upload_photo, name='profile_upload_photo'),
     path('profile/edit/', views.profile_edit, name='profile_edit'),
     path('profile/change-password/', views.profile_change_password, name='profile_change_password'),
+    path('profile/complete-google-profile/', views.complete_google_profile, name='complete_google_profile'),
 ]

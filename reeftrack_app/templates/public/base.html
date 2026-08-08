@@ -32,6 +32,7 @@
     .dropdown-item{display:block;width:100%;padding:.45rem 1rem;clear:both;font-weight:400;color:var(--rt-ink);text-align:inherit;text-decoration:none;white-space:nowrap;background-color:transparent;border:0}
     .dropdown-item:hover{background-color:var(--rt-sand-light);color:var(--rt-navy)}
     .badge{display:inline-block;padding:.35em .65em;font-size:.75em;font-weight:700;line-height:1;color:#fff;text-align:center;white-space:nowrap;vertical-align:baseline;border-radius:.375rem}
+    .bg-danger{background-color:var(--rt-coral)!important}
     .bg-info{background-color:var(--rt-teal)!important}
     .bg-success{background-color:#198754!important}
     .rounded-circle{border-radius:50%!important}
@@ -108,7 +109,12 @@
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
                                data-bs-toggle="dropdown" aria-expanded="false">
                                 {% if user.profile.profile_picture %}<img src="{{ user.profile.profile_picture.url }}" class="rounded-circle me-1" style="width:24px; height:24px; object-fit:cover;">{% else %}<i class="fas fa-user"></i>{% endif %} {{ user.first_name|default:user.email }}
-                                <span class="badge bg-info">{{ user.profile.get_role_display }}</span>
+                                <span class="badge
+                                    {% if user.profile.role == 'admin' %}bg-danger
+                                    {% elif user.profile.role == 'curator' %}bg-warning text-dark
+                                    {% else %}bg-success{% endif %}">
+                                    {{ user.profile.get_role_display }}
+                                </span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li>

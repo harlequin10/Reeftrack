@@ -1,4 +1,5 @@
 {% extends 'public/base.html' %}
+{% load socialaccount %}
 
 {% block title %}Register - ReefTrack{% endblock %}
 
@@ -11,6 +12,19 @@
                 <h4><i class="fas fa-user-plus"></i> Register as Contributor</h4>
             </div>
             <div class="card-body">
+                {% if google_oauth_configured %}
+                <div class="mb-3">
+                    <a href="{% provider_login_url 'google' %}" class="btn btn-outline-dark w-100">
+                        <i class="fab fa-google me-2" style="color:#DB4437;"></i> Sign up with Google
+                    </a>
+                </div>
+                <div class="d-flex align-items-center my-3">
+                    <hr class="flex-grow-1" style="border-top:1px solid var(--rt-border);">
+                    <span class="px-2 text-muted small">OR</span>
+                    <hr class="flex-grow-1" style="border-top:1px solid var(--rt-border);">
+                </div>
+                {% endif %}
+
                 <div style="background:#DCF0F2; border:1px solid #0E7C86; border-radius:8px; padding:1rem 1.25rem; margin-bottom:1rem; color:#062E3F;">
                     <i class="fas fa-info-circle" style="color:#0E7C86;"></i> 
                     <strong>Registration Process:</strong><br>

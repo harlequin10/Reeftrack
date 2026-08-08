@@ -102,7 +102,12 @@
                         <a class="nav-link dropdown-toggle" href="#" id="curatorDropdown" role="button" 
                            data-bs-toggle="dropdown" aria-expanded="false">
                             {% if user.profile.profile_picture %}<img src="{{ user.profile.profile_picture.url }}" class="rounded-circle me-1" style="width:24px; height:24px; object-fit:cover;">{% else %}<i class="fas fa-user"></i>{% endif %} {{ user.first_name|default:user.email }}
-                            <span class="badge bg-warning text-dark">Curator</span>
+                            <span class="badge
+                                {% if user.profile.role == 'admin' %}bg-danger
+                                {% elif user.profile.role == 'curator' %}bg-warning text-dark
+                                {% else %}bg-success{% endif %}">
+                                {{ user.profile.get_role_display }}
+                            </span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="curatorDropdown">
                             <li>

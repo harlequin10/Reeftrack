@@ -174,6 +174,11 @@
     var cropper = null;
     var uploading = false;
 
+    function getCookie(name) {
+        var v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return v ? v.pop() : '';
+    }
+
     photoEditor.addEventListener('click', function() {
         fileInput.click();
     });
@@ -241,8 +246,16 @@
             xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
             xhr.onload = function() {
                 uploading = false;
-                modal.hide();
-                location.reload();
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    modal.hide();
+                    location.reload();
+                } else {
+                    alert('Upload failed. Please try again.');
+                }
+            };
+            xhr.onerror = function() {
+                uploading = false;
+                alert('Upload failed. Please check your connection and try again.');
             };
             xhr.send(fd);
         }, 'image/png');

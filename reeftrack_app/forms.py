@@ -82,6 +82,29 @@ class LoginForm(forms.Form):
     }))
 
 
+class GoogleProfileForm(forms.Form):
+    """Name details required after signing in with Google."""
+    SUFFIX_CHOICES = (
+        ('', 'None'),
+        ('Jr.', 'Jr.'),
+        ('Sr.', 'Sr.'),
+        ('II', 'II'),
+        ('III', 'III'),
+        ('IV', 'IV'),
+        ('V', 'V'),
+    )
+    first_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}))
+    middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
+    last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}))
+    suffix = forms.ChoiceField(choices=SUFFIX_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
+
+    def clean_middle_initial(self):
+        mi = self.cleaned_data.get('middle_initial', '')
+        if mi:
+            mi = mi.strip()[0].upper()
+        return mi
+
+
 class AdminCreateUserForm(forms.ModelForm):
     first_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))

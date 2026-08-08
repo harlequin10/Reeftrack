@@ -247,7 +247,6 @@ document.addEventListener('DOMContentLoaded', function(){
                                 <small style="color: var(--rt-ink-soft);">{{ a.municipality.name }}</small><br>
                                 <small style="color: var(--rt-ink-soft);">Uploaded by {{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</small>
                 </div>
-                </a>
             </div>
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             {% if a.condition %}
@@ -276,6 +275,7 @@ document.addEventListener('DOMContentLoaded', function(){
                         </p>
                     </div>
                 </div>
+                </a>
             </div>
             {% endfor %}
         </div>

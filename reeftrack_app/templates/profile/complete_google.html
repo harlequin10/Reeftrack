@@ -1,0 +1,71 @@
+{% extends 'public/base.html' %}
+
+{% block title %}Complete Your Profile - ReefTrack{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="rt-wave-divider"></div>
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-user-check"></i> Complete Your Profile</h4>
+            </div>
+            <div class="card-body">
+                <div style="background:#DCF0F2; border:1px solid #0E7C86; border-radius:8px; padding:1rem 1.25rem; margin-bottom:1rem; color:#062E3F;">
+                    <i class="fas fa-info-circle" style="color:#0E7C86;"></i>
+                    <strong>Almost there!</strong> You signed in with Google. Please provide your name details below.
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="id_first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <div class="text-danger small">{{ form.first_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label for="id_middle_initial" class="form-label">M.I.</label>
+                            {{ form.middle_initial }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="id_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <div class="text-danger small">{{ form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label for="id_suffix" class="form-label">Suffix</label>
+                            {{ form.suffix }}
+                        </div>
+                    </div>
+
+                    <div style="background:var(--rt-sand-light); border:1px solid var(--rt-border); border-radius:8px; padding:1rem 1.25rem; margin-bottom:1rem; color:var(--rt-ink);">
+                        <i class="fas fa-user-tag"></i>
+                        <strong>Role:</strong> You will be registered as a <span class="badge bg-primary">Contributor</span>
+                        <br>
+                        <i class="fas fa-clock"></i>
+                        <strong>Status:</strong> <span class="badge bg-warning text-dark">Pending Approval</span>
+                        <br>
+                        <small>Your account will be reviewed by an admin or curator before you can use the system.</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-check"></i> Save &amp; Continue
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('id_middle_initial').addEventListener('input', function() {
+    this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
+});
+</script>
+{% endblock %}
