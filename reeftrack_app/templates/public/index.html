@@ -49,9 +49,9 @@
             <h2 class="fw-bold" style="color: var(--rt-navy);">What We Do</h2>
             <p style="color: var(--rt-ink-soft);">Empowering communities to monitor and protect coral reef ecosystems</p>
         </div>
-        <div class="row g-4 rt-stagger">
+        <div class="row g-4">
             <div class="col-md-4">
-                <div class="card h-100 text-center border-0 shadow-sm">
+                <div class="card h-100 text-center border-0 shadow-sm rounded-4">
                     <div class="card-body py-4">
                         <div class="mb-3">
                             <i class="fas fa-map-marked-alt fa-3x rt-icon-float" style="color: var(--rt-teal);"></i>
@@ -62,7 +62,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card h-100 text-center border-0 shadow-sm">
+                <div class="card h-100 text-center border-0 shadow-sm rounded-4">
                     <div class="card-body py-4">
                         <div class="mb-3">
                             <i class="fas fa-chart-line fa-3x rt-icon-float" style="color: var(--rt-coral); animation-delay: 0.5s;"></i>
@@ -73,7 +73,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card h-100 text-center border-0 shadow-sm">
+                <div class="card h-100 text-center border-0 shadow-sm rounded-4">
                     <div class="card-body py-4">
                         <div class="mb-3">
                             <i class="fas fa-users fa-3x rt-icon-float" style="color: var(--rt-success-dark); animation-delay: 1s;"></i>
@@ -88,10 +88,10 @@
 </section>
 
 <!-- About Preview Section -->
-<section class="py-5" style="background-color: var(--rt-sand-light);">
-    <div class="container">
+<section class="py-5">
+    <div class="container rounded-4 shadow-sm" style="background-color: var(--rt-white); padding: 2.5rem 1.5rem;">
         <div class="row align-items-center">
-            <div class="col-lg-6 mb-4 mb-lg-0 rt-animate fade-left">
+            <div class="col-lg-6 mb-4 mb-lg-0">
                 <h2 class="fw-bold" style="color: var(--rt-navy);">Why ReefTrack?</h2>
                 <p style="color: var(--rt-ink-soft);">
                     Coral reefs are among the most biodiverse ecosystems on the planet, yet they face unprecedented threats 
@@ -120,7 +120,7 @@
                     <i class="fas fa-arrow-right"></i> Read More About Us
                 </a>
             </div>
-            <div class="col-lg-6 text-center rt-animate fade-right">
+            <div class="col-lg-6 text-center">
                 <div class="p-4">
                     <i class="fas fa-seedling rt-icon-float" style="font-size: 8rem; color: var(--rt-seafoam-dark); opacity: 0.7;"></i>
                 </div>
@@ -178,8 +178,8 @@
 </section>
 
 <!-- Reef Map Section -->
-<section id="map-section" class="py-5" style="background-color: var(--rt-sand-light);">
-    <div class="container">
+<section id="map-section" class="py-5">
+    <div class="container rounded-4 shadow-sm" style="background-color: var(--rt-white); padding: 2.5rem 1.5rem;">
         <div class="text-center mb-5 rt-animate fade-up">
             <h2 class="fw-bold" style="color: var(--rt-navy);">
                 <i class="fas fa-map-marked-alt" style="color: var(--rt-teal);"></i> Reef Map
@@ -187,7 +187,7 @@
             <p style="color: var(--rt-ink-soft);">Explore coral reef monitoring sites across Sarangani Bay</p>
         </div>
         <div class="rt-animate fade-up">
-            <div class="card border-0 shadow-sm overflow-hidden" style="cursor:pointer;" onclick="window.location='{% url 'public_dashboard' %}'">
+            <div class="card border-0 shadow-sm overflow-hidden rounded-4" style="cursor:pointer;" onclick="window.location='{% url 'public_dashboard' %}'">
                 <div class="card-body p-0 position-relative">
                     <div id="reef-map" style="width:100%;height:400px;"></div>
                     <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:1000;background:var(--rt-white);border-radius:20px;padding:0.4rem 1.2rem;box-shadow:var(--rt-shadow-lg);font-size:0.8rem;font-weight:600;color:var(--rt-navy);pointer-events:none;">

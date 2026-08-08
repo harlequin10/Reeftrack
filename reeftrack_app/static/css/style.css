@@ -146,6 +146,59 @@ html { min-height: 100vh !important; }
 }
 .btn-warning:hover { background-color: #d99520 !important; border-color: #d99520 !important; }
 
+/* Professional button treatment */
+.btn {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border-radius: var(--rt-radius-sm);
+  box-shadow: 0 1px 2px rgba(6, 46, 63, 0.10);
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+              background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(6, 46, 63, 0.18);
+}
+.btn:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 1px 3px rgba(6, 46, 63, 0.15) !important;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--rt-teal-light);
+  outline-offset: 2px;
+}
+.btn-primary { background-image: linear-gradient(180deg, var(--rt-teal-light), var(--rt-teal)); }
+.btn-primary:hover {
+  background-image: linear-gradient(180deg, var(--rt-navy-light), var(--rt-navy));
+  box-shadow: 0 6px 16px rgba(14, 124, 134, 0.35);
+}
+.btn-success { background-image: linear-gradient(180deg, #20a06b, var(--rt-success-dark)); }
+.btn-success:hover {
+  background-image: linear-gradient(180deg, #1c9262, #15704a);
+  box-shadow: 0 6px 16px rgba(27, 138, 90, 0.35);
+}
+.btn-danger { background-image: linear-gradient(180deg, #ef7455, var(--rt-coral)); }
+.btn-danger:hover {
+  background-image: linear-gradient(180deg, var(--rt-coral), var(--rt-coral-dark));
+  box-shadow: 0 6px 16px rgba(232, 93, 58, 0.35);
+}
+.btn-warning { background-image: linear-gradient(180deg, #f2b75a, var(--rt-amber)); }
+.btn-warning:hover {
+  background-image: linear-gradient(180deg, var(--rt-amber), #d99520);
+  box-shadow: 0 6px 16px rgba(240, 168, 48, 0.35);
+}
+.btn-outline-secondary:not(.quick-action-btn) {
+  color: var(--rt-navy);
+  border-color: var(--rt-border);
+  background-color: var(--rt-white);
+}
+.btn-outline-secondary:not(.quick-action-btn):hover {
+  color: var(--rt-navy-light);
+  background-color: var(--rt-sand-light);
+  border-color: var(--rt-navy-light);
+  box-shadow: 0 6px 16px rgba(6, 46, 63, 0.12);
+}
+
 /* ---------- Badges ---------- */
 .badge.bg-info { background-color: var(--rt-teal-light) !important; }
 .badge.bg-success { background-color: var(--rt-success-dark) !important; }
@@ -300,19 +353,6 @@ form textarea:focus {
   transform: translateY(0);
 }
 
-/* Button pulse on hover */
-.btn-primary:hover,
-.btn-success:hover,
-.btn-danger:hover,
-.btn-warning:hover {
-  animation: rt-pulse 0.3s ease;
-}
-@keyframes rt-pulse {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
-
 /* Icon float animation for feature cards */
 .rt-icon-float {
   animation: rt-icon-bob 3s ease-in-out infinite;
@@ -414,7 +454,7 @@ form textarea:focus {
   box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 .rt-assess-stat .stat-icon {
-  font-size: 1.8rem;
+  font-size: 1.4rem;
   opacity: 0.2;
   position: absolute;
   right: 14px;
@@ -423,10 +463,10 @@ form textarea:focus {
 }
 .rt-assess-stat .card-body {
   position: relative;
-  padding: 1rem 1.15rem;
+  padding: 0.7rem 1rem;
 }
 .rt-assess-stat .stat-value {
-  font-size: 1.6rem;
+  font-size: 1.3rem;
   font-weight: 700;
   line-height: 1.1;
 }
@@ -685,7 +725,7 @@ button.rt-action-btn-delete:hover {
 
 @media (min-width: 576px) and (max-width: 991.98px) {
   .rt-assess-stat .stat-value {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
   }
 }
 

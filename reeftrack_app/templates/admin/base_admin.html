@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <style>
     body{visibility:hidden}
-    :root{--rt-navy:#062E3F;--rt-navy-light:#0A4A61;--rt-teal:#0E7C86;--rt-teal-light:#17A8B5;--rt-seafoam:#7DD4C0;--rt-sand:#F5EDE0;--rt-sand-light:#FAF7F2;--rt-coral:#E85D3A;--rt-ink:#1A2C30;--rt-ink-soft:#4D6269;--rt-white:#FEFFFE;--rt-border:#D6CFC2;--rt-shadow:0 2px 12px rgba(6,46,63,.1);--rt-shadow-lg:0 8px 28px rgba(6,46,63,.16);--rt-radius:10px;--rt-font-body:'Inter','Segoe UI',system-ui,sans-serif}
+    :root{--rt-navy:#062E3F;--rt-navy-light:#0A4A61;--rt-teal:#0E7C86;--rt-teal-light:#17A8B5;--rt-seafoam:#7DD4C0;--rt-sand:#F5EDE0;--rt-sand-light:#FAF7F2;--rt-coral:#E85D3A;--rt-coral-dark:#C94425;--rt-success-dark:#1B8A5A;--rt-ink:#1A2C30;--rt-ink-soft:#4D6269;--rt-white:#FEFFFE;--rt-border:#D6CFC2;--rt-shadow:0 2px 12px rgba(6,46,63,.1);--rt-shadow-lg:0 8px 28px rgba(6,46,63,.16);--rt-radius:10px;--rt-font-body:'Inter','Segoe UI',system-ui,sans-serif}
     body{background-color:var(--rt-sand);color:var(--rt-ink);font-family:var(--rt-font-body);line-height:1.6;margin:0;overflow-x:hidden}
     .rt-navbar{background:linear-gradient(90deg,var(--rt-navy) 0%,var(--rt-navy-light) 100%)!important;box-shadow:var(--rt-shadow);position:relative}
     .rt-navbar .nav-link{color:var(--rt-seafoam)!important}
@@ -46,7 +46,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     {% load static %}
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=5">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=6">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark rt-navbar">
@@ -308,6 +308,6 @@
         connectNotifWs();
     })();
     </script>
-    <script>window.addEventListener('load',function(){document.body.style.visibility='visible';});</script>
+    <script>window.addEventListener('load',function(){document.body.style.visibility='visible';});setTimeout(function(){if(document.body)document.body.style.visibility='visible';},1500);</script>
 </body>
 </html>

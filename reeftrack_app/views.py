@@ -264,7 +264,6 @@ def admin_dashboard(request):
     total_assessments = Assessment.objects.count()
     approved_assessments = Assessment.objects.filter(status='approved').count()
     rejected_assessments = Assessment.objects.filter(status='rejected').count()
-    draft_assessments = Assessment.objects.filter(status='draft').count()
     
     # Location & species stats
     total_provinces = Province.objects.count()
@@ -296,7 +295,6 @@ def admin_dashboard(request):
         'total_assessments': total_assessments,
         'approved_assessments': approved_assessments,
         'rejected_assessments': rejected_assessments,
-        'draft_assessments': draft_assessments,
         'total_provinces': total_provinces,
         'total_municipalities': total_municipalities,
         'total_barangays': total_barangays,
@@ -317,6 +315,8 @@ def admin_manage_users(request):
     Admin view to manage all users with dropdown actions
     Admins cannot see edit/delete options for other admins
     """
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
     users = User.objects.all().select_related('profile').order_by('-date_joined')
 
     # Get filter parameters
@@ -337,10 +337,24 @@ def admin_manage_users(request):
             Q(last_name__icontains=search_query)
         ).distinct()
 
+    filtered_count = users.count()
+
+    # Paginate (10 users per page)
+    paginator = Paginator(users, 10)
+    page = request.GET.get('page', 1)
+    try:
+        users_page = paginator.page(page)
+    except PageNotAnInteger:
+        users_page = paginator.page(1)
+    except EmptyPage:
+        users_page = paginator.page(paginator.num_pages)
+
     # Stat counts (unfiltered)
     all_users = User.objects.all().select_related('profile')
     context = {
-        'users': users,
+        'users': users_page,
+        'page_obj': users_page,
+        'filtered_count': filtered_count,
         'role_filter': role_filter,
         'status_filter': status_filter,
         'search_query': search_query,
@@ -499,7 +513,7 @@ def admin_edit_user(request, user_id):
     
     context = {
         'user': user,
-        'role_choices': UserProfile.ROLE_CHOICES,
+        'role_choices': UserProfile.ROLE_CHOICES if request.user.is_superuser else [c for c in UserProfile.ROLE_CHOICES if c[0] != 'admin'],
         'status_choices': UserProfile.STATUS_CHOICES,
         'is_superuser': request.user.is_superuser,
     }
@@ -514,7 +528,7 @@ def admin_create_user(request):
     Only superusers can create admin accounts
     """
     if request.method == 'POST':
-        form = AdminCreateUserForm(request.POST)
+        form = AdminCreateUserForm(request.POST, is_superuser=request.user.is_superuser)
         if form.is_valid():
             # Check if trying to create an admin without superuser privileges
             if form.cleaned_data['role'] == 'admin' and not request.user.is_superuser:
@@ -533,7 +547,7 @@ def admin_create_user(request):
                     error_list.append(f"{label}: {err}")
             messages.error(request, '\n'.join(error_list) if error_list else 'Please correct the errors below.')
     else:
-        form = AdminCreateUserForm()
+        form = AdminCreateUserForm(is_superuser=request.user.is_superuser)
     
     context = {
         'form': form,
@@ -1293,6 +1307,8 @@ def add_transect(request):
             deep_file = request.FILES.get('deep_excel')
             # Validate Excel files
             for f in [shallow_file, deep_file]:
+                if f is None:
+                    continue
                 if f.size > 5 * 1024 * 1024:
                     messages.error(request, f'Excel file "{f.name}" must be under 5 MB.')
                     return redirect('add_transect')
@@ -1922,7 +1938,6 @@ def my_assessments(request):
         'submitted': assessments.filter(status='submitted').count(),
         'approved': assessments.filter(status='approved').count(),
         'rejected': assessments.filter(status='rejected').count(),
-        'draft': assessments.filter(status='draft').count(),
     }
     return render(request, 'contributor/my_assessments.html', {
         'assessments': assessments,
@@ -2104,18 +2119,29 @@ def admin_assessments(request):
 
     total_count = assessments.count()
 
+    # Paginate (10 assessments per page)
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    paginator = Paginator(assessments, 10)
+    page = request.GET.get('page', 1)
+    try:
+        assessments_page = paginator.page(page)
+    except PageNotAnInteger:
+        assessments_page = paginator.page(1)
+    except EmptyPage:
+        assessments_page = paginator.page(paginator.num_pages)
+
     stats = {
         'total': Assessment.objects.count(),
         'submitted': Assessment.objects.filter(status='submitted').count(),
         'approved': Assessment.objects.filter(status='approved').count(),
         'rejected': Assessment.objects.filter(status='rejected').count(),
-        'draft': Assessment.objects.filter(status='draft').count(),
     }
 
     municipalities = Municipality.objects.order_by('name')
 
     context = {
-        'assessments': assessments,
+        'assessments': assessments_page,
+        'page_obj': assessments_page,
         'status_filter': status_filter,
         'search_query': search_query,
         'municipality_filter': municipality_filter,
@@ -2132,7 +2158,7 @@ def admin_assessments(request):
 @login_required
 @admin_required
 def admin_bulk_delete_assessments(request):
-    """Admin: Bulk delete selected assessments. Only rejected and draft can be deleted."""
+    """Admin: Bulk delete selected assessments. Only rejected can be deleted."""
     if request.method == 'POST':
         ids = request.POST.getlist('ids')
         if not ids:
@@ -3213,7 +3239,6 @@ def curator_assessments(request):
         'submitted': Assessment.objects.filter(status='submitted').count(),
         'approved': Assessment.objects.filter(status='approved').count(),
         'rejected': Assessment.objects.filter(status='rejected').count(),
-        'draft': Assessment.objects.filter(status='draft').count(),
     }
 
     context = {
@@ -3526,6 +3551,33 @@ def profile_view(request):
     View for users to see their own profile
     """
     return render(request, 'profile/view.html', {'user': request.user})
+
+@login_required
+def profile_upload_photo(request):
+    """
+    Upload a new profile photo directly (no other profile fields).
+    """
+    if request.method == 'POST':
+        picture = request.FILES.get('profile_picture')
+        if not picture:
+            messages.error(request, 'No photo selected.')
+            return redirect('profile_view')
+        if picture.size > 5 * 1024 * 1024:
+            messages.error(request, 'Photo must be under 5 MB.')
+            return redirect('profile_view')
+        if not picture.content_type.startswith('image/'):
+            messages.error(request, 'Please select an image file.')
+            return redirect('profile_view')
+        profile = request.user.profile
+        if profile.profile_picture:
+            try:
+                profile.profile_picture.delete(save=False)
+            except Exception:
+                pass
+        profile.profile_picture = picture
+        profile.save()
+        messages.success(request, 'Your profile photo has been updated!')
+    return redirect('profile_view')
 
 @login_required
 def profile_edit(request):
@@ -3956,7 +4008,6 @@ def assessments_sync(request):
         'submitted': Assessment.objects.filter(status='submitted').count(),
         'approved': Assessment.objects.filter(status='approved').count(),
         'rejected': Assessment.objects.filter(status='rejected').count(),
-        'draft': Assessment.objects.filter(status='draft').count(),
     }
 
     import hashlib

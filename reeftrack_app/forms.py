@@ -94,6 +94,13 @@ class AdminCreateUserForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
+    def __init__(self, *args, **kwargs):
+        is_superuser = kwargs.pop('is_superuser', False)
+        super().__init__(*args, **kwargs)
+        if not is_superuser:
+            choices = [c for c in UserProfile.ROLE_CHOICES if c[0] != 'admin']
+            self.fields['role'].choices = choices
+
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email', 'password']

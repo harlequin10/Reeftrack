@@ -139,6 +139,12 @@
     .um-modal .modal-body{padding:0 1.25rem 1.25rem;}
     .um-modal .modal-footer{padding:.85rem 1.25rem;border-top:1px solid #f1f5f9;}
 
+    .um-pagination{display:flex;align-items:center;justify-content:center;gap:.35rem;margin-top:1.1rem;flex-wrap:wrap;}
+    .um-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 .6rem;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:.85rem;font-weight:600;text-decoration:none;transition:all .15s;}
+    .um-page-btn:hover{background:#f1f5f9;color:#062E3F;text-decoration:none;}
+    .um-page-btn.active{background:linear-gradient(135deg,#0E7C86,#0A4A61);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(14,124,134,.3);}
+    .um-page-btn.disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
+
     @media(max-width:991px){
         .um-stats{grid-template-columns:repeat(3,1fr);}
     }
@@ -174,12 +180,12 @@
     </div>
 
     <!-- Stat Cards -->
-    {% with total=users|length %}
+    {% with total=filtered_count %}
     <div class="um-stats">
         <a class="um-stat {% if not role_filter and not status_filter %}active{% endif %}"
            href="{% url 'admin_manage_users' %}" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">
             <div class="um-stat-top">
-                <div class="um-stat-val">{{ users|length }}</div>
+                <div class="um-stat-val">{{ filtered_count }}</div>
                 <div class="um-stat-icon"><i class="fas fa-users"></i></div>
             </div>
             <div class="um-stat-lbl">Total Users</div>
@@ -314,6 +320,9 @@
     <!-- Info bar -->
     <div class="um-info-bar">
         <span>Showing <strong>{{ users|length }}</strong> user{{ users|length|pluralize }}</span>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <span style="font-size:.8rem;color:#94a3b8;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% endif %}
     </div>
 
     <!-- Table -->
@@ -449,6 +458,31 @@
         </table>
         </div>
     </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="um-pagination">
+        {% if page_obj.has_previous %}
+        <a class="um-page-btn" href="?{% if role_filter %}role={{ role_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ page_obj.previous_page_number }}"><i class="fas fa-chevron-left"></i></a>
+        {% else %}
+        <span class="um-page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="um-page-btn active">{{ num }}</span>
+            {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+            <a class="um-page-btn" href="?{% if role_filter %}role={{ role_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a class="um-page-btn" href="?{% if role_filter %}role={{ role_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ page_obj.next_page_number }}"><i class="fas fa-chevron-right"></i></a>
+        {% else %}
+        <span class="um-page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <!-- Modals -->

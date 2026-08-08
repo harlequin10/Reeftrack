@@ -67,10 +67,9 @@
                             <div class="text-danger small">{{ form.role.errors }}</div>
                         {% endif %}
                         <div class="form-text">
-                            <span class="badge bg-danger">Admin</span> - Full system access (Auto-approved)
-                            {% if not is_superuser %}
-                            <span class="text-warning">(Only superusers can create)</span>
-                            {% endif %}<br>
+                            {% if is_superuser %}
+                            <span class="badge bg-danger">Admin</span> - Full system access (Auto-approved)<br>
+                            {% endif %}
                             <span class="badge bg-warning text-dark">Curator</span> - Review and curate data (Auto-approved)<br>
                             <span class="badge bg-success">Contributor</span> - Submit and contribute data (Auto-approved)
                         </div>

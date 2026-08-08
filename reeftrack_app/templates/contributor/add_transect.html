@@ -273,10 +273,12 @@
 
                 <hr>
 
-                <div class="d-flex justify-content-between">
-                    <a href="{% url 'upload_assessment' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Assessment Info
-                    </a>
+                <div class="d-flex justify-content-between flex-wrap gap-2">
+                    <div>
+                        <a href="{% url 'upload_assessment' %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-arrow-left"></i> Back to Assessment Info
+                        </a>
+                    </div>
                     <form method="POST" class="d-inline">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="preview">

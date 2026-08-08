@@ -25,7 +25,7 @@
     .am-btn-danger:hover{background:#fef2f2;border-color:#fca5a5;}
     .am-btn-danger.active{background:#dc2626;color:#fff;border-color:#dc2626;box-shadow:0 2px 8px rgba(220,38,38,.25);}
 
-    .am-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem;margin-bottom:1.5rem;}
+    .am-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem;}
     .am-stat{border-radius:12px;padding:1rem 1.15rem;color:#fff;position:relative;overflow:hidden;cursor:pointer;transition:all .2s ease;border:1px solid transparent;}
     .am-stat:hover{transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,0,0,.18);}
     .am-stat.active{border-color:rgba(255,255,255,.5);box-shadow:0 0 0 2px rgba(255,255,255,.3),0 8px 25px rgba(0,0,0,.18);}
@@ -122,7 +122,7 @@
     .am-badge.approved{background:#dcfce7;color:#15803d;}
     .am-badge.submitted{background:#fef3c7;color:#b45309;}
     .am-badge.rejected{background:#fee2e2;color:#dc2626;}
-    .am-badge.draft{background:#f3f4f6;color:#6b7280;}
+    .am-badge.rejected{background:#fef2f2;color:#dc2626;}
 
     .am-acts{display:flex;gap:.3rem;}
     .am-act{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;font-size:.78rem;border:1px solid transparent;cursor:pointer;text-decoration:none;transition:all .15s;}
@@ -166,6 +166,12 @@
         .am-ctrl{padding:0 .6rem;font-size:.75rem;}
         .am-ctrl span{display:none;}
     }
+
+    .am-pagination{display:flex;align-items:center;justify-content:center;gap:.35rem;margin-top:1.1rem;flex-wrap:wrap;}
+    .am-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 .6rem;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:.85rem;font-weight:600;text-decoration:none;transition:all .15s;}
+    .am-page-btn:hover{background:#f1f5f9;color:#062E3F;text-decoration:none;}
+    .am-page-btn.active{background:linear-gradient(135deg,#0E7C86,#0A4A61);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(14,124,134,.3);}
+    .am-page-btn.disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
 </style>
 
 <div class="am-page">
@@ -207,10 +213,6 @@
             <div class="am-stat-top"><div class="am-stat-val">{{ stats.rejected }}</div><div class="am-stat-icon"><i class="fas fa-times-circle"></i></div></div>
             <div class="am-stat-lbl">Rejected</div>
         </a>
-        <a href="?status=draft&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if status_filter == 'draft' %}active{% endif %}" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);text-decoration:none;color:#fff;">
-            <div class="am-stat-top"><div class="am-stat-val">{{ stats.draft }}</div><div class="am-stat-icon"><i class="fas fa-pen-to-square"></i></div></div>
-            <div class="am-stat-lbl">Draft</div>
-        </a>
     </div>
 
     <form method="GET" id="filterForm">
@@ -242,9 +244,6 @@
                         </div>
                         <div class="am-drop-opt {% if status_filter == 'rejected' %}selected{% endif %}" data-field="status" data-val="rejected">
                             <span class="check">{% if status_filter == 'rejected' %}<i class="fas fa-check"></i>{% endif %}</span> Rejected
-                        </div>
-                        <div class="am-drop-opt {% if status_filter == 'draft' %}selected{% endif %}" data-field="status" data-val="draft">
-                            <span class="check">{% if status_filter == 'draft' %}<i class="fas fa-check"></i>{% endif %}</span> Draft
                         </div>
                     </div>
                 </div>
@@ -308,7 +307,7 @@
     {% endif %}
 
     <div class="am-info-bar">
-        <span>Showing <strong>{{ total_count }}</strong> assessment{{ total_count|pluralize }}</span>
+        <span>Showing <strong>{{ assessments|length }}</strong> assessment{{ assessments|length|pluralize }}</span>
     </div>
 
     <div class="am-table-card">
@@ -332,7 +331,7 @@
                 {% for a in assessments %}
                 <tr class="assess-row" data-id="{{ a.id }}" data-status="{{ a.status }}" onclick="window.location='{% url 'admin_assessment_detail' a.id %}'">
                     <td onclick="event.stopPropagation()">
-                        {% if a.status == 'rejected' or a.status == 'draft' %}
+                        {% if a.status == 'rejected' %}
                         <input type="checkbox" class="form-check-input assess-check" value="{{ a.id }}">
                         {% endif %}
                     </td>
@@ -401,6 +400,33 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="am-pagination">
+        {% with pl="status="|add:status_filter|add:"&search="|add:search_query|add:"&municipality="|add:municipality_filter|add:"&date_from="|add:date_from|add:"&date_to="|add:date_to|add:"&sort="|add:sort_by %}
+        {% if page_obj.has_previous %}
+        <a class="am-page-btn" href="?{{ pl }}&page={{ page_obj.previous_page_number }}"><i class="fas fa-chevron-left"></i></a>
+        {% else %}
+        <span class="am-page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="am-page-btn active">{{ num }}</span>
+            {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+            <a class="am-page-btn" href="?{{ pl }}&page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a class="am-page-btn" href="?{{ pl }}&page={{ page_obj.next_page_number }}"><i class="fas fa-chevron-right"></i></a>
+        {% else %}
+        <span class="am-page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+        {% endif %}
+        {% endwith %}
+    </div>
+    {% endif %}
 </div>
 
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1">

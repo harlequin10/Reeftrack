@@ -113,7 +113,6 @@ class Assessment(models.Model):
     )
 
     STATUS_CHOICES = (
-        ('draft', 'Draft'),
         ('submitted', 'Submitted'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
@@ -123,7 +122,7 @@ class Assessment(models.Model):
     barangay = models.ForeignKey(Barangay, on_delete=models.PROTECT, related_name='assessments')
     assessment_date = models.DateField()
     methodology = models.CharField(max_length=100, default='photo_quadrat')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True, null=True)
     overall_coral_cover = models.DecimalField(max_digits=7, decimal_places=4, blank=True, null=True, help_text="Final Mean coral cover %")
     thesis_pdf = models.FileField(upload_to='assessments/thesis/', blank=True, null=True)
@@ -482,3 +481,5 @@ class SecurityAuditLog(models.Model):
     def __str__(self):
         user_str = self.user.email if self.user else 'anonymous'
         return f'[{self.event}] {user_str} @ {self.created_at:%Y-%m-%d %H:%M}'
+
+
