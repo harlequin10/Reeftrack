@@ -235,26 +235,47 @@
     });
 
     saveBtn.addEventListener('click', function() {
-        if (!cropper || uploading) return;
+        if (!cropper) {
+            alert('Cropping tool not ready. Please close and try again.');
+            return;
+        }
+        if (uploading) return;
         uploading = true;
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
         var canvas = cropper.getCroppedCanvas({ width: 400, height: 400, imageSmoothingQuality: 'high' });
         canvas.toBlob(function(blob) {
+            if (!blob) {
+                uploading = false;
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-check"></i> Save Photo';
+                alert('Failed to process image. Please try again.');
+                return;
+            }
             var fd = new FormData();
             fd.append('profile_picture', new File([blob], 'profile_crop.png', { type: 'image/png' }));
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '{% url "profile_upload_photo" %}');
             xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+            xhr.responseType = 'json';
             xhr.onload = function() {
                 uploading = false;
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    modal.hide();
-                    location.reload();
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-check"></i> Save Photo';
+                var res = xhr.response;
+                if (xhr.status >= 200 && xhr.status < 300 && res && res.ok) {
+                    saveBtn.innerHTML = '<i class="fas fa-check-circle"></i> Done!';
+                    saveBtn.style.background = '#16a34a';
+                    saveBtn.style.borderColor = '#16a34a';
+                    setTimeout(function() { location.reload(); }, 1000);
                 } else {
-                    alert('Upload failed. Please try again.');
+                    alert((res && res.error) || 'Upload failed. Please try again.');
                 }
             };
             xhr.onerror = function() {
                 uploading = false;
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-check"></i> Save Photo';
                 alert('Upload failed. Please check your connection and try again.');
             };
             xhr.send(fd);

@@ -1,7 +1,49 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+
+# ==================== CUSTOM USER MODEL ====================
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('Email is required')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+        return self.create_user(email, password, **extra_fields)
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=150)
+    last_name = models.CharField(max_length=150)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['first_name', 'last_name']
+
+    objects = CustomUserManager()
+
+    class Meta:
+        db_table = 'auth_user'
+
+    def __str__(self):
+        return self.email
 
 
 # ==================== LOOKUP TABLES ====================
@@ -369,7 +411,7 @@ class UserProfile(models.Model):
         return ' '.join(parts) if parts else ''
     
     def __str__(self):
-        return f"{self.user.username} - {self.get_role_display()} ({self.get_status_display()})"
+        return f"{self.get_full_name() or self.user.email} - {self.get_role_display()} ({self.get_status_display()})"
     
     def save(self, *args, **kwargs):
         # Auto-approve admin and curator roles (they don't need approval)
@@ -424,7 +466,7 @@ class Notification(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.user.username}: {self.title}"
+        return f"{self.user.email}: {self.title}"
 
     def mark_read(self):
         self.is_read = True
@@ -463,7 +505,7 @@ class SecurityAuditLog(models.Model):
     ]
 
     user = models.ForeignKey(
-        'auth.User',
+        User,
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='audit_logs'

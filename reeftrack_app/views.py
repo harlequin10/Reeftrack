@@ -10,7 +10,7 @@ from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_protect
 from django_ratelimit.decorators import ratelimit
 from django.contrib import messages
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db.models import Count, Q
 from django.db import transaction
@@ -25,6 +25,8 @@ from .models import (
     Transect, Species, TransectSpecies, AssessmentImage, Contributor, CustomMethodology,
     BarangayTransect
 )
+
+User = get_user_model()
 
 
 def notify_assessment_refresh(action=''):
@@ -136,7 +138,7 @@ def register(request):
             log_security_event('account_created', request=request, user=user, details={'email': user.email})
             messages.success(
                 request, 
-                f'Registration successful! Welcome {user.username}! '
+                f'Registration successful! Welcome {user.email}! '
                 'Your account is pending approval. '
                 'You will be notified once an admin approves your account.'
             )
@@ -174,11 +176,7 @@ def login_view(request):
                 messages.error(request, 'Too many failed attempts. Please try again in 15 minutes.')
                 return render(request, 'public/login.html', {'form': form})
 
-            try:
-                user_obj = User.objects.get(email=email)
-                user = authenticate(username=user_obj.username, password=password)
-            except User.DoesNotExist:
-                user = None
+            user = authenticate(email=email, password=password)
 
             if user is not None:
                 if not user.is_active:
@@ -387,7 +385,6 @@ def admin_manage_users(request):
         users = users.filter(profile__status=status_filter)
     if search_query:
         users = users.filter(
-            Q(username__icontains=search_query) |
             Q(email__icontains=search_query) |
             Q(first_name__icontains=search_query) |
             Q(last_name__icontains=search_query)
@@ -453,9 +450,9 @@ def admin_user_action(request, user_id):
             user.is_active = True
             user.save()
             user.profile.save()
-            messages.success(request, f'✅ {user.username} has been approved!')
+            messages.success(request, f'✅ {user.email} has been approved!')
         else:
-            messages.warning(request, f'{user.username} is not a pending contributor.')
+            messages.warning(request, f'{user.email} is not a pending contributor.')
     
     elif action == 'reject':
         if user.profile.role == 'contributor' and user.profile.status == 'pending':
@@ -465,27 +462,27 @@ def admin_user_action(request, user_id):
             user.is_active = False
             user.save()
             user.profile.save()
-            messages.info(request, f'❌ {user.username} has been rejected.')
+            messages.info(request, f'❌ {user.email} has been rejected.')
         else:
-            messages.warning(request, f'{user.username} is not a pending contributor.')
+            messages.warning(request, f'{user.email} is not a pending contributor.')
     
     elif action == 'activate':
         user.is_active = True
         user.save()
-        messages.success(request, f'✅ {user.username} has been activated!')
+        messages.success(request, f'✅ {user.email} has been activated!')
     
     elif action == 'deactivate':
         user.is_active = False
         user.save()
-        messages.warning(request, f'⛔ {user.username} has been deactivated.')
+        messages.warning(request, f'⛔ {user.email} has been deactivated.')
     
     elif action == 'delete':
         if user.profile.role == 'admin' and not request.user.is_superuser:
             messages.error(request, 'You cannot delete other admin accounts!')
             return redirect('admin_manage_users')
-        username = user.username
+        user_email = user.email
         user.delete()
-        messages.success(request, f'✅ {username} has been deleted.')
+        messages.success(request, f'✅ {user_email} has been deleted.')
     
     else:
         messages.error(request, 'Invalid action selected.')
@@ -568,7 +565,7 @@ def admin_edit_user(request, user_id):
         return redirect('admin_manage_users')
     
     context = {
-        'user': user,
+        'edit_user': user,
         'role_choices': UserProfile.ROLE_CHOICES if request.user.is_superuser else [c for c in UserProfile.ROLE_CHOICES if c[0] != 'admin'],
         'status_choices': UserProfile.STATUS_CHOICES,
         'is_superuser': request.user.is_superuser,
@@ -655,8 +652,9 @@ def curator_manage_contributors(request):
         contributors = contributors.filter(profile__status=status_filter)
     if search_query:
         contributors = contributors.filter(
-            Q(username__icontains=search_query) |
-            Q(email__icontains=search_query)
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
         )
 
     context = {
@@ -698,9 +696,9 @@ def curator_contributor_action(request, user_id):
             user.is_active = True
             user.save()
             user.profile.save()
-            messages.success(request, f'✅ {user.username} has been approved!')
+            messages.success(request, f'✅ {user.email} has been approved!')
         else:
-            messages.warning(request, f'{user.username} is not pending approval.')
+            messages.warning(request, f'{user.email} is not pending approval.')
     
     elif action == 'reject':
         if user.profile.status == 'pending':
@@ -710,19 +708,19 @@ def curator_contributor_action(request, user_id):
             user.is_active = False
             user.save()
             user.profile.save()
-            messages.info(request, f'❌ {user.username} has been rejected.')
+            messages.info(request, f'❌ {user.email} has been rejected.')
         else:
-            messages.warning(request, f'{user.username} is not pending approval.')
+            messages.warning(request, f'{user.email} is not pending approval.')
     
     elif action == 'activate':
         user.is_active = True
         user.save()
-        messages.success(request, f'✅ {user.username} has been activated!')
+        messages.success(request, f'✅ {user.email} has been activated!')
     
     elif action == 'deactivate':
         user.is_active = False
         user.save()
-        messages.warning(request, f'⛔ {user.username} has been deactivated.')
+        messages.warning(request, f'⛔ {user.email} has been deactivated.')
     
     else:
         messages.error(request, 'Invalid action selected.')
@@ -777,7 +775,7 @@ def curator_edit_contributor(request, user_id):
         return redirect('curator_dashboard')
     
     context = {
-        'user': user,
+        'edit_user': user,
         'status_choices': UserProfile.STATUS_CHOICES,
     }
     
@@ -3287,7 +3285,7 @@ def curator_assessments(request):
         assessments = assessments.filter(
             Q(barangay__name__icontains=search_query) |
             Q(municipality__name__icontains=search_query) |
-            Q(uploaded_by__username__icontains=search_query)
+            Q(uploaded_by__email__icontains=search_query)
         )
 
     stats = {
@@ -3613,27 +3611,24 @@ def profile_upload_photo(request):
     """
     Upload a new profile photo directly (no other profile fields).
     """
-    if request.method == 'POST':
-        picture = request.FILES.get('profile_picture')
-        if not picture:
-            messages.error(request, 'No photo selected.')
-            return redirect('profile_view')
-        if picture.size > 5 * 1024 * 1024:
-            messages.error(request, 'Photo must be under 5 MB.')
-            return redirect('profile_view')
-        if not picture.content_type.startswith('image/'):
-            messages.error(request, 'Please select an image file.')
-            return redirect('profile_view')
-        profile = request.user.profile
-        if profile.profile_picture:
-            try:
-                profile.profile_picture.delete(save=False)
-            except Exception:
-                pass
-        profile.profile_picture = picture
-        profile.save()
-        messages.success(request, 'Your profile photo has been updated!')
-    return redirect('profile_view')
+    if request.method != 'POST':
+        return redirect('profile_view')
+    picture = request.FILES.get('profile_picture')
+    if not picture:
+        return JsonResponse({'ok': False, 'error': 'No photo selected.'}, status=400)
+    if picture.size > 5 * 1024 * 1024:
+        return JsonResponse({'ok': False, 'error': 'Photo must be under 5 MB.'}, status=400)
+    if not picture.content_type.startswith('image/'):
+        return JsonResponse({'ok': False, 'error': 'Please select an image file.'}, status=400)
+    profile = request.user.profile
+    if profile.profile_picture:
+        try:
+            profile.profile_picture.delete(save=False)
+        except Exception:
+            pass
+    profile.profile_picture = picture
+    profile.save()
+    return JsonResponse({'ok': True, 'url': profile.profile_picture.url if profile.profile_picture else ''})
 
 @login_required
 def profile_edit(request):
@@ -4041,7 +4036,7 @@ def assessments_sync(request):
         assessments = assessments.filter(
             Q(barangay__name__icontains=search_query) |
             Q(municipality__name__icontains=search_query) |
-            Q(uploaded_by__username__icontains=search_query)
+            Q(uploaded_by__email__icontains=search_query)
         )
 
     rows = []

@@ -1,7 +1,9 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
 from .models import UserProfile
+
+User = get_user_model()
 
 
 class RegisterForm(UserCreationForm):
@@ -39,6 +41,14 @@ class RegisterForm(UserCreationForm):
             raise forms.ValidationError('An account with this email already exists.')
         return email
 
+    def clean_first_name(self):
+        name = self.cleaned_data.get('first_name', '')
+        return name.strip().title() if name else name
+
+    def clean_last_name(self):
+        name = self.cleaned_data.get('last_name', '')
+        return name.strip().title() if name else name
+
     def clean_middle_initial(self):
         mi = self.cleaned_data.get('middle_initial', '')
         if mi:
@@ -50,14 +60,6 @@ class RegisterForm(UserCreationForm):
         user.email = self.cleaned_data['email']
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
-        # Auto-generate username from email prefix
-        base_username = self.cleaned_data['email'].split('@')[0]
-        username = base_username
-        counter = 1
-        while User.objects.filter(username=username).exists():
-            username = f"{base_username}{counter}"
-            counter += 1
-        user.username = username
 
         if commit:
             user.save()
@@ -97,6 +99,14 @@ class GoogleProfileForm(forms.Form):
     middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
     last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}))
     suffix = forms.ChoiceField(choices=SUFFIX_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
+
+    def clean_first_name(self):
+        name = self.cleaned_data.get('first_name', '')
+        return name.strip().title() if name else name
+
+    def clean_last_name(self):
+        name = self.cleaned_data.get('last_name', '')
+        return name.strip().title() if name else name
 
     def clean_middle_initial(self):
         mi = self.cleaned_data.get('middle_initial', '')
@@ -140,6 +150,14 @@ class AdminCreateUserForm(forms.ModelForm):
             mi = mi.strip()[0].upper()
         return mi
 
+    def clean_first_name(self):
+        name = self.cleaned_data.get('first_name', '')
+        return name.strip().title() if name else name
+
+    def clean_last_name(self):
+        name = self.cleaned_data.get('last_name', '')
+        return name.strip().title() if name else name
+
     def clean_password(self):
         password = self.cleaned_data.get('password')
         if password:
@@ -155,13 +173,6 @@ class AdminCreateUserForm(forms.ModelForm):
         user.email = self.cleaned_data['email']
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
-        base_username = self.cleaned_data['email'].split('@')[0]
-        username = base_username
-        counter = 1
-        while User.objects.filter(username=username).exists():
-            username = f"{base_username}{counter}"
-            counter += 1
-        user.username = username
         user.set_password(self.cleaned_data['password'])
 
         if commit:
@@ -202,6 +213,14 @@ class UserProfileForm(forms.ModelForm):
         if User.objects.filter(email=email).exclude(id=self.instance.id).exists():
             raise forms.ValidationError('Email already exists')
         return email
+
+    def clean_first_name(self):
+        name = self.cleaned_data.get('first_name', '')
+        return name.strip().title() if name else name
+
+    def clean_last_name(self):
+        name = self.cleaned_data.get('last_name', '')
+        return name.strip().title() if name else name
 
     def clean_middle_initial(self):
         mi = self.cleaned_data.get('middle_initial', '')

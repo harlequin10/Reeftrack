@@ -28,7 +28,8 @@ class GoogleSocialAccountAdapter(DefaultSocialAccountAdapter):
         email = (sociallogin.account.extra_data or {}).get('email')
         if not email or sociallogin.is_existing:
             return
-        from django.contrib.auth.models import User
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
 
         existing = User.objects.filter(email__iexact=email).first()
         if existing is None:

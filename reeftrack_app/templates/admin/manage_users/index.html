@@ -498,7 +498,7 @@
                 <form method="POST" action="{% url 'admin_user_action' u.id %}">
                     {% csrf_token %}
                     <div class="modal-body">
-                        <p style="color:#475569;">Are you sure you want to reject <strong>{{ u.profile.get_full_name|default:u.username }}</strong>?</p>
+                        <p style="color:#475569;">Are you sure you want to reject <strong>{{ u.profile.get_full_name|default:u.email }}</strong>?</p>
                         <input type="hidden" name="action" value="reject">
                         <div>
                             <label class="form-label fw-bold" style="font-size:.82rem;">Rejection Reason</label>
@@ -530,7 +530,7 @@
                         <div class="alert alert-danger d-flex align-items-start gap-2 mb-0" style="border-radius:10px;">
                             <i class="fas fa-exclamation-circle mt-1"></i>
                             <div>
-                                <p class="mb-1">Are you sure you want to delete <strong>{{ u.profile.get_full_name|default:u.username }}</strong>?</p>
+                                <p class="mb-1">Are you sure you want to delete <strong>{{ u.profile.get_full_name|default:u.email }}</strong>?</p>
                                 <p class="mb-0" style="font-size:.82rem;color:#94a3b8;">This action cannot be undone.</p>
                             </div>
                         </div>

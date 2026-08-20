@@ -79,12 +79,6 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" value="{{ user.username }}" disabled>
-                        <div class="form-text">Username is auto-generated and cannot be changed.</div>
-                    </div>
-                    
-                    <div class="mb-3">
                         <label for="id_bio" class="form-label">Bio</label>
                         {{ form.bio }}
                         {% if form.bio.errors %}
@@ -159,6 +153,16 @@
 
     document.getElementById('id_middle_initial').addEventListener('input', function() {
         this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
+    });
+
+    ['id_first_name', 'id_last_name'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', function() {
+            var pos = this.selectionStart;
+            this.value = this.value.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+            this.setSelectionRange(pos, pos);
+        });
     });
 
     if (changeBtn) {

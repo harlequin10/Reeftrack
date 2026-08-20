@@ -149,6 +149,9 @@ else:
         },
     }
 
+# Custom User Model
+AUTH_USER_MODEL = 'reeftrack_app.User'
+
 # Database
 DATABASES = {
     'default': {

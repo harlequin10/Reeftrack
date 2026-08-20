@@ -67,5 +67,14 @@
 document.getElementById('id_middle_initial').addEventListener('input', function() {
     this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
 });
+['id_first_name', 'id_last_name'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function() {
+        var pos = this.selectionStart;
+        this.value = this.value.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+        this.setSelectionRange(pos, pos);
+    });
+});
 </script>
 {% endblock %}

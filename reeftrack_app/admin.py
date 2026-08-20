@@ -5,7 +5,7 @@ from .models import UserProfile, SecurityAuditLog
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'role', 'created_at', 'updated_at']
     list_filter = ['role', 'created_at']
-    search_fields = ['user__username', 'user__email', 'bio']
+    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'bio']
     readonly_fields = ['created_at', 'updated_at']
     list_per_page = 25
 

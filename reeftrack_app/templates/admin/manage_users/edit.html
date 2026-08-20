@@ -26,12 +26,12 @@
             <div class="card-body">
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i> 
-                    <strong>Editing:</strong> {{ user.profile.get_full_name|default:user.email }}
+                    <strong>Editing:</strong> {{ edit_user.profile.get_full_name|default:edit_user.email }}
                     <span class="badge 
-                        {% if user.profile.role == 'admin' %}bg-danger
-                        {% elif user.profile.role == 'curator' %}bg-warning text-dark
+                        {% if edit_user.profile.role == 'admin' %}bg-danger
+                        {% elif edit_user.profile.role == 'curator' %}bg-warning text-dark
                         {% else %}bg-success{% endif %} ms-2">
-                        {{ user.profile.get_role_display }}
+                        {{ edit_user.profile.get_role_display }}
                     </span>
                 </div>
                 
@@ -42,35 +42,30 @@
                         <div class="col-md-4">
                             <label for="first_name" class="form-label">First Name</label>
                             <input type="text" name="first_name" id="first_name" 
-                                   class="form-control" value="{{ user.first_name }}">
+                                   class="form-control" value="{{ edit_user.first_name }}">
                         </div>
                         <div class="col-md-2">
                             <label for="middle_initial" class="form-label">M.I.</label>
                                     <input type="text" name="middle_initial" id="middle_initial" 
-                                           class="form-control" value="{{ user.profile.middle_initial }}" maxlength="1" style="text-transform: uppercase;">
+                                           class="form-control" value="{{ edit_user.profile.middle_initial }}" maxlength="1" style="text-transform: uppercase;">
                         </div>
                         <div class="col-md-4">
                             <label for="last_name" class="form-label">Last Name</label>
                             <input type="text" name="last_name" id="last_name" 
-                                   class="form-control" value="{{ user.last_name }}">
+                                   class="form-control" value="{{ edit_user.last_name }}">
                         </div>
                         <div class="col-md-2">
                             <label for="suffix" class="form-label">Suffix</label>
                             <input type="text" name="suffix" id="suffix" 
-                                   class="form-control" value="{{ user.profile.suffix }}">
+                                   class="form-control" value="{{ edit_user.profile.suffix }}">
                         </div>
                     </div>
 
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
                             <input type="email" name="email" id="email" 
-                                   class="form-control" value="{{ user.email }}" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Username (auto-generated)</label>
-                            <input type="text" class="form-control" value="{{ user.username }}" disabled>
-                            <div class="form-text">Username is generated from email and cannot be changed.</div>
+                                   class="form-control" value="{{ edit_user.email }}" required>
                         </div>
                     </div>
                     
@@ -81,7 +76,7 @@
                                 <select name="role" id="role" class="form-select">
                                     {% for role_value, role_label in role_choices %}
                                         <option value="{{ role_value }}" 
-                                            {% if user.profile.role == role_value %}selected{% endif %}>
+                                            {% if edit_user.profile.role == role_value %}selected{% endif %}>
                                             {{ role_label }}
                                         </option>
                                     {% endfor %}
@@ -100,9 +95,9 @@
                             <div class="mb-3">
                                 <label for="status" class="form-label">Status</label>
                                 <select name="status" id="status" class="form-select">
-                                    <option value="approved" {% if user.profile.status == 'approved' %}selected{% endif %}>Approved</option>
-                                    <option value="pending" {% if user.profile.status == 'pending' %}selected{% endif %}>Pending</option>
-                                    <option value="rejected" {% if user.profile.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                                    <option value="approved" {% if edit_user.profile.status == 'approved' %}selected{% endif %}>Approved</option>
+                                    <option value="pending" {% if edit_user.profile.status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="rejected" {% if edit_user.profile.status == 'rejected' %}selected{% endif %}>Rejected</option>
                                 </select>
                                 <div class="form-text text-muted">
                                     <i class="fas fa-info-circle"></i> 
@@ -118,20 +113,20 @@
                                 <div class="col-md-6">
                                     <strong>Current Role:</strong>
                                     <span class="badge 
-                                        {% if user.profile.role == 'admin' %}bg-danger
-                                        {% elif user.profile.role == 'curator' %}bg-warning text-dark
+                                        {% if edit_user.profile.role == 'admin' %}bg-danger
+                                        {% elif edit_user.profile.role == 'curator' %}bg-warning text-dark
                                         {% else %}bg-success{% endif %}">
-                                        {{ user.profile.get_role_display }}
+                                        {{ edit_user.profile.get_role_display }}
                                     </span>
                                 </div>
                                 <div class="col-md-6">
                                     <strong>Current Status:</strong>
-                                    {% if user.profile.role == 'contributor' %}
+                                    {% if edit_user.profile.role == 'contributor' %}
                                         <span class="badge 
-                                            {% if user.profile.status == 'approved' %}bg-success
-                                            {% elif user.profile.status == 'pending' %}bg-warning text-dark
+                                            {% if edit_user.profile.status == 'approved' %}bg-success
+                                            {% elif edit_user.profile.status == 'pending' %}bg-warning text-dark
                                             {% else %}bg-danger{% endif %}">
-                                            {{ user.profile.get_status_display }}
+                                            {{ edit_user.profile.get_status_display }}
                                         </span>
                                     {% else %}
                                         <span class="badge bg-secondary">N/A (Auto-approved)</span>
@@ -141,28 +136,28 @@
                             <div class="row mt-2">
                                 <div class="col-md-6">
                                     <strong>Active:</strong>
-                                    {% if user.is_active %}
+                                    {% if edit_user.is_active %}
                                         <span class="badge bg-success">Yes</span>
                                     {% else %}
                                         <span class="badge bg-danger">No</span>
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6">
-                                    <strong>Joined:</strong> {{ user.date_joined|date:"M d, Y H:i" }}
+                                    <strong>Joined:</strong> {{ edit_user.date_joined|date:"M d, Y H:i" }}
                                 </div>
                             </div>
-                            {% if user.profile.rejection_reason %}
+                            {% if edit_user.profile.rejection_reason %}
                             <div class="row mt-2">
                                 <div class="col-12">
-                                    <strong>Rejection Reason:</strong> {{ user.profile.rejection_reason }}
+                                    <strong>Rejection Reason:</strong> {{ edit_user.profile.rejection_reason }}
                                 </div>
                             </div>
                             {% endif %}
-                            {% if user.profile.approved_by %}
+                            {% if edit_user.profile.approved_by %}
                             <div class="row mt-2">
                                 <div class="col-12">
-                                    <strong>Approved By:</strong> {{ user.profile.approved_by.username }}
-                                    <span class="text-muted ms-2">on {{ user.profile.approved_at|date:"M d, Y H:i" }}</span>
+                                    <strong>Approved By:</strong> {{ edit_user.profile.approved_by.email }}
+                                    <span class="text-muted ms-2">on {{ edit_user.profile.approved_at|date:"M d, Y H:i" }}</span>
                                 </div>
                             </div>
                             {% endif %}
