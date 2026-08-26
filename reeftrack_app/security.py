@@ -17,7 +17,6 @@ class ContentSecurityPolicyMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
 
-        # Only set CSP on HTML responses (not static files, APIs, etc.)
         content_type = response.get('Content-Type', '')
         if 'text/html' in content_type:
             response['Content-Security-Policy'] = (
@@ -31,6 +30,9 @@ class ContentSecurityPolicyMiddleware:
                 "base-uri 'self'; "
                 "form-action 'self'"
             )
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
         return response
 
 

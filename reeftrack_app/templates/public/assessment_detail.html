@@ -1,6 +1,6 @@
 {% extends 'public/base.html' %}
 
-{% block title %}Assessment #{{ assessment.id }} - ReefTrack{% endblock %}
+{% block title %}Assessment - ReefTrack{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -9,7 +9,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="mb-0">
-                    <i class="fas fa-clipboard-list"></i> Assessment #{{ assessment.id }}
+                    <i class="fas fa-clipboard-list"></i> Assessment
                     <span class="badge bg-success ms-2">Approved</span>
                 </h4>
             </div>
@@ -94,6 +94,7 @@
                 <h6 class="mb-0"><i class="fas fa-file-pdf"></i> Thesis / Reference PDF</h6>
             </div>
             <div class="card-body">
+                {% if user.is_authenticated %}
                 <a href="{{ assessment.thesis_pdf.url }}" target="_blank" class="pdf-link">
                     <i class="fas fa-file-pdf fa-lg"></i>
                     <div>
@@ -101,9 +102,18 @@
                         <small style="opacity:0.8;">Click to open in new tab</small>
                     </div>
                 </a>
-                <div class="mt-3">
-                    <iframe src="{{ assessment.thesis_pdf.url }}" style="width:100%; height:500px; border:1px solid #dee2e6; border-radius:8px;" frameborder="0"></iframe>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-lock fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-2">You must be logged in to view the thesis document.</p>
+                    <a href="{% url 'login' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-sign-in-alt"></i> Log In
+                    </a>
+                    <a href="{% url 'register' %}" class="btn btn-outline-primary btn-sm ms-2">
+                        <i class="fas fa-user-plus"></i> Register
+                    </a>
                 </div>
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -146,7 +156,7 @@
         {% endif %}
 
         <!-- Transects -->
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
         <div class="card mb-4 border-primary">
             <div class="card-header bg-primary text-white">
                 <h6 class="mb-0"><i class="fas fa-map-marked-alt"></i> Transect Locations</h6>
@@ -171,7 +181,8 @@
                         <small>
                             {% if t.shallow_start_lat or t.shallow_end_lat %}
                                 Start: {{ t.shallow_start_lat|default:"-" }}, {{ t.shallow_start_lng|default:"-" }}<br>
-                                End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}
+                                End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}<br>
+                                {% if t.shallow_length %}<strong>{{ t.shallow_length }} m</strong>{% endif %}
                             {% else %}
                                 <span class="text-muted">No coordinates</span>
                             {% endif %}
@@ -182,7 +193,8 @@
                         <small>
                             {% if t.deep_start_lat or t.deep_end_lat %}
                                 Start: {{ t.deep_start_lat|default:"-" }}, {{ t.deep_start_lng|default:"-" }}<br>
-                                End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}
+                                End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}<br>
+                                {% if t.deep_length %}<strong>{{ t.deep_length }} m</strong>{% endif %}
                             {% else %}
                                 <span class="text-muted">No coordinates</span>
                             {% endif %}
@@ -281,7 +293,7 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var transectData = [
@@ -295,7 +307,9 @@ document.addEventListener('DOMContentLoaded', function() {
             dSLat: {{ t.deep_start_lat|default:"null" }},
             dSLng: {{ t.deep_start_lng|default:"null" }},
             dELat: {{ t.deep_end_lat|default:"null" }},
-            dELng: {{ t.deep_end_lng|default:"null" }}
+            dELng: {{ t.deep_end_lng|default:"null" }},
+            sLen: {{ t.shallow_length|default:"null" }},
+            dLen: {{ t.deep_length|default:"null" }}
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
@@ -319,13 +333,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var bounds = [];
     transectData.forEach(function(t) {
         if (t.sLat && t.sLng && t.eLat && t.eLng) {
-            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Shallow');
+            var sLabel = 'Transect ' + t.num + ' — Shallow' + (t.sLen ? ' (' + t.sLen + ' m)' : '');
+            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup(sLabel);
             L.marker([t.sLat, t.sLng], {icon: makeIcon('#0dcaf0', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow Start');
             L.marker([t.eLat, t.eLng], {icon: makeIcon('#0dcaf0', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow End');
             bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
         }
         if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
-            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Deep');
+            var dLabel = 'Transect ' + t.num + ' — Deep' + (t.dLen ? ' (' + t.dLen + ' m)' : '');
+            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup(dLabel);
             L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#0d6efd', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep Start');
             L.marker([t.dELat, t.dELng], {icon: makeIcon('#0d6efd', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep End');
             bounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);

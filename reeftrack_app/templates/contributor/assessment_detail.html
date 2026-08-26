@@ -164,7 +164,7 @@
         {% endif %}
 
         <!-- Transects -->
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
         <div class="card mb-4 border-primary">
             <div class="card-header bg-primary text-white">
                 <h6 class="mb-0"><i class="fas fa-map-marked-alt"></i> Transect Locations</h6>
@@ -320,7 +320,7 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var transectData = [
@@ -334,7 +334,9 @@ document.addEventListener('DOMContentLoaded', function() {
             dSLat: {{ t.deep_start_lat|default:"null" }},
             dSLng: {{ t.deep_start_lng|default:"null" }},
             dELat: {{ t.deep_end_lat|default:"null" }},
-            dELng: {{ t.deep_end_lng|default:"null" }}
+            dELng: {{ t.deep_end_lng|default:"null" }},
+            sLen: {{ t.shallow_length|default:"null" }},
+            dLen: {{ t.deep_length|default:"null" }}
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
@@ -358,13 +360,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var bounds = [];
     transectData.forEach(function(t) {
         if (t.sLat && t.sLng && t.eLat && t.eLng) {
-            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Shallow');
+            var sLabel = 'Transect ' + t.num + ' — Shallow' + (t.sLen ? ' (' + t.sLen + ' m)' : '');
+            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup(sLabel);
             L.marker([t.sLat, t.sLng], {icon: makeIcon('#0dcaf0', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow Start');
             L.marker([t.eLat, t.eLng], {icon: makeIcon('#0dcaf0', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow End');
             bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
         }
         if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
-            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Deep');
+            var dLabel = 'Transect ' + t.num + ' — Deep' + (t.dLen ? ' (' + t.dLen + ' m)' : '');
+            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup(dLabel);
             L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#0d6efd', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep Start');
             L.marker([t.dELat, t.dELng], {icon: makeIcon('#0d6efd', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep End');
             bounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);

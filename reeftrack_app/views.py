@@ -12,7 +12,7 @@ from django_ratelimit.decorators import ratelimit
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Prefetch, Case, When, Value
 from django.db import transaction
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -91,7 +91,12 @@ def public_assessment_detail(request, assessment_id):
         id=assessment_id,
         status='approved',
     )
-    transects = assessment.transects.prefetch_related('species_data__species').all()
+    transects = assessment.transects.prefetch_related(
+        Prefetch('species_data', queryset=TransectSpecies.objects.select_related('species').order_by(
+            Case(When(depth='shallow', then=0), When(depth='deep', then=1)),
+            'species__major_category', 'species__sub_category'
+        ))
+    ).all()
 
     parsed_species = []
     has_species_records = TransectSpecies.objects.filter(transect__assessment=assessment).exists()
@@ -123,7 +128,6 @@ def about(request):
     """Public about page"""
     return render(request, 'public/about.html', {'active_page': 'about'})
 
-@ratelimit(key='ip', rate='5/h', method='POST', block=True)
 def register(request):
     """Registration page - Only allows contributor role"""
     if request.user.is_authenticated:
@@ -155,7 +159,6 @@ def register(request):
     
     return render(request, 'public/register.html', {'form': form})
 
-@ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def login_view(request):
     """Public login page - email + password"""
     if request.user.is_authenticated:
@@ -1156,6 +1159,111 @@ def check_duplicate_species(species_list, depth, pending_transects, barangay_id=
             )
 
     return warnings
+
+
+def get_review_warnings(all_species, assessment):
+    """
+    Generate all review warnings for admin/curator confirm_approval pages.
+    Returns (duplicate_warnings, within_warnings, new_species, unique_new).
+    """
+    from collections import defaultdict
+
+    # Build per-depth species sets
+    depth_species = defaultdict(set)
+    for sp in all_species:
+        key = (sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2))
+        depth_species[sp['depth'].lower()].add(key)
+        sp['is_new'] = not Species.objects.filter(
+            sub_category__iexact=sp['sub_category'],
+            major_category__iexact=sp['major_category'],
+        ).exists()
+
+    # 1. Within-assessment duplicates (shallow vs deep same transect)
+    within_warnings = []
+    for sp in all_species:
+        sp['_key'] = (sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2))
+    by_transect = defaultdict(list)
+    for sp in all_species:
+        by_transect[sp['transect']].append(sp)
+    for tnum, t_species in by_transect.items():
+        shallow = {s['_key'] for s in t_species if s['depth'].lower() == 'shallow'}
+        deep = {s['_key'] for s in t_species if s['depth'].lower() == 'deep'}
+        if shallow and deep:
+            overlap = shallow & deep
+            if len(overlap) == len(shallow) and len(overlap) == len(deep) and len(overlap) > 0:
+                within_warnings.append({
+                    'message': f'Transect {tnum}: Shallow and Deep files have the exact same {len(overlap)} species with identical cover values.',
+                    'severity': 'exact',
+                    'overlap_count': len(overlap),
+                    'total': len(overlap),
+                })
+            elif len(overlap) > 0:
+                within_warnings.append({
+                    'message': f'Transect {tnum}: {len(overlap)} of {max(len(shallow), len(deep))} species are identical between Shallow and Deep.',
+                    'severity': 'high',
+                    'overlap_count': len(overlap),
+                    'total': max(len(shallow), len(deep)),
+                })
+
+    # 2. Duplicate against approved assessments (same barangay)
+    current_set = {(sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)) for sp in all_species}
+    duplicate_warnings = []
+    if current_set:
+        same_barangay = Assessment.objects.filter(
+            barangay=assessment.barangay, status='approved'
+        ).exclude(id=assessment.id).order_by('-assessment_date')[:10]
+        other_barangay = Assessment.objects.filter(
+            status='approved'
+        ).exclude(barangay=assessment.barangay).order_by('-assessment_date')[:10]
+
+        for other in list(same_barangay) + list(other_barangay):
+            other_species = TransectSpecies.objects.filter(
+                transect__assessment=other
+            ).select_related('species')
+            other_set = {(ts.species.sub_category.lower(), ts.species.major_category.lower(), round(float(ts.cover), 2)) for ts in other_species}
+            if not other_set:
+                continue
+            overlap = current_set & other_set
+            total = max(len(current_set), len(other_set))
+            if total == 0:
+                continue
+            match_pct = (len(overlap) / total) * 100
+            if match_pct < 50:
+                continue
+            is_same = other.barangay_id == assessment.barangay_id
+            if match_pct == 100 and len(current_set) == len(other_set):
+                severity = 'exact'
+            elif match_pct > 75:
+                severity = 'high'
+            else:
+                severity = 'moderate'
+            duplicate_warnings.append({
+                'assessment': other,
+                'match_count': len(overlap),
+                'total': total,
+                'match_pct': round(match_pct, 1),
+                'is_exact': severity == 'exact',
+                'severity': severity,
+                'location_type': 'same_barangay' if is_same else 'other_barangay',
+                'overlap_species': list(overlap)[:5],
+            })
+
+    # Sort: exact first, then high, then moderate; same_barangay before other
+    severity_order = {'exact': 0, 'high': 1, 'moderate': 2}
+    type_order = {'same_barangay': 0, 'other_barangay': 1}
+    duplicate_warnings.sort(key=lambda w: (severity_order.get(w['severity'], 3), type_order.get(w['location_type'], 2)))
+
+    # 3. New species
+    seen = set()
+    unique_new = []
+    for sp in all_species:
+        if sp['is_new']:
+            key = (sp['sub_category'].lower(), sp['major_category'].lower())
+            if key not in seen:
+                seen.add(key)
+                unique_new.append(sp)
+
+    return duplicate_warnings, within_warnings, unique_new
 
 
 def validate_species_list(species_items):
@@ -2248,7 +2356,12 @@ def admin_assessment_detail(request, assessment_id):
         ).prefetch_related('transects__species_data__species', 'images'),
         id=assessment_id,
     )
-    transects = assessment.transects.prefetch_related('species_data__species').all()
+    transects = assessment.transects.prefetch_related(
+        Prefetch('species_data', queryset=TransectSpecies.objects.select_related('species').order_by(
+            Case(When(depth='shallow', then=0), When(depth='deep', then=1)),
+            'species__major_category', 'species__sub_category'
+        ))
+    ).all()
 
     # Parse Excel files on-the-fly if no species records yet
     parsed_species = []
@@ -2359,64 +2472,16 @@ def admin_confirm_approval(request, assessment_id):
                 sp['depth'] = 'Deep'
                 all_species.append(sp)
 
-    # Check for duplicates against approved assessments
-    current_set = {(sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)) for sp in all_species}
-    duplicate_warnings = []
-    if current_set:
-        approved = Assessment.objects.filter(
-            barangay=assessment.barangay, status='approved'
-        ).exclude(id=assessment.id).order_by('-assessment_date')[:10]
-        for other in approved:
-            other_species = TransectSpecies.objects.filter(
-                transect__assessment=other
-            ).select_related('species')
-            other_set = {(ts.species.sub_category.lower(), ts.species.major_category.lower(), round(float(ts.cover), 2)) for ts in other_species}
-            if not other_set:
-                continue
-            overlap = current_set & other_set
-            total = max(len(current_set), len(other_set))
-            if total == 0:
-                continue
-            match_pct = (len(overlap) / total) * 100
-            if match_pct >= 50:
-                duplicate_warnings.append({
-                    'assessment': other,
-                    'match_count': len(overlap),
-                    'total': total,
-                    'match_pct': round(match_pct, 1),
-                    'is_exact': match_pct == 100 and len(current_set) == len(other_set),
-                    'overlap_species': list(overlap)[:5],
-                })
+    duplicate_warnings, within_warnings, unique_new = get_review_warnings(all_species, assessment)
 
-    # Check for new species not in the Species table
-    new_species = []
-    new_keys = set()
-    for sp in all_species:
-        exists = Species.objects.filter(
-            sub_category__iexact=sp['sub_category'],
-            major_category__iexact=sp['major_category'],
-        ).exists()
-        sp['is_new'] = not exists
-        if not exists:
-            new_species.append(sp)
-            new_keys.add((sp['sub_category'].lower(), sp['major_category'].lower()))
-
-    # Unique new species
-    seen = set()
-    unique_new = []
-    for ns in new_species:
-        key = (ns['sub_category'].lower(), ns['major_category'].lower())
-        if key not in seen:
-            seen.add(key)
-            unique_new.append(ns)
-
-    has_warnings = bool(duplicate_warnings or unique_new)
+    has_warnings = bool(duplicate_warnings or within_warnings or unique_new)
 
     return render(request, 'admin/assessments/confirm_approval.html', {
         'assessment': assessment,
         'transects': transects,
         'all_species': all_species,
         'duplicate_warnings': duplicate_warnings,
+        'within_warnings': within_warnings,
         'new_species': unique_new,
         'has_warnings': has_warnings,
     })
@@ -3423,59 +3488,16 @@ def curator_confirm_approval(request, assessment_id):
                 sp['depth'] = 'Deep'
                 all_species.append(sp)
 
-    current_set = {(sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)) for sp in all_species}
-    duplicate_warnings = []
-    if current_set:
-        approved = Assessment.objects.filter(
-            barangay=assessment.barangay, status='approved'
-        ).exclude(id=assessment.id).order_by('-assessment_date')[:10]
-        for other in approved:
-            other_species = TransectSpecies.objects.filter(
-                transect__assessment=other
-            ).select_related('species')
-            other_set = {(ts.species.sub_category.lower(), ts.species.major_category.lower(), round(float(ts.cover), 2)) for ts in other_species}
-            if not other_set:
-                continue
-            overlap = current_set & other_set
-            total = max(len(current_set), len(other_set))
-            if total == 0:
-                continue
-            match_pct = (len(overlap) / total) * 100
-            if match_pct >= 50:
-                duplicate_warnings.append({
-                    'assessment': other,
-                    'match_count': len(overlap),
-                    'total': total,
-                    'match_pct': round(match_pct, 1),
-                    'is_exact': match_pct == 100 and len(current_set) == len(other_set),
-                    'overlap_species': list(overlap)[:5],
-                })
+    duplicate_warnings, within_warnings, unique_new = get_review_warnings(all_species, assessment)
 
-    new_species = []
-    for sp in all_species:
-        exists = Species.objects.filter(
-            sub_category__iexact=sp['sub_category'],
-            major_category__iexact=sp['major_category'],
-        ).exists()
-        sp['is_new'] = not exists
-        if not exists:
-            new_species.append(sp)
-
-    seen = set()
-    unique_new = []
-    for ns in new_species:
-        key = (ns['sub_category'].lower(), ns['major_category'].lower())
-        if key not in seen:
-            seen.add(key)
-            unique_new.append(ns)
-
-    has_warnings = bool(duplicate_warnings or unique_new)
+    has_warnings = bool(duplicate_warnings or within_warnings or unique_new)
 
     return render(request, 'curator/confirm_approval.html', {
         'assessment': assessment,
         'transects': transects,
         'all_species': all_species,
         'duplicate_warnings': duplicate_warnings,
+        'within_warnings': within_warnings,
         'new_species': unique_new,
         'has_warnings': has_warnings,
     })
@@ -3780,6 +3802,8 @@ def public_dashboard_data(request):
                 'sc': len(sp),
                 'sh': _health_for_species(shallow_sp),
                 'dh': _health_for_species(deep_sp),
+                'sl': t.shallow_length,
+                'dl': t.deep_length,
             })
 
         cover = float(a.overall_coral_cover) if a.overall_coral_cover is not None else None

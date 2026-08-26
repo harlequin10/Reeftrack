@@ -1,76 +1,76 @@
 {% extends 'admin/base_admin.html' %}
 {% load static %}
-{% block title %}Confirm Approval - Assessment #{{ assessment.id }} - ReefTrack{% endblock %}
+{% block title %}Confirm Approval - Assessment - ReefTrack{% endblock %}
 
 {% block content %}
 <style>
-    .ad-header {
+    .dam-header {
         display: flex; align-items: center; justify-content: space-between;
         padding: 1.25rem 1.5rem; border-radius: 10px;
         background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
         border-left: 4px solid var(--rt-primary); margin-bottom: 1.5rem;
     }
-    .ad-header-left { display: flex; align-items: center; gap: 0.75rem; }
-    .ad-header .icon {
+    .dam-header-left { display: flex; align-items: center; gap: 0.75rem; }
+    .dam-header .icon {
         width: 48px; height: 48px; border-radius: 12px;
         background: linear-gradient(135deg, var(--rt-primary), var(--rt-navy));
         color: #fff; display: flex; align-items: center; justify-content: center;
         font-size: 1.25rem; flex-shrink: 0;
     }
-    .ad-header h4 { margin: 0; font-weight: 700; color: var(--rt-navy); font-size: 1.15rem; }
-    .ad-header small { color: #64748b; font-size: 0.82rem; }
-    .ad-header .back-btn {
+    .dam-header h4 { margin: 0; font-weight: 700; color: var(--rt-navy); font-size: 1.15rem; }
+    .dam-header small { color: #64748b; font-size: 0.82rem; }
+    .dam-header .back-btn {
         display: inline-flex; align-items: center; gap: 0.4rem;
         padding: 0.45rem 1rem; border-radius: 8px; border: 1px solid #cbd5e1;
         background: #fff; color: #475569; font-size: 0.82rem; font-weight: 500;
         text-decoration: none; transition: all 0.2s;
     }
-    .ad-header .back-btn:hover { background: #f8fafc; border-color: #94a3b8; color: #1e293b; }
+    .dam-header .back-btn:hover { background: #f8fafc; border-color: #94a3b8; color: #1e293b; }
 
-    .ad-status-badge {
+    .dam-status-badge {
         display: inline-flex; align-items: center; gap: 0.35rem;
         border-radius: 6px; padding: 0.25rem 0.7rem; font-size: 0.78rem; font-weight: 600;
     }
-    .ad-status-badge.submitted { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b; color: #92400e; }
+    .dam-status-badge.submitted { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b; color: #92400e; }
 
-    .ad-section {
+    .dam-section {
         background: #fff; border-radius: 10px; border: 1px solid #e5e7eb;
         margin-bottom: 1.25rem; overflow: hidden;
     }
-    .ad-section-header {
+    .dam-section-header {
         display: flex; align-items: center; gap: 0.5rem;
         padding: 0.75rem 1.25rem;
         background: #f8fafc; border-bottom: 1px solid #e5e7eb;
         font-weight: 600; font-size: 0.88rem; color: #1e293b;
     }
-    .ad-section-header i { color: var(--rt-primary); font-size: 0.9rem; }
-    .ad-section-body { padding: 1.25rem; }
+    .dam-section-header i { color: var(--rt-primary); font-size: 0.9rem; }
+    .dam-section-body { padding: 1.25rem; }
 
-    .ad-info-grid {
+    .dam-info-grid {
         display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 1rem;
     }
-    .ad-info-item {
+    .dam-info-item {
         background: #f8fafc; border-radius: 8px; padding: 0.75rem 1rem;
         border: 1px solid #f1f5f9;
     }
-    .ad-info-item .label {
+    .dam-info-item .label {
         font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.6px;
         color: #94a3b8; font-weight: 600; margin-bottom: 0.2rem;
     }
-    .ad-info-item .value { font-size: 0.92rem; font-weight: 600; color: #1e293b; }
+    .dam-info-item .value { font-size: 0.92rem; font-weight: 600; color: #1e293b; }
 
-    .ad-desc-box {
+    .dam-desc-box {
         background: #f8fafc; border-radius: 8px; padding: 1rem 1.25rem;
         border: 1px solid #f1f5f9; margin-top: 1rem;
     }
-    .ad-desc-box .label {
+    .dam-desc-box .label {
         font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.6px;
         color: #94a3b8; font-weight: 600; margin-bottom: 0.3rem;
     }
-    .ad-desc-box .value { font-size: 0.9rem; color: #334155; line-height: 1.5; }
+    .dam-desc-box .value { font-size: 0.9rem; color: #334155; line-height: 1.5; }
 
-    .ad-contrib-tag {
+    .dam-contrib-tag {
         display: inline-flex; align-items: center; gap: 0.3rem;
         background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
         border: 1px solid #cbd5e1; border-radius: 6px;
@@ -78,58 +78,58 @@
         color: #475569;
     }
 
-    .ad-transect {
+    .dam-transect {
         border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;
         margin-bottom: 0.75rem;
     }
-    .ad-transect-header {
+    .dam-transect-header {
         display: flex; align-items: center; justify-content: space-between;
         padding: 0.65rem 1rem;
         background: linear-gradient(135deg, #0ea5e9, #0284c7);
         color: #fff; font-weight: 600; font-size: 0.85rem;
     }
-    .ad-transect-body { padding: 1rem; }
-    .ad-depth-header {
+    .dam-transect-body { padding: 1rem; }
+    .dam-depth-header {
         display: flex; align-items: center; gap: 0.4rem;
         font-weight: 600; font-size: 0.85rem; margin: 0.75rem 0 0.4rem;
         padding: 0.3rem 0.6rem; border-radius: 6px;
     }
-    .ad-depth-header.shallow { background: #ecfeff; color: #0891b2; }
-    .ad-depth-header.deep { background: #eff6ff; color: #2563eb; }
-    .ad-gps-tag {
+    .dam-depth-header.shallow { background: #ecfeff; color: #0891b2; }
+    .dam-depth-header.deep { background: #eff6ff; color: #2563eb; }
+    .dam-gps-tag {
         display: inline-flex; align-items: center; gap: 0.3rem;
         background: #eff6ff; color: #1d4ed8; border-radius: 5px;
         padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 500;
         border: 1px solid #bfdbfe;
     }
-    .ad-excel-tag {
+    .dam-excel-tag {
         display: inline-flex; align-items: center; gap: 0.3rem;
         background: #f0fdf4; color: #15803d; border-radius: 5px;
         padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 500;
         border: 1px solid #bbf7d0;
     }
 
-    .ad-map-container {
+    .dam-map-container {
         height: 320px; border-radius: 8px; border: 1px solid #e5e7eb;
         margin-bottom: 1rem; overflow: hidden;
     }
-    .ad-map-legend { display: flex; gap: 1.5rem; padding: 0.6rem 0; margin-bottom: 0.5rem; }
-    .ad-map-legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #64748b; }
-    .ad-map-legend-line { width: 20px; height: 3px; border-radius: 2px; }
+    .dam-map-legend { display: flex; gap: 1.5rem; padding: 0.6rem 0; margin-bottom: 0.5rem; }
+    .dam-map-legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #64748b; }
+    .dam-map-legend-line { width: 20px; height: 3px; border-radius: 2px; }
 
-    .ad-species-table { border-collapse: separate; border-spacing: 0; width: 100%; }
-    .ad-species-table th {
+    .dam-species-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .dam-species-table th {
         background: #f1f5f9; font-size: 0.72rem; text-transform: uppercase;
         letter-spacing: 0.5px; color: #64748b; font-weight: 600;
         padding: 0.6rem 0.8rem; border-bottom: 2px solid #e2e8f0;
     }
-    .ad-species-table td {
+    .dam-species-table td {
         padding: 0.55rem 0.8rem; font-size: 0.85rem; color: #334155;
         border-bottom: 1px solid #f1f5f9;
     }
-    .ad-species-table tr:last-child td { border-bottom: none; }
-    .ad-species-table tr:hover td { background: #f8fafc; }
-    .ad-family-badge {
+    .dam-species-table tr:last-child td { border-bottom: none; }
+    .dam-species-table tr:hover td { background: #f8fafc; }
+    .dam-family-badge {
         display: inline-flex; align-items: center; gap: 0.25rem;
         background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
         border: 1px solid #cbd5e1; border-radius: 5px;
@@ -137,7 +137,7 @@
         color: #475569;
     }
 
-    .ad-pdf-link {
+    .dam-pdf-link {
         display: inline-flex; align-items: center; gap: 0.6rem;
         background: linear-gradient(135deg, #fef2f2, #fee2e2);
         border: 1px solid #fca5a5; border-radius: 8px;
@@ -145,20 +145,20 @@
         color: #991b1b; font-weight: 600; font-size: 0.88rem;
         transition: all 0.2s;
     }
-    .ad-pdf-link:hover { background: #fee2e2; color: #7f1d1d; transform: translateY(-1px); }
-    .ad-pdf-link .sub { font-weight: 400; font-size: 0.75rem; opacity: 0.8; }
+    .dam-pdf-link:hover { background: #fee2e2; color: #7f1d1d; transform: translateY(-1px); }
+    .dam-pdf-link .sub { font-weight: 400; font-size: 0.75rem; opacity: 0.8; }
 
-    .ad-img-carousel { border-radius: 8px; overflow: hidden; background: #0f172a; }
-    .ad-img-carousel img { max-height: 450px; object-fit: contain; }
+    .dam-img-carousel { border-radius: 8px; overflow: hidden; background: #0f172a; }
+    .dam-img-carousel img { max-height: 450px; object-fit: contain; }
 
-    .ad-new-badge {
+    .dam-new-badge {
         display: inline-flex; align-items: center; gap: 0.25rem;
         background: linear-gradient(135deg, #dbeafe, #bfdbfe);
         border: 1px solid #93c5fd; border-radius: 5px;
         padding: 0.15rem 0.5rem; font-size: 0.75rem; font-weight: 600;
         color: #1e40af;
     }
-    .ad-existing-badge {
+    .dam-existing-badge {
         display: inline-flex; align-items: center; gap: 0.25rem;
         background: linear-gradient(135deg, #dcfce7, #bbf7d0);
         border: 1px solid #86efac; border-radius: 5px;
@@ -166,59 +166,89 @@
         color: #166534;
     }
 
-    .ad-warn-card { border-radius: 10px; overflow: hidden; margin-bottom: 0.75rem; border: 1px solid #e5e7eb; }
-    .ad-warn-card.exact { border-left: 4px solid #dc2626; }
-    .ad-warn-card.similar { border-left: 4px solid #f59e0b; }
-    .ad-warn-card-body { padding: 0.75rem 1rem; }
-    .ad-warn-title { display: flex; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.88rem; }
-    .ad-warn-title.exact { color: #dc2626; }
-    .ad-warn-title.similar { color: #d97706; }
-    .ad-warn-meta { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }
+    .dam-warn-card {
+        border-radius: 10px; overflow: hidden; margin-bottom: 0.75rem;
+        border: 1px solid #e5e7eb; background: #fff;
+        transition: box-shadow 0.2s;
+    }
+    .dam-warn-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .dam-warn-card.exact { border-left: 4px solid #dc2626; }
+    .dam-warn-card.high { border-left: 4px solid #f59e0b; }
+    .dam-warn-card.moderate { border-left: 4px solid #fb923c; }
+    .dam-warn-card-body { padding: 1rem 1.25rem; }
+    .dam-warn-title {
+        display: flex; align-items: center; gap: 0.5rem;
+        font-weight: 700; font-size: 0.85rem; letter-spacing: 0.3px;
+    }
+    .dam-warn-title .warn-icon {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 28px; height: 28px; border-radius: 8px; font-size: 0.75rem; flex-shrink: 0;
+    }
+    .dam-warn-title.exact { color: #991b1b; }
+    .dam-warn-title.exact .warn-icon { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .dam-warn-title.high { color: #92400e; }
+    .dam-warn-title.high .warn-icon { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .dam-warn-title.moderate { color: #9a3412; }
+    .dam-warn-title.moderate .warn-icon { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+    .dam-warn-meta { font-size: 0.82rem; color: #64748b; margin-top: 0.4rem; line-height: 1.5; }
+    .dam-warn-detail-row {
+        display: flex; align-items: center; gap: 0.5rem;
+        font-size: 0.82rem; color: #475569; margin-top: 0.3rem;
+    }
+    .dam-warn-detail-row i { font-size: 0.7rem; color: #94a3b8; }
+    .dam-warn-badge {
+        display: inline-flex; align-items: center; gap: 0.25rem;
+        border-radius: 5px; padding: 0.15rem 0.5rem;
+        font-size: 0.72rem; font-weight: 600;
+    }
+    .dam-warn-badge.critical { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .dam-warn-badge.warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .dam-warn-badge.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
 
-    .ad-actions {
+    .dam-actions {
         background: #fff; border-radius: 10px; border: 1px solid #e5e7eb;
         padding: 1.5rem; margin-bottom: 2rem;
     }
-    .ad-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .ad-btn-approve {
+    .dam-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .dam-btn-approve {
         display: flex; align-items: center; justify-content: center; gap: 0.5rem;
         width: 100%; padding: 0.85rem 1rem; border: none; border-radius: 8px;
         font-size: 0.95rem; font-weight: 600; cursor: pointer;
         background: linear-gradient(135deg, #16a34a, #15803d);
         color: #fff; transition: all 0.2s; text-decoration: none;
     }
-    .ad-btn-approve:hover { background: linear-gradient(135deg, #15803d, #166534); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,0.3); color: #fff; }
-    .ad-btn-approve.warn {
+    .dam-btn-approve:hover { background: linear-gradient(135deg, #15803d, #166534); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,0.3); color: #fff; }
+    .dam-btn-approve.warn {
         background: linear-gradient(135deg, #f59e0b, #d97706);
     }
-    .ad-btn-approve.warn:hover { background: linear-gradient(135deg, #d97706, #b45309); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
-    .ad-btn-cancel {
+    .dam-btn-approve.warn:hover { background: linear-gradient(135deg, #d97706, #b45309); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
+    .dam-btn-cancel {
         display: flex; align-items: center; justify-content: center; gap: 0.5rem;
         width: 100%; padding: 0.85rem 1rem; border: 2px solid #e2e8f0; border-radius: 8px;
         font-size: 0.95rem; font-weight: 600; cursor: pointer;
         background: #fff; color: #64748b; transition: all 0.2s; text-decoration: none;
     }
-    .ad-btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; color: #334155; }
+    .dam-btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; color: #334155; }
 
     @media (max-width: 768px) {
-        .ad-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
-        .ad-info-grid { grid-template-columns: 1fr 1fr; }
-        .ad-actions-grid { grid-template-columns: 1fr; }
-        .ad-map-container { height: 250px; }
+        .dam-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+        .dam-info-grid { grid-template-columns: 1fr 1fr; }
+        .dam-actions-grid { grid-template-columns: 1fr; }
+        .dam-map-container { height: 250px; }
     }
     @media (max-width: 480px) {
-        .ad-info-grid { grid-template-columns: 1fr; }
+        .dam-info-grid { grid-template-columns: 1fr; }
     }
 </style>
 
-<div class="ad-header">
-    <div class="ad-header-left">
+<div class="dam-header">
+    <div class="dam-header-left">
         <div class="icon"><i class="fas fa-clipboard-check"></i></div>
         <div>
             <h4>Review Before Approval
-                <span class="ad-status-badge submitted"><i class="fas fa-clock"></i> Pending Review</span>
+                <span class="dam-status-badge submitted"><i class="fas fa-clock"></i> Pending Review</span>
             </h4>
-            <small>Assessment #{{ assessment.id }} — {{ assessment.barangay.name }}, {{ assessment.municipality.name }}, {{ assessment.municipality.province.name }}</small>
+            <small>{{ assessment.barangay.name }}, {{ assessment.municipality.name }}, {{ assessment.municipality.province.name }}</small>
         </div>
     </div>
     <a href="{% url 'admin_assessment_detail' assessment.id %}" class="back-btn">
@@ -227,47 +257,47 @@
 </div>
 
 <!-- Assessment Info -->
-<div class="ad-section">
-    <div class="ad-section-header">
+<div class="dam-section">
+    <div class="dam-section-header">
         <i class="fas fa-info-circle"></i> Assessment Information
     </div>
-    <div class="ad-section-body">
-        <div class="ad-info-grid">
-            <div class="ad-info-item">
+    <div class="dam-section-body">
+        <div class="dam-info-grid">
+            <div class="dam-info-item">
                 <div class="label">Province</div>
                 <div class="value">{{ assessment.municipality.province.name }}</div>
             </div>
-            <div class="ad-info-item">
+            <div class="dam-info-item">
                 <div class="label">Municipality</div>
                 <div class="value">{{ assessment.municipality.name }}</div>
             </div>
-            <div class="ad-info-item">
+            <div class="dam-info-item">
                 <div class="label">Barangay</div>
                 <div class="value">{{ assessment.barangay.name }}</div>
             </div>
-            <div class="ad-info-item">
+            <div class="dam-info-item">
                 <div class="label">Assessment Date</div>
                 <div class="value">{{ assessment.assessment_date }}</div>
             </div>
-            <div class="ad-info-item">
+            <div class="dam-info-item">
                 <div class="label">Methodology</div>
                 <div class="value">{{ assessment.get_methodology_display_name }}</div>
             </div>
-            <div class="ad-info-item">
+            <div class="dam-info-item">
                 <div class="label">Uploaded By</div>
                 <div class="value">{{ assessment.uploaded_by.profile.get_full_name|default:assessment.uploaded_by.email }}</div>
             </div>
-            <div class="ad-info-item">
+            <div class="dam-info-item">
                 <div class="label">Transects</div>
                 <div class="value">{{ transects.count }}</div>
             </div>
-            <div class="ad-info-item">
+            <div class="dam-info-item">
                 <div class="label">Date Submitted</div>
                 <div class="value">{{ assessment.created_at|date:"M d, Y H:i" }}</div>
             </div>
         </div>
         {% if assessment.description %}
-        <div class="ad-desc-box">
+        <div class="dam-desc-box">
             <div class="label">Description</div>
             <div class="value">{{ assessment.description }}</div>
         </div>
@@ -277,7 +307,7 @@
             <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.6px;color:#94a3b8;font-weight:600;margin-bottom:0.4rem;">Contributors</div>
             <div class="d-flex flex-wrap gap-2">
                 {% for c in assessment.contributors.all %}
-                <span class="ad-contrib-tag"><i class="fas fa-user"></i> {{ c.get_full_name }}</span>
+                <span class="dam-contrib-tag"><i class="fas fa-user"></i> {{ c.get_full_name }}</span>
                 {% endfor %}
             </div>
         </div>
@@ -287,34 +317,31 @@
 
 <!-- Thesis PDF -->
 {% if assessment.thesis_pdf %}
-<div class="ad-section">
-    <div class="ad-section-header">
+<div class="dam-section">
+    <div class="dam-section-header">
         <i class="fas fa-file-pdf"></i> Thesis / Reference PDF
     </div>
-    <div class="ad-section-body">
-        <a href="{{ assessment.thesis_pdf.url }}" target="_blank" class="ad-pdf-link">
+    <div class="dam-section-body">
+        <a href="{{ assessment.thesis_pdf.url }}" target="_blank" class="dam-pdf-link">
             <i class="fas fa-file-pdf fa-lg"></i>
             <div>
                 <div>{{ assessment.thesis_pdf.name|cut:"assessments/thesis/" }}</div>
                 <div class="sub">Click to open in new tab</div>
             </div>
         </a>
-        <div class="mt-3">
-            <iframe src="{{ assessment.thesis_pdf.url }}" style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;" frameborder="0"></iframe>
-        </div>
     </div>
 </div>
 {% endif %}
 
 <!-- Assessment Images -->
 {% if assessment.images.all %}
-<div class="ad-section">
-    <div class="ad-section-header">
+<div class="dam-section">
+    <div class="dam-section-header">
         <i class="fas fa-images"></i> Assessment Images ({{ assessment.images.count }})
     </div>
-    <div class="ad-section-body" style="padding:0;">
+    <div class="dam-section-body" style="padding:0;">
         <div id="imgCarousel" class="carousel slide" data-bs-ride="false">
-            <div class="carousel-inner ad-img-carousel">
+            <div class="carousel-inner dam-img-carousel">
                 {% for img in assessment.images.all %}
                 <div class="carousel-item {% if forloop.first %}active{% endif %}">
                     <img src="{{ img.image.url }}" class="d-block w-100" style="max-height:450px; object-fit:contain;" alt="{{ img.caption|default:'Assessment image' }}">
@@ -345,41 +372,44 @@
 {% endif %}
 
 <!-- Transect Details -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<div class="ad-section">
-    <div class="ad-section-header">
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+<div class="dam-section">
+    <div class="dam-section-header">
         <i class="fas fa-map-marked-alt"></i> Transect Details ({{ transects.count }})
     </div>
-    <div class="ad-section-body">
-        <div id="transectMap" class="ad-map-container"></div>
-        <div class="ad-map-legend">
-            <div class="ad-map-legend-item">
-                <div class="ad-map-legend-line" style="background:#06b6d4;"></div> Shallow transect
+    <div class="dam-section-body">
+        <div id="transectMap" class="dam-map-container"></div>
+        <div class="dam-map-legend">
+            <div class="dam-map-legend-item">
+                <div class="dam-map-legend-line" style="background:#06b6d4;"></div> Shallow transect
             </div>
-            <div class="ad-map-legend-item">
-                <div class="ad-map-legend-line" style="background:#2563eb;"></div> Deep transect
+            <div class="dam-map-legend-item">
+                <div class="dam-map-legend-line" style="background:#2563eb;"></div> Deep transect
             </div>
         </div>
 
         {% for transect in transects %}
-        <div class="ad-transect">
-            <div class="ad-transect-header">
+        <div class="dam-transect">
+            <div class="dam-transect-header">
                 <span><i class="fas fa-water"></i> Transect {{ transect.transect_number }}</span>
                 <div class="d-flex gap-2">
-                    {% if transect.shallow_excel %}<span class="ad-excel-tag"><i class="fas fa-file-excel"></i> Shallow</span>{% endif %}
-                    {% if transect.deep_excel %}<span class="ad-excel-tag"><i class="fas fa-file-excel"></i> Deep</span>{% endif %}
+                    {% if transect.shallow_excel %}<span class="dam-excel-tag"><i class="fas fa-file-excel"></i> Shallow</span>{% endif %}
+                    {% if transect.deep_excel %}<span class="dam-excel-tag"><i class="fas fa-file-excel"></i> Deep</span>{% endif %}
                 </div>
             </div>
-            <div class="ad-transect-body">
+            <div class="dam-transect-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="ad-depth-header shallow"><i class="fas fa-arrow-up"></i> Shallow</div>
+                        <div class="dam-depth-header shallow"><i class="fas fa-arrow-up"></i> Shallow</div>
                         <div class="d-flex flex-column gap-1">
                             {% if transect.shallow_start_lat and transect.shallow_start_lng %}
-                            <span class="ad-gps-tag"><i class="fas fa-map-pin"></i> Start: {{ transect.shallow_start_lat }}, {{ transect.shallow_start_lng }}</span>
+                            <span class="dam-gps-tag"><i class="fas fa-map-pin"></i> Start: {{ transect.shallow_start_lat }}, {{ transect.shallow_start_lng }}</span>
                             {% endif %}
                             {% if transect.shallow_end_lat and transect.shallow_end_lng %}
-                            <span class="ad-gps-tag"><i class="fas fa-flag-checkered"></i> End: {{ transect.shallow_end_lat }}, {{ transect.shallow_end_lng }}</span>
+                            <span class="dam-gps-tag"><i class="fas fa-flag-checkered"></i> End: {{ transect.shallow_end_lat }}, {{ transect.shallow_end_lng }}</span>
+                            {% endif %}
+                            {% if transect.shallow_length %}
+                            <span class="dam-gps-tag" style="background:#ecfeff;color:#0891b2;border-color:#a5f3fc;"><i class="fas fa-ruler"></i> {{ transect.shallow_length }} m</span>
                             {% endif %}
                             {% if not transect.shallow_start_lat and not transect.shallow_end_lat %}
                             <span class="text-muted" style="font-size:0.82rem;"><i class="fas fa-map-pin"></i> No coordinates</span>
@@ -387,13 +417,16 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="ad-depth-header deep"><i class="fas fa-arrow-down"></i> Deep</div>
+                        <div class="dam-depth-header deep"><i class="fas fa-arrow-down"></i> Deep</div>
                         <div class="d-flex flex-column gap-1">
                             {% if transect.deep_start_lat and transect.deep_start_lng %}
-                            <span class="ad-gps-tag"><i class="fas fa-map-pin"></i> Start: {{ transect.deep_start_lat }}, {{ transect.deep_start_lng }}</span>
+                            <span class="dam-gps-tag"><i class="fas fa-map-pin"></i> Start: {{ transect.deep_start_lat }}, {{ transect.deep_start_lng }}</span>
                             {% endif %}
                             {% if transect.deep_end_lat and transect.deep_end_lng %}
-                            <span class="ad-gps-tag"><i class="fas fa-flag-checkered"></i> End: {{ transect.deep_end_lat }}, {{ transect.deep_end_lng }}</span>
+                            <span class="dam-gps-tag"><i class="fas fa-flag-checkered"></i> End: {{ transect.deep_end_lat }}, {{ transect.deep_end_lng }}</span>
+                            {% endif %}
+                            {% if transect.deep_length %}
+                            <span class="dam-gps-tag" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;"><i class="fas fa-ruler"></i> {{ transect.deep_length }} m</span>
                             {% endif %}
                             {% if not transect.deep_start_lat and not transect.deep_end_lat %}
                             <span class="text-muted" style="font-size:0.82rem;"><i class="fas fa-map-pin"></i> No coordinates</span>
@@ -407,32 +440,80 @@
     </div>
 </div>
 
-<!-- Duplicate Warnings -->
-{% if duplicate_warnings %}
-<div class="ad-section" style="border-color:#fde68a;">
-    <div class="ad-section-header" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-bottom-color:#fde68a;">
-        <i class="fas fa-exclamation-triangle" style="color:#d97706;"></i>
-        <span style="color:#92400e;">Duplicate Warnings ({{ duplicate_warnings|length }})</span>
+<!-- Within-Assessment Duplicates -->
+{% if within_warnings %}
+<div class="dam-section" style="border-color:#fca5a5;">
+    <div class="dam-section-header" style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border-bottom-color:#fca5a5;">
+        <i class="fas fa-clone" style="color:#dc2626;"></i>
+        <span style="color:#991b1b;">Within-Assessment Duplicates</span>
+        <span class="dam-warn-badge critical" style="margin-left:auto;">{{ within_warnings|length }} found</span>
     </div>
-    <div class="ad-section-body">
-        {% for warn in duplicate_warnings %}
-        <div class="ad-warn-card {% if warn.is_exact %}exact{% else %}similar{% endif %}">
-            <div class="ad-warn-card-body">
-                <div class="ad-warn-title {% if warn.is_exact %}exact{% else %}similar{% endif %}">
-                    {% if warn.is_exact %}
-                    <i class="fas fa-exclamation-circle"></i> EXACT DUPLICATE
+    <div class="dam-section-body">
+        {% for warn in within_warnings %}
+        <div class="dam-warn-card {% if warn.severity == 'exact' %}exact{% else %}high{% endif %}">
+            <div class="dam-warn-card-body">
+                <div class="dam-warn-title {% if warn.severity == 'exact' %}exact{% else %}high{% endif %}">
+                    <span class="warn-icon"><i class="fas {% if warn.severity == 'exact' %}fa-copy{% else %}fa-exclamation-triangle{% endif %}"></i></span>
+                    {% if warn.severity == 'exact' %}
+                    <span>Exact Copy Detected</span>
+                    <span class="dam-warn-badge critical" style="margin-left:0.5rem;">100% Match</span>
                     {% else %}
-                    <i class="fas fa-exclamation-triangle"></i> {{ warn.match_pct }}% Similar
+                    <span>{{ warn.overlap_count }}/{{ warn.total }} Identical Species</span>
                     {% endif %}
                 </div>
-                <div class="ad-warn-meta">
-                    Assessment #{{ warn.assessment.id }} — {{ warn.assessment.barangay.name }}, {{ warn.assessment.municipality.name }}, {{ warn.assessment.municipality.province.name }} ({{ warn.assessment.assessment_date }})
+                <div class="dam-warn-detail-row" style="margin-top:0.5rem;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>{{ warn.message }}</span>
                 </div>
-                <div class="ad-warn-meta">{{ warn.match_count }} of {{ warn.total }} species match exactly</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Duplicate Warnings -->
+{% if duplicate_warnings %}
+<div class="dam-section" style="border-color:#fde68a;">
+    <div class="dam-section-header" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-bottom-color:#fde68a;">
+        <i class="fas fa-exclamation-triangle" style="color:#d97706;"></i>
+        <span style="color:#92400e;">Duplicate Warnings</span>
+        <span class="dam-warn-badge warning" style="margin-left:auto;">{{ duplicate_warnings|length }} found</span>
+    </div>
+    <div class="dam-section-body">
+        {% for warn in duplicate_warnings %}
+        <div class="dam-warn-card {% if warn.severity == 'exact' %}exact{% elif warn.severity == 'high' %}high{% else %}moderate{% endif %}">
+            <div class="dam-warn-card-body">
+                <div class="dam-warn-title {% if warn.severity == 'exact' %}exact{% elif warn.severity == 'high' %}high{% else %}moderate{% endif %}">
+                    <span class="warn-icon"><i class="fas {% if warn.severity == 'exact' %}fa-exclamation-circle{% else %}fa-exclamation-triangle{% endif %}"></i></span>
+                    {% if warn.severity == 'exact' %}
+                    <span>Exact Duplicate</span>
+                    <span class="dam-warn-badge critical" style="margin-left:0.5rem;">100% Match</span>
+                    {% elif warn.severity == 'high' %}
+                    <span>High Similarity</span>
+                    <span class="dam-warn-badge warning" style="margin-left:0.5rem;">{{ warn.match_pct }}% Match</span>
+                    {% else %}
+                    <span>Moderate Similarity</span>
+                    <span class="dam-warn-badge info" style="margin-left:0.5rem;">{{ warn.match_pct }}% Match</span>
+                    {% endif %}
+                </div>
+                <div class="dam-warn-detail-row" style="margin-top:0.5rem;">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ warn.assessment.barangay.name }}, {{ warn.assessment.municipality.name }}, {{ warn.assessment.municipality.province.name }}</span>
+                    <span style="color:#94a3b8;">·</span>
+                    <span>{{ warn.assessment.assessment_date }}</span>
+                    {% if warn.location_type == 'other_barangay' %}
+                    <span class="dam-warn-badge info" style="font-size:0.68rem;">Different Barangay</span>
+                    {% endif %}
+                </div>
+                <div class="dam-warn-detail-row">
+                    <i class="fas fa-paw"></i>
+                    <span>{{ warn.match_count }} of {{ warn.total }} species match exactly</span>
+                </div>
                 {% if warn.overlap_species %}
                 <div class="mt-2 d-flex flex-wrap gap-1">
                     {% for sp in warn.overlap_species %}
-                    <span class="ad-family-badge">{{ sp.0 }} ({{ sp.1 }}) — {{ sp.2 }}%</span>
+                    <span class="dam-family-badge">{{ sp.0 }} <span style="opacity:0.6;">({{ sp.1 }})</span> — {{ sp.2 }}%</span>
                     {% endfor %}
                 </div>
                 {% endif %}
@@ -445,17 +526,17 @@
 
 <!-- New Species -->
 {% if new_species %}
-<div class="ad-section" style="border-color:#93c5fd;">
-    <div class="ad-section-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-bottom-color:#93c5fd;">
+<div class="dam-section" style="border-color:#93c5fd;">
+    <div class="dam-section-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-bottom-color:#93c5fd;">
         <i class="fas fa-plus-circle" style="color:#2563eb;"></i>
         <span style="color:#1e40af;">New Species ({{ new_species|length }})</span>
     </div>
-    <div class="ad-section-body">
+    <div class="dam-section-body">
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.7rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:#1e40af;">
             <i class="fas fa-info-circle"></i> These species will be created in the Species reference table upon approval.
         </div>
         <div style="overflow-x:auto;">
-            <table class="ad-species-table">
+            <table class="dam-species-table">
                 <thead>
                     <tr>
                         <th>Sub Category</th>
@@ -469,7 +550,7 @@
                     {% for sp in new_species %}
                     <tr>
                         <td><strong>{{ sp.sub_category }}</strong></td>
-                        <td><span class="ad-new-badge">{{ sp.major_category }}</span></td>
+                        <td><span class="dam-new-badge">{{ sp.major_category }}</span></td>
                         <td>T{{ sp.transect }}</td>
                         <td>{{ sp.depth }}</td>
                         <td>{{ sp.cover|floatformat:1 }}%</td>
@@ -483,11 +564,11 @@
 {% endif %}
 
 <!-- Species Data -->
-<div class="ad-section">
-    <div class="ad-section-header">
+<div class="dam-section">
+    <div class="dam-section-header">
         <i class="fas fa-table"></i> Species Data ({{ all_species|length }} records)
     </div>
-    <div class="ad-section-body">
+    <div class="dam-section-body">
         {% regroup all_species by transect as transect_groups %}
         {% for tg in transect_groups %}
         <div style="font-weight:600;font-size:0.9rem;color:#1e293b;margin:0.75rem 0 0.4rem;padding-bottom:0.3rem;border-bottom:1px solid #e2e8f0;">
@@ -495,11 +576,11 @@
         </div>
         {% regroup tg.list by depth as depth_groups %}
         {% for dg in depth_groups %}
-        <div class="ad-depth-header {% if dg.grouper == 'Shallow' %}shallow{% else %}deep{% endif %}">
+        <div class="dam-depth-header {% if dg.grouper == 'Shallow' %}shallow{% else %}deep{% endif %}">
             <i class="fas fa-layer-group"></i> {{ dg.grouper }} ({{ dg.list|length }} species)
         </div>
         <div style="overflow-x:auto;">
-            <table class="ad-species-table">
+            <table class="dam-species-table">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -514,13 +595,13 @@
                     <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ sp.sub_category }}</td>
-                        <td><span class="ad-family-badge">{{ sp.major_category }}</span></td>
+                        <td><span class="dam-family-badge">{{ sp.major_category }}</span></td>
                         <td>{{ sp.cover|floatformat:1 }}%</td>
                         <td>
                             {% if sp.is_new %}
-                            <span class="ad-new-badge">New</span>
+                            <span class="dam-new-badge">New</span>
                             {% else %}
-                            <span class="ad-existing-badge">Existing</span>
+                            <span class="dam-existing-badge">Existing</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -534,28 +615,28 @@
 </div>
 
 <!-- Action Buttons -->
-<div class="ad-actions">
-    <div class="ad-actions-grid">
+<div class="dam-actions">
+    <div class="dam-actions-grid">
         <form method="POST" action="{% url 'admin_assessment_action' assessment.id %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="approve">
             {% if has_warnings %}
-            <button type="submit" class="ad-btn-approve warn" onclick="return confirm('This assessment has warnings. Are you sure you want to approve it?');">
+            <button type="submit" class="dam-btn-approve warn" onclick="return confirm('This assessment has warnings. Are you sure you want to approve it?');">
                 <i class="fas fa-exclamation-triangle"></i> Approve Anyway
             </button>
             {% else %}
-            <button type="submit" class="ad-btn-approve">
+            <button type="submit" class="dam-btn-approve">
                 <i class="fas fa-check-circle"></i> Approve Assessment
             </button>
             {% endif %}
         </form>
-        <a href="{% url 'admin_assessment_detail' assessment.id %}" class="ad-btn-cancel">
+        <a href="{% url 'admin_assessment_detail' assessment.id %}" class="dam-btn-cancel">
             <i class="fas fa-times"></i> Cancel
         </a>
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var transectData = [
@@ -569,7 +650,9 @@ document.addEventListener('DOMContentLoaded', function() {
             dSLat: {{ t.deep_start_lat|default:"null" }},
             dSLng: {{ t.deep_start_lng|default:"null" }},
             dELat: {{ t.deep_end_lat|default:"null" }},
-            dELng: {{ t.deep_end_lng|default:"null" }}
+            dELng: {{ t.deep_end_lng|default:"null" }},
+            sLen: {{ t.shallow_length|default:"null" }},
+            dLen: {{ t.deep_length|default:"null" }}
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
@@ -593,13 +676,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var bounds = [];
     transectData.forEach(function(t) {
         if (t.sLat && t.sLng && t.eLat && t.eLng) {
-            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#06b6d4', weight: 3, opacity: 0.85, dashArray: '6,4'}).addTo(map).bindPopup('<b>Transect ' + t.num + '</b> — Shallow');
+            var sLabel = '<b>Transect ' + t.num + '</b> — Shallow' + (t.sLen ? '<br>' + t.sLen + ' m' : '');
+            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#06b6d4', weight: 3, opacity: 0.85, dashArray: '6,4'}).addTo(map).bindPopup(sLabel);
             L.marker([t.sLat, t.sLng], {icon: makeIcon('#0891b2', 'T' + t.num + 'S')}).addTo(map).bindPopup('<b>T' + t.num + ' Shallow Start</b>');
             L.marker([t.eLat, t.eLng], {icon: makeIcon('#0891b2', 'T' + t.num + 'E')}).addTo(map).bindPopup('<b>T' + t.num + ' Shallow End</b>');
             bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
         }
         if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
-            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#2563eb', weight: 3, opacity: 0.85, dashArray: '6,4'}).addTo(map).bindPopup('<b>Transect ' + t.num + '</b> — Deep');
+            var dLabel = '<b>Transect ' + t.num + '</b> — Deep' + (t.dLen ? '<br>' + t.dLen + ' m' : '');
+            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#2563eb', weight: 3, opacity: 0.85, dashArray: '6,4'}).addTo(map).bindPopup(dLabel);
             L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#1d4ed8', 'T' + t.num + 'S')}).addTo(map).bindPopup('<b>T' + t.num + ' Deep Start</b>');
             L.marker([t.dELat, t.dELng], {icon: makeIcon('#1d4ed8', 'T' + t.num + 'E')}).addTo(map).bindPopup('<b>T' + t.num + ' Deep End</b>');
             bounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);

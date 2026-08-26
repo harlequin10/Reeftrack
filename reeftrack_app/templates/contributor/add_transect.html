@@ -4,7 +4,7 @@
 {% block title %}Add Transect - ReefTrack{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
 
 <div class="row justify-content-center">
     <div class="col-12 col-lg-10">
@@ -103,6 +103,7 @@
                                         <div class="card-body">
                                             <h6 class="text-info mb-3">
                                                 <i class="fas fa-water"></i> Shallow
+                                                <span id="shallowLengthDisplay" class="badge bg-info ms-2" style="display:none;font-size:0.75rem;"></span>
                                             </h6>
                                             <div class="row g-2 mb-2">
                                                 <div class="col-6">
@@ -153,6 +154,7 @@
                                         <div class="card-body">
                                             <h6 class="text-primary mb-3">
                                                 <i class="fas fa-water"></i> Deep
+                                                <span id="deepLengthDisplay" class="badge bg-primary ms-2" style="display:none;font-size:0.75rem;"></span>
                                             </h6>
                                             <div class="row g-2 mb-2">
                                                 <div class="col-6">
@@ -244,6 +246,9 @@
                                 {% if t.shallow_start_lat or t.shallow_end_lat %}
                                     <br><small>Start: {{ t.shallow_start_lat|default:"-" }}, {{ t.shallow_start_lng|default:"-" }}</small>
                                     <br><small>End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}</small>
+                                    {% if t.shallow_start_lat and t.shallow_start_lng and t.shallow_end_lat and t.shallow_end_lng %}
+                                    <br><small class="text-info fw-bold"><i class="fas fa-ruler"></i> <span class="prev-length" data-slat="{{ t.shallow_start_lat }}" data-slng="{{ t.shallow_start_lng }}" data-elat="{{ t.shallow_end_lat }}" data-elng="{{ t.shallow_end_lng }}"></span></small>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted">No coordinates</span>
                                 {% endif %}
@@ -257,6 +262,9 @@
                                 {% if t.deep_start_lat or t.deep_end_lat %}
                                     <br><small>Start: {{ t.deep_start_lat|default:"-" }}, {{ t.deep_start_lng|default:"-" }}</small>
                                     <br><small>End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}</small>
+                                    {% if t.deep_start_lat and t.deep_start_lng and t.deep_end_lat and t.deep_end_lng %}
+                                    <br><small class="text-primary fw-bold"><i class="fas fa-ruler"></i> <span class="prev-length" data-slat="{{ t.deep_start_lat }}" data-slng="{{ t.deep_start_lng }}" data-elat="{{ t.deep_end_lat }}" data-elng="{{ t.deep_end_lng }}"></span></small>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted">No coordinates</span>
                                 {% endif %}
@@ -293,7 +301,7 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // ── Coordinate validation (no Leaflet dependency) ──
@@ -388,6 +396,42 @@ document.addEventListener('DOMContentLoaded', function() {
         return (v !== '' && !isNaN(v)) ? parseFloat(v) : null;
     }
 
+    function haversine(lat1, lng1, lat2, lng2) {
+        var R = 6371000;
+        var phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
+        var dphi = (lat2 - lat1) * Math.PI / 180;
+        var dlam = (lng2 - lng1) * Math.PI / 180;
+        var a = Math.sin(dphi / 2) * Math.sin(dphi / 2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dlam / 2) * Math.sin(dlam / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function updateLengthDisplay() {
+        var sL1 = getVal('shallow_start_lat'), sN1 = getVal('shallow_start_lng');
+        var sL2 = getVal('shallow_end_lat'),   sN2 = getVal('shallow_end_lng');
+        var dL1 = getVal('deep_start_lat'),     dN1 = getVal('deep_start_lng');
+        var dL2 = getVal('deep_end_lat'),       dN2 = getVal('deep_end_lng');
+        var sEl = document.getElementById('shallowLengthDisplay');
+        var dEl = document.getElementById('deepLengthDisplay');
+        if (sEl) {
+            if (sL1 !== null && sN1 !== null && sL2 !== null && sN2 !== null) {
+                sEl.textContent = haversine(sL1, sN1, sL2, sN2).toFixed(1) + ' m';
+                sEl.style.display = '';
+            } else {
+                sEl.textContent = '';
+                sEl.style.display = 'none';
+            }
+        }
+        if (dEl) {
+            if (dL1 !== null && dN1 !== null && dL2 !== null && dN2 !== null) {
+                dEl.textContent = haversine(dL1, dN1, dL2, dN2).toFixed(1) + ' m';
+                dEl.style.display = '';
+            } else {
+                dEl.textContent = '';
+                dEl.style.display = 'none';
+            }
+        }
+    }
+
     function updateMap() {
         if (!map) return;
         var sLat1 = getVal('shallow_start_lat'), sLng1 = getVal('shallow_start_lng');
@@ -431,6 +475,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (bounds.length > 0) {
             map.fitBounds(bounds, {padding: [40, 40], maxZoom: 15});
         }
+        updateLengthDisplay();
     }
 
     document.querySelectorAll('.coord-input').forEach(function(el) {
@@ -691,6 +736,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
     }
+    // ── Compute lengths for previously added transects ──
+    document.querySelectorAll('.prev-length').forEach(function(el) {
+        var sLat = parseFloat(el.dataset.slat), sLng = parseFloat(el.dataset.slng);
+        var eLat = parseFloat(el.dataset.elat), eLng = parseFloat(el.dataset.elng);
+        if (!isNaN(sLat) && !isNaN(sLng) && !isNaN(eLat) && !isNaN(eLng)) {
+            el.textContent = haversine(sLat, sLng, eLat, eLng).toFixed(1) + ' m';
+        }
+    });
 });
 </script>
 

@@ -48,9 +48,9 @@ body {
   color: var(--rt-ink);
   font-family: var(--rt-font-body);
   line-height: 1.6;
-  min-height: 100vh !important;
-  display: flex !important;
-  flex-direction: column !important;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   margin: 0;
   overflow-x: hidden;
 }

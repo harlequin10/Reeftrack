@@ -164,7 +164,7 @@
 {% endif %}
 
 <!-- Transect Details -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
 <div class="card mb-4 rt-card">
     <div class="card-header">
         <h6 class="mb-0"><i class="fas fa-map-marked-alt"></i> Transect Details ({{ transects.count }})</h6>
@@ -221,6 +221,33 @@
     </div>
 </div>
 
+<!-- Within-Assessment Duplicates -->
+{% if within_warnings %}
+<div class="card mb-4 rt-card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h6 class="mb-0"><i class="fas fa-copy"></i> Within-Assessment Duplicates ({{ within_warnings|length }})</h6>
+    </div>
+    <div class="card-body">
+        {% for warn in within_warnings %}
+        <div class="alert {% if warn.severity == 'exact' %}alert-danger{% else %}alert-warning{% endif %} mb-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>
+                        {% if warn.severity == 'exact' %}
+                        <i class="fas fa-exclamation-circle"></i> EXACT COPY
+                        {% else %}
+                        <i class="fas fa-exclamation-triangle"></i> {{ warn.overlap_count }}/{{ warn.total }} IDENTICAL
+                        {% endif %}
+                    </strong>
+                    <p class="mb-1 mt-1">{{ warn.message }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Duplicate Warnings -->
 {% if duplicate_warnings %}
 <div class="card mb-4 rt-card border-warning">
@@ -229,18 +256,23 @@
     </div>
     <div class="card-body">
         {% for warn in duplicate_warnings %}
-        <div class="alert {% if warn.is_exact %}alert-danger{% else %}alert-warning{% endif %} mb-3">
+        <div class="alert {% if warn.severity == 'exact' %}alert-danger{% elif warn.severity == 'high' %}alert-warning{% else %}alert-secondary{% endif %} mb-3">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
                     <strong>
-                        {% if warn.is_exact %}
+                        {% if warn.severity == 'exact' %}
                         <i class="fas fa-exclamation-circle"></i> EXACT DUPLICATE
+                        {% elif warn.severity == 'high' %}
+                        <i class="fas fa-exclamation-triangle"></i> {{ warn.match_pct }}% Similar (High)
                         {% else %}
-                        <i class="fas fa-exclamation-triangle"></i> {{ warn.match_pct }}% Similar
+                        <i class="fas fa-exclamation-triangle"></i> {{ warn.match_pct }}% Similar (Moderate)
                         {% endif %}
                     </strong>
                     <p class="mb-1 mt-1">
-                        Assessment #{{ warn.assessment.id }} — {{ warn.assessment.barangay.name }}, {{ warn.assessment.municipality.name }}, {{ warn.assessment.municipality.province.name }} ({{ warn.assessment.assessment_date }})
+                        {{ warn.assessment.barangay.name }}, {{ warn.assessment.municipality.name }}, {{ warn.assessment.municipality.province.name }} ({{ warn.assessment.assessment_date }})
+                        {% if warn.location_type == 'other_barangay' %}
+                        <span class="badge bg-primary">Different Barangay</span>
+                        {% endif %}
                     </p>
                     <small>{{ warn.match_count }} of {{ warn.total }} species match exactly</small>
                 </div>
@@ -378,7 +410,7 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var transectData = [
@@ -392,7 +424,9 @@ document.addEventListener('DOMContentLoaded', function() {
             dSLat: {{ t.deep_start_lat|default:"null" }},
             dSLng: {{ t.deep_start_lng|default:"null" }},
             dELat: {{ t.deep_end_lat|default:"null" }},
-            dELng: {{ t.deep_end_lng|default:"null" }}
+            dELng: {{ t.deep_end_lng|default:"null" }},
+            sLen: {{ t.shallow_length|default:"null" }},
+            dLen: {{ t.deep_length|default:"null" }}
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
@@ -416,13 +450,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var bounds = [];
     transectData.forEach(function(t) {
         if (t.sLat && t.sLng && t.eLat && t.eLng) {
-            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Shallow');
+            var sLabel = 'Transect ' + t.num + ' — Shallow' + (t.sLen ? ' (' + t.sLen + ' m)' : '');
+            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup(sLabel);
             L.marker([t.sLat, t.sLng], {icon: makeIcon('#0dcaf0', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow Start');
             L.marker([t.eLat, t.eLng], {icon: makeIcon('#0dcaf0', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow End');
             bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
         }
         if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
-            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Transect ' + t.num + ' - Deep');
+            var dLabel = 'Transect ' + t.num + ' — Deep' + (t.dLen ? ' (' + t.dLen + ' m)' : '');
+            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup(dLabel);
             L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#0d6efd', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep Start');
             L.marker([t.dELat, t.dELng], {icon: makeIcon('#0d6efd', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep End');
             bounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);

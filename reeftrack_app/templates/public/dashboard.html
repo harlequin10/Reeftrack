@@ -4,19 +4,19 @@
 {% block title %}Explore - ReefTrack{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}"/>
+<link rel="stylesheet" href="{% static 'vendor/markercluster/MarkerCluster.css' %}"/>
+<link rel="stylesheet" href="{% static 'vendor/markercluster/MarkerCluster.Default.css' %}"/>
 <style>
-body{visibility:visible!important;overflow:hidden!important;height:100vh!important;display:grid!important;grid-template-rows:auto 1fr auto!important;}
+body{visibility:visible!important;opacity:1!important;overflow:hidden!important;height:100vh!important;display:grid!important;grid-template-rows:auto 1fr!important;}
 .rt-back-to-top{display:none!important;}
-.rt-dash-subbar{background:linear-gradient(135deg,var(--rt-navy),var(--rt-teal));color:#fff;padding:.65rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;position:relative;z-index:1000;flex-shrink:0;}
+.rt-dash-subbar{background:linear-gradient(135deg,var(--rt-navy),var(--rt-teal));color:#fff;padding:.65rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;position:relative;z-index:1400;flex-shrink:0;}
 .rt-dash-subbar h6{margin:0;font-size:.85rem;font-weight:700;white-space:nowrap;color:#fff !important;}
 .rt-dash-subbar small{color:rgba(255,255,255,.9);font-size:.72rem;flex:1;min-width:120px;}
-.rt-dash-root{display:flex;flex:1;overflow:hidden;min-height:0;}
+.rt-dash-root{display:flex;flex:1;overflow:hidden;min-height:0;min-width:0;}
 .rt-dash-mapcol{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;min-height:0;}
-.rt-dash-sidecol{width:380px;overflow-y:auto;border-left:1px solid var(--rt-border);background:var(--rt-sand-light);display:flex;flex-direction:column;gap:1px;min-height:0;}
-.rt-dash-filters{display:flex;gap:.5rem;padding:.5rem .75rem;background:var(--rt-white);border-bottom:1px solid var(--rt-border);flex-wrap:wrap;align-items:flex-end;z-index:999;}
+.rt-dash-sidecol{width:380px;overflow-y:auto;border-left:1px solid var(--rt-border);background:var(--rt-sand-light);display:flex;flex-direction:column;gap:1px;min-height:0;position:relative;z-index:1200;}
+.rt-dash-filters{display:flex;gap:.5rem;padding:.5rem .75rem;background:var(--rt-white);border-bottom:1px solid var(--rt-border);flex-wrap:wrap;align-items:flex-end;position:relative;z-index:1300;}
 .rt-dash-fg{display:flex;flex-direction:column;gap:2px;min-width:110px;}
 .rt-dash-fg label{font-size:.65rem;font-weight:600;color:var(--rt-ink-soft);text-transform:uppercase;letter-spacing:.04em;margin:0;}
 .rt-dash-fg select,.rt-dash-fg input{font-size:.78rem;padding:.3rem .5rem;border:1px solid var(--rt-border);border-radius:var(--rt-radius-sm);background:var(--rt-white);color:var(--rt-ink);font-family:var(--rt-font-body);}
@@ -24,8 +24,13 @@ body{visibility:visible!important;overflow:hidden!important;height:100vh!importa
 .rt-dash-yr{display:flex;align-items:center;gap:.35rem;}
 .rt-dash-yr span{color:var(--rt-ink-soft);font-size:.75rem;}
 .rt-dash-yr input{width:70px;}
-#dashMap{flex:1;min-height:0;z-index:998;}
-.rt-dash-legendbar{display:flex;gap:.6rem;padding:.35rem .75rem;background:var(--rt-white);border-top:1px solid var(--rt-border);flex-wrap:wrap;align-items:center;flex-shrink:0;}
+#dashMap{flex:1;min-height:0;min-width:0;z-index:1;background:#dceef2;overflow:hidden;}
+#dashMap.leaflet-container,#dashMap .leaflet-container{width:100%;height:100%;}
+.rt-map-loading{position:relative;}
+.rt-map-loading::after{content:'\f110';font-family:'Font Awesome 6 Free';font-weight:900;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.6rem;color:#0E7C86;z-index:600;animation:rt-spin 1s steps(8) infinite;pointer-events:none;}
+.rt-map-loading::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 2px 14px rgba(6,46,63,.18);z-index:599;pointer-events:none;}
+@keyframes rt-spin{100%{transform:translate(-50%,-50%) rotate(360deg);}}
+.rt-dash-legendbar{display:flex;gap:.6rem;padding:.35rem .75rem;background:var(--rt-white);border-top:1px solid var(--rt-border);flex-wrap:wrap;align-items:center;flex-shrink:0;position:relative;z-index:1300;}
 .rt-dash-leg-t{font-size:.7rem;color:var(--rt-ink-soft);font-weight:600;}
 .rt-dash-leg{display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--rt-ink-soft);}
 .rt-dash-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
@@ -154,7 +159,7 @@ body{visibility:visible!important;overflow:hidden!important;height:100vh!importa
 .tl-yr.active{background:var(--rt-teal);color:#fff;border-color:var(--rt-teal);}
 .tl-label{font-size:.65rem;color:var(--rt-ink-soft);font-weight:500;}
 .tl-info{font-size:.68rem;color:var(--rt-navy);font-weight:600;margin-top:.25rem;min-height:1.2em;}
-@media(max-width:1024px){.rt-dash-root{flex-direction:column;}.rt-dash-sidecol{width:100%;max-height:45vh;border-left:none;border-top:1px solid var(--rt-border);}}
+@media(max-width:1024px){.rt-dash-root{flex-direction:column;}.rt-dash-mapcol{min-height:340px;flex:1;}.rt-dash-sidecol{width:100%;max-height:45vh;border-left:none;border-top:1px solid var(--rt-border);}}
 @media(max-width:576px){.rt-dash-filters{flex-direction:column;gap:.35rem;}.rt-dash-fg{min-width:100%;}.rt-dash-yr input{width:60px;}.rt-dash-subbar{flex-direction:column;align-items:flex-start;gap:.35rem;}.rt-tour-replay span{display:none;}.rt-tour-replay{padding:.35rem;}}
 </style>
 {% endblock %}
@@ -178,7 +183,7 @@ body{visibility:visible!important;overflow:hidden!important;height:100vh!importa
       <button id="btnTransects" class="rt-dash-tbtn rt-dash-tbtn-green"><i class="fas fa-draw-polygon"></i> Transects</button>
       <button id="btnResetFilters" class="rt-dash-tbtn" style="color:#dc2626;border-color:#fecaca;" onclick="resetFilters()"><i class="fas fa-times"></i> Reset</button>
     </div>
-    <div id="dashMap"></div>
+    <div id="dashMap" class="rt-map-loading"></div>
     <div class="rt-dash-legendbar">
       <span class="rt-dash-leg-t"><i class="fas fa-palette"></i></span>
       <span class="rt-dash-leg"><span class="rt-dash-dot" style="background:#16a34a"></span>Excellent</span>
@@ -261,11 +266,15 @@ body{visibility:visible!important;overflow:hidden!important;height:100vh!importa
 {% block footer %}{% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+body{display:grid!important;grid-template-rows:auto 1fr!important;min-height:100vh!important;}
+</style>
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'vendor/markercluster/leaflet.markercluster.js' %}"></script>
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
 <script>
 (function(){
+try{
 var map,chart,mCluster,tLayer,bLayer;
 var D={m:[],s:{},t:[]};
 var showT=false,mapF=false;
@@ -273,13 +282,14 @@ var selMuni=null,selBrgy=null;
 var HC={excellent:'#16a34a',good:'#2563eb',fair:'#d97706',poor:'#dc2626'};
 
 document.addEventListener('DOMContentLoaded',function(){
-  init();
-  load({});
+  try{init();load({});}catch(err2){console.error('Dashboard init failed:',err2);var el=document.getElementById('dashMap');if(el){el.classList.remove('rt-map-loading');el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#f1f5f9;border-radius:8px;"><div style="text-align:center;padding:2rem;"><i class="fas fa-exclamation-triangle" style="font-size:2rem;color:#d97706;margin-bottom:1rem;display:block;"></i><p style="color:#475569;margin:0;">Unable to load the map. Please check your internet connection and reload the page.</p></div></div>';}}
 });
 
 function init(){
   map=L.map('dashMap',{zoomControl:true}).setView([6.05,125.25],10);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap',maxZoom:18}).addTo(map);
+  var tl=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap',maxZoom:18}).addTo(map);
+  var rmLd=function(){var el=document.getElementById('dashMap');if(el)el.classList.remove('rt-map-loading');};
+  tl.on('load',rmLd);setTimeout(rmLd,4000);
   mCluster=L.markerClusterGroup({maxClusterRadius:40});
   map.addLayer(mCluster);
   tLayer=L.layerGroup();
@@ -325,7 +335,14 @@ function load(f){
     updStats(d.s);
     updChart(d.t);
     updHealth(d.m);
-  }).catch(function(e){console.error(e);});
+  }).catch(function(e){
+    console.error('Dashboard data fetch failed:',e);
+    document.getElementById('sTotalAssess').textContent='—';
+    document.getElementById('sTotalTran').textContent='—';
+    document.getElementById('sAvgCover').textContent='—';
+    document.getElementById('sTotalSpecies').textContent='—';
+    document.getElementById('trendInfo').innerHTML='<i class="fas fa-exclamation-triangle"></i> Failed to load data. Please reload.';
+  });
 }
 
 function popMuniSel(ms){
@@ -543,12 +560,14 @@ function drawLine(t,a,bn){
   var dcc=HC[dHC&&dHC.label?dHC.label:null]||'#6b7280';
   var sCnt=sHC&&sHC.avg!==null?sHC.avg:'—';
   var dCnt=dHC&&dHC.avg!==null?dHC.avg:'—';
+  var sLen=t.sl?'<br>'+t.sl+' m':'';
+  var dLen=t.dl?'<br>'+t.dl+' m':'';
   if(t.s.s&&t.s.e){
     var glow=L.polyline([t.s.s,t.s.e],{color:scc,weight:8,opacity:.2,smoothFactor:1,lineCap:'round'});
     tLayer.addLayer(glow);
     var sl=L.polyline([t.s.s,t.s.e],{color:scc,weight:4,opacity:.92,smoothFactor:1,lineCap:'round'});
-    sl.bindTooltip('<b>T'+t.n+'</b> Shallow<br><span style="color:'+scc+'">'+depthLabel(sHC)+'</span> · '+sCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-s',sticky:true});
-    sl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Shallow</b><br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+scc+';font-weight:700">'+depthLabel(sHC)+'</span><br>Avg cover: <b>'+sCnt+'%</b><br>'+t.sc+' species<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
+    sl.bindTooltip('<b>T'+t.n+'</b> Shallow'+sLen+'<br><span style="color:'+scc+'">'+depthLabel(sHC)+'</span> · '+sCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-s',sticky:true});
+    sl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Shallow</b>'+sLen+'<br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+scc+';font-weight:700">'+depthLabel(sHC)+'</span><br>Avg cover: <b>'+sCnt+'%</b><br>'+t.sc+' species<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
     tLayer.addLayer(sl);
     var ep1=L.circleMarker(t.s.s,{radius:4,fillColor:'#8b5cf6',color:'#fff',weight:1.5,fillOpacity:1});
     ep1.bindTooltip('Start · '+t.s.s[0].toFixed(5)+', '+t.s.s[1].toFixed(5),{direction:'top',offset:[0,-6]});
@@ -561,8 +580,8 @@ function drawLine(t,a,bn){
     var dglow=L.polyline([t.d.s,t.d.e],{color:dcc,weight:8,opacity:.12,smoothFactor:1,lineCap:'round'});
     tLayer.addLayer(dglow);
     var dl=L.polyline([t.d.s,t.d.e],{color:dcc,weight:4,opacity:.55,smoothFactor:1,lineCap:'round',dashArray:'10,7'});
-    dl.bindTooltip('<b>T'+t.n+'</b> Deep<br><span style="color:'+dcc+'">'+depthLabel(dHC)+'</span> · '+dCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-d',sticky:true});
-    dl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Deep</b><br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+dcc+';font-weight:700">'+depthLabel(dHC)+'</span><br>Avg cover: <b>'+dCnt+'%</b><br>'+t.sc+' species<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
+    dl.bindTooltip('<b>T'+t.n+'</b> Deep'+dLen+'<br><span style="color:'+dcc+'">'+depthLabel(dHC)+'</span> · '+dCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-d',sticky:true});
+    dl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Deep</b>'+dLen+'<br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+dcc+';font-weight:700">'+depthLabel(dHC)+'</span><br>Avg cover: <b>'+dCnt+'%</b><br>'+t.sc+' species<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
     tLayer.addLayer(dl);
     var ep3=L.circleMarker(t.d.s,{radius:4,fillColor:'#8b5cf6',color:'#fff',weight:1.5,fillOpacity:1});
     ep3.bindTooltip('Start · '+t.d.s[0].toFixed(5)+', '+t.d.s[1].toFixed(5),{direction:'top',offset:[0,-6]});
@@ -728,6 +747,11 @@ window.ZB=function(mid,bid){
     showBLines(b);buildTimeline(b);
   },400);
 };
+}catch(err){
+console.error('Dashboard init failed:',err);
+var el=document.getElementById('dashMap');
+if(el){el.classList.remove('rt-map-loading');el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#f1f5f9;border-radius:8px;"><div style="text-align:center;padding:2rem;"><i class="fas fa-exclamation-triangle" style="font-size:2rem;color:#d97706;margin-bottom:1rem;display:block;"></i><p style="color:#475569;margin:0;">Unable to load the map. Please check your internet connection and reload the page.</p></div></div>';}
+}
 })();
 </script>
 <script>

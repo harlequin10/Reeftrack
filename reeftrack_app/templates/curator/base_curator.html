@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>{% block title %}Curator - ReefTrack{% endblock %}</title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <style>
-    body{visibility:hidden}
     :root{--rt-navy:#062E3F;--rt-navy-light:#0A4A61;--rt-teal:#0E7C86;--rt-teal-light:#17A8B5;--rt-seafoam:#7DD4C0;--rt-sand:#F5EDE0;--rt-sand-light:#FAF7F2;--rt-coral:#E85D3A;--rt-ink:#1A2C30;--rt-ink-soft:#4D6269;--rt-white:#FEFFFE;--rt-border:#D6CFC2;--rt-shadow:0 2px 12px rgba(6,46,63,.1);--rt-shadow-lg:0 8px 28px rgba(6,46,63,.16);--rt-radius:10px;--rt-font-body:'Inter','Segoe UI',system-ui,sans-serif}
-    body{background-color:var(--rt-sand);color:var(--rt-ink);font-family:var(--rt-font-body);line-height:1.6;margin:0;overflow-x:hidden}
+    body{background-color:var(--rt-sand);color:var(--rt-ink);font-family:var(--rt-font-body);line-height:1.6;margin:0;overflow-x:hidden;opacity:0;transition:opacity .15s ease}
     .rt-navbar{background:linear-gradient(90deg,var(--rt-navy) 0%,var(--rt-navy-light) 100%)!important;box-shadow:var(--rt-shadow);position:relative}
     .rt-navbar .nav-link{color:var(--rt-seafoam)!important}
     .rt-navbar .nav-link:hover{color:var(--rt-white)!important}
@@ -41,8 +41,8 @@
     .ms-auto{margin-left:auto!important}
     .me-auto{margin-right:auto!important}
     </style>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="/static/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
     {% load static %}
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v=6">
@@ -140,27 +140,42 @@
 
     {% if messages %}
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    (function() {
         var msgs = [
             {% for message in messages %}
             {text: "{{ message|escapejs }}", tag: "{{ message.tags }}"},
             {% endfor %}
         ];
         var m = msgs[msgs.length - 1];
-        var titles = {error: 'Error', success: 'Success', warning: 'Warning', info: 'Info'};
         var icons = {error: 'fa-exclamation-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle'};
         var colors = {error: '#dc2626', success: '#059669', warning: '#d97706', info: '#2563eb'};
-        var iconBg = {error: '#fee2e2', success: '#d1fae5', warning: '#fef3c7', info: '#dbeafe'};
-        var backdrop = document.createElement('div');
-        backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);z-index:10500;';
-        document.body.appendChild(backdrop);
-        var card = document.createElement('div');
-        card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:440px;max-width:90vw;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;z-index:10501;border-top:4px solid '+colors[m.tag]+';';
-        card.innerHTML = '<div style="padding:2rem 2rem 0;text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;font-size:1.8rem;background:'+iconBg[m.tag]+';color:'+colors[m.tag]+';"><i class="fas '+icons[m.tag]+'"></i></span></div><div style="padding:1rem 2rem 0.5rem;text-align:center;"><p style="font-size:1.15rem;font-weight:700;margin-bottom:0.5rem;color:'+colors[m.tag]+';">'+titles[m.tag]+'</p><p style="font-size:0.9rem;line-height:1.6;color:#495057;margin:0;word-wrap:break-word;white-space:pre-line;text-align:left;">'+m.text+'</p></div><div style="padding:1.25rem 2rem 1.5rem;text-align:center;"><button style="min-width:100px;padding:0.45rem 2rem;border-radius:8px;font-weight:600;font-size:0.9rem;border:none;color:#fff;background:'+colors[m.tag]+';cursor:pointer;" onclick="this.closest(\'div[style*=fixed]\').remove();document.querySelector(\'div[style*=backdrop]\').remove();">OK</button></div>';
-        document.body.appendChild(card);
-        function dismiss() { if (card.parentNode) card.remove(); if (backdrop.parentNode) backdrop.remove(); }
-        backdrop.addEventListener('click', dismiss);
-    });
+        var bg = {error: '#fee2e2', success: '#d1fae5', warning: '#fef3c7', info: '#dbeafe'};
+        var border = {error: '#fca5a5', success: '#86efac', warning: '#fde68a', info: '#93c5fd'};
+
+        var style = document.createElement('style');
+        style.textContent = '@keyframes rtToastIn{from{opacity:0;transform:translateX(40px);}to{opacity:1;transform:translateX(0);}}';
+        document.head.appendChild(style);
+
+        function showToast() {
+            var toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;top:20px;right:20px;max-width:420px;width:calc(100vw - 40px);background:'+bg[m.tag]+';border:1px solid '+border[m.tag]+';border-left:4px solid '+colors[m.tag]+';border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:10500;display:flex;align-items:flex-start;gap:12px;padding:16px 16px 16px 14px;animation:rtToastIn .3s ease;';
+            toast.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-size:0.85rem;background:'+bg[m.tag]+';color:'+colors[m.tag]+';flex-shrink:0;margin-top:1px;"><i class="fas '+icons[m.tag]+'"></i></span><div style="flex:1;min-width:0;"><p style="font-size:0.88rem;font-weight:600;color:'+colors[m.tag]+';margin:0 0 2px;">'+m.text+'</p></div><button onclick="this.closest(\'div[style*=fixed]\').remove();" style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:0;font-size:1.1rem;line-height:1;flex-shrink:0;margin-top:2px;">&times;</button>';
+            document.body.appendChild(toast);
+
+            setTimeout(function() {
+                toast.style.transition = 'opacity .3s ease, transform .3s ease';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(40px)';
+                setTimeout(function() { if (toast.parentNode) toast.remove(); }, 300);
+            }, 4000);
+        }
+
+        if (document.readyState === 'complete') {
+            setTimeout(showToast, 150);
+        } else {
+            window.addEventListener('load', function() { setTimeout(showToast, 150); });
+        }
+    })();
     </script>
     {% endif %}
 
@@ -174,7 +189,7 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <style>
     .notif-wrapper{position:relative;}
     .notif-panel{display:none;position:absolute;top:100%;right:-60px;width:360px;max-height:420px;background:#fff;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,0.18);z-index:9999;overflow:hidden;flex-direction:column;}
@@ -203,7 +218,7 @@
     .notif-item .notif-msg{font-size:0.78rem;color:#475569;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
     .notif-item .notif-time{font-size:0.7rem;color:#94a3b8;margin-top:2px;}
     .notif-item .notif-unread-dot{width:8px;height:8px;border-radius:50%;background:#3b82f6;flex-shrink:0;margin-top:6px;}
-    @media(max-width:400px){.notif-panel{right:-40px;width:300px;}}
+    @media(max-width:480px){.notif-panel{position:fixed;top:auto;left:8px;right:8px;width:auto;max-width:calc(100vw - 16px);}}
     </style>
     <script>
     (function() {
@@ -282,20 +297,31 @@
         var proto=location.protocol==='https:'?'wss:':'ws:';
         var wsUrl=proto+'//'+location.host+'/ws/assessments/';
         var notifWs=null;
+        var wsFailCount=0;
+        var wsMaxFails=5;
         function connectNotifWs(){
             try{notifWs=new WebSocket(wsUrl);}catch(e){return;}
+            notifWs.onopen=function(){wsFailCount=0;};
             notifWs.onmessage=function(e){
                 try{var msg=JSON.parse(e.data);}catch(x){return;}
                 if(msg.type==='notification_update'){
                     fetch('/api/notifications/unread-count/').then(function(r){return r.json();}).then(function(d){updateBadge(d.count);}).catch(function(){});
                 }
             };
-            notifWs.onclose=function(){setTimeout(connectNotifWs,5000);};
+            notifWs.onclose=function(){
+                wsFailCount++;
+                if(wsFailCount<wsMaxFails){setTimeout(connectNotifWs,5000);}
+                else{setTimeout(function(){wsFailCount=0;connectNotifWs();},60000);}
+            };
             notifWs.onerror=function(){};
         }
         connectNotifWs();
     })();
     </script>
-    <script>window.addEventListener('load',function(){document.body.style.visibility='visible';});setTimeout(function(){if(document.body)document.body.style.visibility='visible';},1500);</script>
-</body>
+    <script>
+    window.addEventListener('load', function() {
+        document.body.style.opacity = '1';
+    });
+    </script>
+    </body>
 </html>

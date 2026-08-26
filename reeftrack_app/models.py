@@ -1,4 +1,5 @@
 from django.db import models
+import math
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -264,6 +265,28 @@ class Transect(models.Model):
     @property
     def deep_health(self):
         return self._health_for_depth('deep')
+
+    @staticmethod
+    def _haversine(lat1, lng1, lat2, lng2):
+        """Calculate distance in meters between two GPS coordinates."""
+        R = 6371000
+        phi1, phi2 = math.radians(float(lat1)), math.radians(float(lat2))
+        dphi = math.radians(float(lat2) - float(lat1))
+        dlambda = math.radians(float(lng2) - float(lng1))
+        a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    @property
+    def shallow_length(self):
+        if self.shallow_start_lat and self.shallow_start_lng and self.shallow_end_lat and self.shallow_end_lng:
+            return round(self._haversine(self.shallow_start_lat, self.shallow_start_lng, self.shallow_end_lat, self.shallow_end_lng), 1)
+        return None
+
+    @property
+    def deep_length(self):
+        if self.deep_start_lat and self.deep_start_lng and self.deep_end_lat and self.deep_end_lng:
+            return round(self._haversine(self.deep_start_lat, self.deep_start_lng, self.deep_end_lat, self.deep_end_lng), 1)
+        return None
 
     @property
     def overall_health(self):
