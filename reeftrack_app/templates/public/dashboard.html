@@ -136,6 +136,11 @@ body{visibility:visible!important;opacity:1!important;overflow:hidden!important;
 .rt-dash-yf select{padding:.2rem .4rem;font-size:.7rem;border-radius:6px;border:1px solid var(--rt-border);background:var(--rt-white);}
 .rt-dash-yf-btn{background:var(--rt-sand);border:none;padding:.2rem .5rem;border-radius:6px;font-size:.65rem;cursor:pointer;}
 .rt-dash-yf-btn:hover{background:var(--rt-border);}
+.rt-dash-pager{display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.4rem .75rem;border-top:1px solid var(--rt-border);}
+.rt-dash-pager button{background:var(--rt-sand);border:1px solid var(--rt-border);border-radius:6px;padding:.15rem .55rem;font-size:.68rem;cursor:pointer;font-family:var(--rt-font-body);transition:all .15s;}
+.rt-dash-pager button:hover:not(:disabled){background:var(--rt-teal);color:#fff;border-color:var(--rt-teal);}
+.rt-dash-pager button:disabled{opacity:.35;cursor:default;}
+.rt-dash-pager span{font-size:.65rem;color:var(--rt-ink-soft);}
 .rt-dash-trsp{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--rt-border);font-size:.72rem;cursor:pointer;transition:background .15s;}
 .rt-dash-trsp:hover{background:#e8f0fe;}
 .rt-dash-trsp:last-child{border-bottom:none;}
@@ -159,6 +164,12 @@ body{visibility:visible!important;opacity:1!important;overflow:hidden!important;
 .tl-yr.active{background:var(--rt-teal);color:#fff;border-color:var(--rt-teal);}
 .tl-label{font-size:.65rem;color:var(--rt-ink-soft);font-weight:500;}
 .tl-info{font-size:.68rem;color:var(--rt-navy);font-weight:600;margin-top:.25rem;min-height:1.2em;}
+.tl-alist{margin-top:.4rem;max-height:280px;overflow-y:auto;}
+.tl-a-item{display:flex;align-items:center;justify-content:space-between;padding:.4rem .55rem;border-radius:6px;margin-bottom:2px;font-size:.7rem;cursor:pointer;transition:background .15s;border-left:3px solid transparent;}
+.tl-a-item:hover{background:var(--rt-sand);}
+.tl-a-item.active{background:rgba(8,145,178,.1);border-left-color:var(--rt-teal);}
+.tl-a-date{font-weight:500;color:var(--rt-ink);}
+.tl-a-cov{font-weight:700;}
 @media(max-width:1024px){.rt-dash-root{flex-direction:column;}.rt-dash-mapcol{min-height:340px;flex:1;}.rt-dash-sidecol{width:100%;max-height:45vh;border-left:none;border-top:1px solid var(--rt-border);}}
 @media(max-width:576px){.rt-dash-filters{flex-direction:column;gap:.35rem;}.rt-dash-fg{min-width:100%;}.rt-dash-yr input{width:60px;}.rt-dash-subbar{flex-direction:column;align-items:flex-start;gap:.35rem;}.rt-tour-replay span{display:none;}.rt-tour-replay{padding:.35rem;}}
 </style>
@@ -227,6 +238,7 @@ body{visibility:visible!important;opacity:1!important;overflow:hidden!important;
         </div>
         <div class="tl-wrap" id="tlWrap"></div>
         <div class="tl-info" id="tlInfo"></div>
+        <div class="tl-alist" id="tlAList"></div>
       </div>
     </div>
     <div class="rt-dash-card">
@@ -279,6 +291,8 @@ var map,chart,mCluster,tLayer,bLayer;
 var D={m:[],s:{},t:[]};
 var showT=false,mapF=false;
 var selMuni=null,selBrgy=null;
+var _aPage=0,_aFiltered=null,_aPP=10;
+var _tlPage=0,_tlFiltered=null,_tlPP=10;
 var HC={excellent:'#16a34a',good:'#2563eb',fair:'#d97706',poor:'#dc2626'};
 
 document.addEventListener('DOMContentLoaded',function(){
@@ -389,11 +403,33 @@ window.ZM=function(mid){
   updHealth([m]);
 };
 
+function renderAList(){
+  var list=document.getElementById('brgyAssessList');
+  if(!list||!_aFiltered)return;
+  var total=_aFiltered.length;
+  var totalPages=Math.ceil(total/_aPP);
+  if(_aPage>=totalPages)_aPage=totalPages-1;
+  if(_aPage<0)_aPage=0;
+  var start=_aPage*_aPP;
+  var slice=_aFiltered.slice(start,start+_aPP);
+  var h='';
+  slice.forEach(function(a){
+    var ac=HC[a.c]||'#6b7280';
+    h+='<div class="rt-dash-ab" onclick="window.SA('+a.id+')"><span><i class="fas fa-calendar-alt"></i> '+a.d+'</span><span class="rt-dash-badge" style="background:'+ac+';color:#fff">'+(a.cc!==null?a.cc+'%':'N/A')+'</span><i class="fas fa-chevron-right" style="font-size:.6rem;color:var(--rt-ink-soft);"></i></div>';
+  });
+  if(!h)h='<div style="text-align:center;color:var(--rt-ink-soft);font-size:.72rem;padding:.5rem;">No assessments for this year</div>';
+  if(total>_aPP){
+    h+='<div class="rt-dash-pager"><button onclick="_aPage--;renderAList();"'+(_aPage===0?' disabled':'')+'><i class="fas fa-chevron-left"></i></button><span>'+(_aPage+1)+' / '+totalPages+'</span><button onclick="_aPage++;renderAList();"'+(_aPage>=totalPages-1?' disabled':'')+'><i class="fas fa-chevron-right"></i></button></div>';
+  }
+  list.innerHTML=h;
+}
+
 function showBDetails(b,m){
   document.getElementById('backToMuniBtn').style.display='';
   var el=document.getElementById('pDetails');
   var c=HC[b.lc]||'#6b7280';
   var allA=b.a.slice().sort(function(x,y){return new Date(y.d)-new Date(x.d);});
+  _aFiltered=allA;_aPage=0;
   var avgCover=0,scov=0,scnt=0;
   allA.forEach(function(a){if(a.cc!==null){scov+=a.cc;scnt++;}});
   if(scnt>0)avgCover=(scov/scnt).toFixed(1);
@@ -404,10 +440,6 @@ function showBDetails(b,m){
   var yearList=Object.keys(years).sort(function(a,b){return b-a;});
   var yearOpts=yearList.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
   var condText=b.lc?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A';
-  var ah='';allA.forEach(function(a){
-    var ac=HC[a.c]||'#6b7280';
-    ah+='<div class="rt-dash-ab" onclick="window.SA('+a.id+')"><span><i class="fas fa-calendar-alt"></i> '+a.d+'</span><span class="rt-dash-badge" style="background:'+ac+';color:#fff">'+(a.cc!==null?a.cc+'%':'N/A')+'</span><i class="fas fa-chevron-right" style="font-size:.6rem;color:var(--rt-ink-soft);"></i></div>';
-  });
   el.innerHTML='<div class="rt-dash-bh"><div class="rt-dash-bn">'+b.name+'</div><div class="rt-dash-bmtag"><i class="fas fa-city"></i> '+m.name+', '+m.province+'</div></div>'+
     '<div class="rt-dash-dr"><span>🏝️ Latest coral cover</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(b.lcv!==null?b.lcv+'% ('+condText+')':'No data')+'</span></div>'+
     '<div class="rt-dash-dr"><span>📊 Mean cover (all years)</span><span><strong>'+avgCover+'%</strong></span></div>'+
@@ -418,9 +450,10 @@ function showBDetails(b,m){
     '<div class="rt-dash-ddh" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span><i class="fas fa-list"></i> All Assessments ('+b.ac+')</span><i class="fas fa-chevron-down"></i></div>'+
     '<div class="rt-dash-ddc">'+
     '<div class="rt-dash-yf"><label><i class="fas fa-filter"></i> Year:</label><select id="brgyYearFilter" onchange="filterBrgyAssessments(this.value)"><option value="all">All Years</option>'+yearOpts+'</select><button class="rt-dash-yf-btn" onclick="document.getElementById(\'brgyYearFilter\').value=\'all\';filterBrgyAssessments(\'all\');">Clear</button></div>'+
-    '<div id="brgyAssessList">'+ah+'</div>'+
+    '<div id="brgyAssessList"></div>'+
     '</div>'+
     '<button class="rt-dash-back-btn" onclick="backToMuni()"><i class="fas fa-globe"></i> Back to All Barangays</button>';
+  renderAList();
   updChartBrgy(b);
 }
 
@@ -450,6 +483,33 @@ function showBLines(b){
   if(sorted.length>0){sorted[0].tr.forEach(function(t){drawLine(t,sorted[0],b.name);});}
 }
 
+var _MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function _fmtMonth(d){
+  var p=d.split('-');if(p.length<3)return d;
+  return _MONTHS[parseInt(p[1])-1]+' '+parseInt(p[2])+', '+p[0];
+}
+
+function renderTlAList(){
+  var el=document.getElementById('tlAList');
+  if(!el||!_tlFiltered){if(el)el.innerHTML='';return;}
+  var total=_tlFiltered.length;
+  if(total===0){el.innerHTML='';return;}
+  var totalPages=Math.ceil(total/_tlPP);
+  if(_tlPage>=totalPages)_tlPage=totalPages-1;
+  if(_tlPage<0)_tlPage=0;
+  var start=_tlPage*_tlPP;
+  var slice=_tlFiltered.slice(start,start+_tlPP);
+  var h='';
+  slice.forEach(function(a,i){
+    var ac=HC[a.c]||'#6b7280';
+    h+='<div class="tl-a-item" onclick="window.SA('+a.id+')" data-idx="'+(start+i)+'"><span class="tl-a-date"><i class="fas fa-calendar-day"></i> '+_fmtMonth(a.d)+'</span><span class="tl-a-cov" style="color:'+ac+'">'+(a.cc!==null?a.cc+'%':'N/A')+'</span></div>';
+  });
+  if(total>_tlPP){
+    h+='<div class="rt-dash-pager"><button onclick="_tlPage--;renderTlAList();"'+(_tlPage===0?' disabled':'')+'><i class="fas fa-chevron-left"></i></button><span>'+(_tlPage+1)+' / '+totalPages+'</span><button onclick="_tlPage++;renderTlAList();"'+(_tlPage>=totalPages-1?' disabled':'')+'><i class="fas fa-chevron-right"></i></button></div>';
+  }
+  el.innerHTML=h;
+}
+
 function buildTimeline(b){
   var card=document.getElementById('timelineCard');
   var wrap=document.getElementById('tlWrap');
@@ -477,6 +537,8 @@ function buildTimeline(b){
   wrap.innerHTML=h;
   tLayer.clearLayers();
   info.textContent='Select a year or range to view transects';
+  _tlFiltered=null;_tlPage=0;
+  document.getElementById('tlAList').innerHTML='';
 }
 
 function tlRangeFilter(){
@@ -496,6 +558,9 @@ function tlRangeFilter(){
   showBLinesYear(selBrgy,null,from,to);
   document.getElementById('tlInfo').textContent='Showing transects from '+from+' to '+to;
   if(showT)showLines();
+  _tlFiltered=selBrgy.a.filter(function(a){var y=parseInt(a.d.split('-')[0]);return y>=from&&y<=to;}).sort(function(x,y){return new Date(y.d)-new Date(x.d);});
+  _tlPage=0;
+  renderTlAList();
 }
 
 function pickTlYear(y){
@@ -505,6 +570,9 @@ function pickTlYear(y){
   });
   showBLinesYear(selBrgy,null,y,y);
   document.getElementById('tlInfo').textContent='Showing transects for '+y;
+  _tlFiltered=selBrgy.a.filter(function(a){return parseInt(a.d.split('-')[0])===y;}).sort(function(x,y){return new Date(y.d)-new Date(x.d);});
+  _tlPage=0;
+  renderTlAList();
 }
 
 function resetTimeline(){
@@ -619,17 +687,10 @@ function backToMuni(){
 
 function filterBrgyAssessments(year){
   if(!selBrgy)return;
-  var list=document.getElementById('brgyAssessList');
-  if(!list)return;
-  var filtered;
-  if(year==='all'){filtered=selBrgy.a;}
-  else{filtered=selBrgy.a.filter(function(a){return parseInt(a.d.split('-')[0])===parseInt(year);});}
-  var html='';filtered.sort(function(x,y){return new Date(y.d)-new Date(x.d);}).forEach(function(a){
-    var ac=HC[a.c]||'#6b7280';
-    html+='<div class="rt-dash-ab" onclick="window.SA('+a.id+')"><span><i class="fas fa-calendar-alt"></i> '+a.d+'</span><span class="rt-dash-badge" style="background:'+ac+';color:#fff">'+(a.cc!==null?a.cc+'%':'N/A')+'</span><i class="fas fa-chevron-right" style="font-size:.6rem;color:var(--rt-ink-soft);"></i></div>';
-  });
-  if(!html)html='<div style="text-align:center;color:var(--rt-ink-soft);font-size:.72rem;padding:.5rem;">No assessments for this year</div>';
-  list.innerHTML=html;
+  if(year==='all'){_aFiltered=selBrgy.a;}
+  else{_aFiltered=selBrgy.a.filter(function(a){return parseInt(a.d.split('-')[0])===parseInt(year);});}
+  _aPage=0;
+  renderAList();
 }
 
 function fB(){
