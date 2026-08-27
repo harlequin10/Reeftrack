@@ -4,114 +4,187 @@
 {% block title %}Register - ReefTrack{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="rt-wave-divider"></div>
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h4><i class="fas fa-user-plus"></i> Register as Contributor</h4>
-            </div>
-            <div class="card-body">
-                {% if google_oauth_configured %}
-                <div class="mb-3">
-                    <a href="{% provider_login_url 'google' %}" class="btn btn-outline-dark w-100">
-                        <i class="fab fa-google me-2" style="color:#DB4437;"></i> Sign up with Google
-                    </a>
-                </div>
-                <div class="d-flex align-items-center my-3">
-                    <hr class="flex-grow-1" style="border-top:1px solid var(--rt-border);">
-                    <span class="px-2 text-muted small">OR</span>
-                    <hr class="flex-grow-1" style="border-top:1px solid var(--rt-border);">
-                </div>
-                {% endif %}
+<style>
+    .reg-wrap{max-width:540px;margin:0 auto;padding:2rem 0;}
+    .reg-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.05);overflow:hidden;}
+    .reg-header{text-align:center;padding:2rem 2rem 0;position:relative;}
+    .reg-header-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .85rem;border-radius:20px;font-size:.72rem;font-weight:600;background:rgba(14,124,134,.1);color:var(--rt-teal);border:1px solid rgba(14,124,134,.2);margin-bottom:1rem;}
+    .reg-header h2{margin:0 0 .3rem;font-weight:800;color:var(--rt-navy);font-size:1.4rem;}
+    .reg-header p{margin:0;color:var(--rt-ink-soft);font-size:.88rem;}
+    .reg-body{padding:1.5rem 2rem 2rem;}
 
-                <div style="background:#DCF0F2; border:1px solid #0E7C86; border-radius:8px; padding:1rem 1.25rem; margin-bottom:1rem; color:#062E3F;">
-                    <i class="fas fa-info-circle" style="color:#0E7C86;"></i> 
-                    <strong>Registration Process:</strong><br>
-                    1. You will be registered as a <strong>Contributor</strong><br>
-                    2. Your account will be <strong>pending for approval</strong><br>
-                    3. An admin or curator will review your registration<br>
-                    4. You will be notified once approved
-                </div>
-                
-                <form method="POST">
-                    {% csrf_token %}
-                    
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label for="id_first_name" class="form-label">First Name <span class="text-danger">*</span></label>
-                            {{ form.first_name }}
+    .reg-steps{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.25rem;padding:1rem;border-radius:12px;background:rgba(14,124,134,.04);border:1px solid rgba(14,124,134,.12);}
+    .reg-steps-title{font-size:.82rem;font-weight:700;color:var(--rt-navy);margin-bottom:.2rem;display:flex;align-items:center;gap:.4rem;}
+    .reg-steps-title i{color:var(--rt-teal);font-size:.8rem;}
+    .reg-steps ol{margin:0;padding-left:1.1rem;font-size:.78rem;color:var(--rt-ink-soft);line-height:1.65;}
+    .reg-steps ol li{margin-bottom:.1rem;}
+
+    .reg-google-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.65rem;border-radius:10px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none;}
+    .reg-google-btn:hover{background:#f9fafb;border-color:#d1d5db;color:#374151;}
+
+    .reg-divider{display:flex;align-items:center;gap:.75rem;margin:1.25rem 0;}
+    .reg-divider::before,.reg-divider::after{content:'';flex:1;height:1px;background:#e5e7eb;}
+    .reg-divider span{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;}
+
+    .reg-section-label{font-size:.78rem;font-weight:700;color:var(--rt-teal);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.65rem;display:flex;align-items:center;gap:.4rem;}
+    .reg-section-label::after{content:'';flex:1;height:1px;background:rgba(14,124,134,.15);}
+
+    .reg-field{margin-bottom:.85rem;}
+    .reg-field label{display:block;margin-bottom:.3rem;font-size:.82rem;font-weight:600;color:var(--rt-navy);}
+    .reg-field label .req{color:#dc2626;}
+    .reg-field-input{position:relative;}
+    .reg-field-input input,.reg-field-input select{width:100%;padding:.6rem .85rem;border:1px solid #d1d5db;border-radius:10px;font-size:.86rem;color:var(--rt-navy);background:#fff;transition:border-color .2s;outline:none;}
+    .reg-field-input input:focus,.reg-field-input select:focus{border-color:var(--rt-teal);box-shadow:0 0 0 3px rgba(14,124,134,.1);}
+    .reg-field-hint{margin-top:.25rem;font-size:.72rem;color:#9ca3af;}
+    .reg-field-error{margin-top:.25rem;font-size:.76rem;color:#dc2626;display:flex;align-items:center;gap:.3rem;}
+    .reg-field-error i{font-size:.7rem;}
+    .reg-field-input .reg-eye{position:absolute;right:.5rem;top:50%;transform:translateY(-50%);border:none;background:none;color:#9ca3af;cursor:pointer;padding:.25rem;font-size:.85rem;}
+    .reg-field-input .reg-eye:hover{color:var(--rt-teal);}
+
+    .reg-name-row{display:grid;grid-template-columns:1.5fr .6fr 1.5fr .6fr;gap:.6rem;}
+    @media(max-width:575px){
+        .reg-name-row{grid-template-columns:1fr 1fr;}
+    }
+
+    .reg-info-box{padding:.75rem 1rem;border-radius:10px;font-size:.8rem;display:flex;align-items:flex-start;gap:.5rem;margin-bottom:1rem;line-height:1.55;}
+    .reg-info-box i{margin-top:.15rem;flex-shrink:0;}
+    .reg-info-box-teal{background:rgba(14,124,134,.06);color:#062E3F;border:1px solid rgba(14,124,134,.15);}
+    .reg-info-box-teal i{color:var(--rt-teal);}
+    .reg-info-box-sand{background:#fef9ee;color:var(--rt-navy);border:1px solid #f0dfb0;}
+    .reg-info-box-sand i{color:#b45309;}
+
+    .reg-submit{width:100%;padding:.7rem;border:none;border-radius:10px;background:var(--rt-teal);color:#fff;font-size:.92rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:.25rem;}
+    .reg-submit:hover{background:var(--rt-navy);transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,124,134,.2);}
+
+    .reg-login-card{margin-top:1rem;padding:1rem;border-radius:12px;background:#f8fafc;border:1px solid #e5e7eb;text-align:center;}
+    .reg-login-card p{margin:0;font-size:.85rem;color:var(--rt-ink-soft);}
+    .reg-login-card a{color:var(--rt-teal);font-weight:600;text-decoration:none;}
+    .reg-login-card a:hover{text-decoration:underline;color:var(--rt-navy);}
+
+    .reg-back{display:inline-flex;align-items:center;gap:.35rem;margin-bottom:1rem;font-size:.82rem;font-weight:600;color:var(--rt-ink-soft);text-decoration:none;transition:color .2s;}
+    .reg-back:hover{color:var(--rt-teal);}
+</style>
+
+<div class="reg-wrap">
+    <a href="{% url 'home' %}" class="reg-back">
+        <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+    <div class="reg-card">
+        <div class="reg-header">
+            <div class="reg-header-badge"><i class="fas fa-water"></i> ReefTrack</div>
+            <h2>Create Account</h2>
+            <p>Join the reef conservation community</p>
+        </div>
+        <div class="reg-body">
+            <div class="reg-steps">
+                <div class="reg-steps-title"><i class="fas fa-info-circle"></i> Registration Process</div>
+                <ol>
+                    <li>You will be registered as a <strong>Contributor</strong></li>
+                    <li>Your account will be <strong>pending for approval</strong></li>
+                    <li>An admin or curator will review your registration</li>
+                    <li>You will be notified once approved</li>
+                </ol>
+            </div>
+
+            {% if google_oauth_configured %}
+            <a href="{% provider_login_url 'google' %}" class="reg-google-btn">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Sign up with Google
+            </a>
+            <div class="reg-divider"><span>or</span></div>
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="reg-section-label"><i class="fas fa-user"></i> Personal Information</div>
+
+                <div class="reg-name-row">
+                    <div class="reg-field">
+                        <label for="id_first_name">First Name <span class="req">*</span></label>
+                        <div class="reg-field-input">
+                            <input type="text" id="id_first_name" name="first_name" placeholder="Juan" required>
                             {% if form.first_name.errors %}
-                                <div class="text-danger small">{{ form.first_name.errors }}</div>
+                            <div class="reg-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.first_name.errors.0 }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-md-2">
-                            <label for="id_middle_initial" class="form-label">M.I.</label>
-                            {{ form.middle_initial }}
+                    </div>
+                    <div class="reg-field">
+                        <label for="id_middle_initial">M.I.</label>
+                        <div class="reg-field-input">
+                            <input type="text" id="id_middle_initial" name="middle_initial" placeholder="D">
                         </div>
-                        <div class="col-md-4">
-                            <label for="id_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
-                            {{ form.last_name }}
+                    </div>
+                    <div class="reg-field">
+                        <label for="id_last_name">Last Name <span class="req">*</span></label>
+                        <div class="reg-field-input">
+                            <input type="text" id="id_last_name" name="last_name" placeholder="Dela Cruz" required>
                             {% if form.last_name.errors %}
-                                <div class="text-danger small">{{ form.last_name.errors }}</div>
+                            <div class="reg-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.last_name.errors.0 }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-md-2">
-                            <label for="id_suffix" class="form-label">Suffix</label>
+                    </div>
+                    <div class="reg-field">
+                        <label for="id_suffix">Suffix</label>
+                        <div class="reg-field-input">
                             {{ form.suffix }}
                         </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="id_email" class="form-label">Email <span class="text-danger">*</span></label>
-                        {{ form.email }}
-                        {% if form.email.errors %}
-                            <div class="text-danger small">{{ form.email.errors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="mb-3">
-                        <label for="id_password1" class="form-label">Password <span class="text-danger">*</span></label>
-                        <div class="position-relative">
-                            {{ form.password1 }}
-                            <button class="btn position-absolute top-50 end-0 translate-middle-y me-3 p-1 border-0 bg-transparent text-muted" type="button" onclick="togglePassword('id_password1', this)" style="z-index:5;">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        {% if form.password1.errors %}
-                            <div class="text-danger small">{{ form.password1.errors }}</div>
-                        {% endif %}
-                        <small class="text-muted">Minimum 8 characters</small>
-                    </div>
-                    <div class="mb-3">
-                        <label for="id_password2" class="form-label">Confirm Password <span class="text-danger">*</span></label>
-                        <div class="position-relative">
-                            {{ form.password2 }}
-                            <button class="btn position-absolute top-50 end-0 translate-middle-y me-3 p-1 border-0 bg-transparent text-muted" type="button" onclick="togglePassword('id_password2', this)" style="z-index:5;">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        {% if form.password2.errors %}
-                            <div class="text-danger small">{{ form.password2.errors }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div style="background:var(--rt-sand-light); border:1px solid var(--rt-border); border-radius:8px; padding:1rem 1.25rem; margin-bottom:1rem; color:var(--rt-ink);">
-                        <i class="fas fa-user-tag"></i> 
-                        <strong>Role:</strong> You will be registered as a <span class="badge bg-primary">Contributor</span>
-                        <br>
-                        <i class="fas fa-clock"></i> 
-                        <strong>Status:</strong> <span class="badge bg-warning text-dark">Pending Approval</span>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-user-plus"></i> Register
-                    </button>
-                </form>
-                <div class="mt-3 text-center">
-                    <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
                 </div>
-            </div>
+
+                <div class="reg-section-label" style="margin-top:.5rem;"><i class="fas fa-envelope"></i> Account Credentials</div>
+
+                <div class="reg-field">
+                    <label for="id_email">Email <span class="req">*</span></label>
+                    <div class="reg-field-input">
+                        <input type="email" id="id_email" name="email" placeholder="you@example.com" required>
+                        {% if form.email.errors %}
+                        <div class="reg-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="reg-field">
+                    <label for="id_password1">Password <span class="req">*</span></label>
+                    <div class="reg-field-input">
+                        <input type="password" id="id_password1" name="password1" placeholder="Create a password" required>
+                        <button class="reg-eye" type="button" onclick="togglePassword('id_password1', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    {% if form.password1.errors %}
+                    <div class="reg-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.password1.errors.0 }}</div>
+                    {% endif %}
+                    <div class="reg-field-hint">Minimum 8 characters</div>
+                </div>
+                <div class="reg-field">
+                    <label for="id_password2">Confirm Password <span class="req">*</span></label>
+                    <div class="reg-field-input">
+                        <input type="password" id="id_password2" name="password2" placeholder="Confirm your password" required>
+                        <button class="reg-eye" type="button" onclick="togglePassword('id_password2', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    {% if form.password2.errors %}
+                    <div class="reg-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.password2.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="reg-info-box reg-info-box-sand">
+                    <i class="fas fa-user-tag"></i>
+                    <div>
+                        <strong>Role:</strong> Contributor &nbsp;|&nbsp;
+                        <strong>Status:</strong> <span style="color:#b45309;font-weight:600;">Pending Approval</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="reg-submit">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+            </form>
         </div>
+    </div>
+    <div class="reg-login-card">
+        <p>Already have an account? <a href="{% url 'login' %}">Sign in here</a></p>
     </div>
 </div>
 

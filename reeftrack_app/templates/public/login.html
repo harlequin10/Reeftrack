@@ -4,67 +4,113 @@
 {% block title %}Login - ReefTrack{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="rt-wave-divider"></div>
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h4><i class="fas fa-sign-in-alt"></i> Login</h4>
-            </div>
-            <div class="card-body">
-                {% if status == 'pending' %}
-                <div class="alert alert-warning">
-                    <i class="fas fa-clock"></i>
-                    <strong>Pending Approval:</strong> Your account is waiting for an admin or curator to approve it. You will be able to log in once approved.
-                </div>
-                {% endif %}
+<style>
+    .login-wrap{max-width:460px;margin:0 auto;padding:2rem 0;}
+    .login-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.05);overflow:hidden;}
+    .login-header{text-align:center;padding:2rem 2rem 0;position:relative;}
+    .login-header-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .85rem;border-radius:20px;font-size:.72rem;font-weight:600;background:rgba(14,124,134,.1);color:var(--rt-teal);border:1px solid rgba(14,124,134,.2);margin-bottom:1rem;}
+    .login-header h2{margin:0 0 .3rem;font-weight:800;color:var(--rt-navy);font-size:1.4rem;}
+    .login-header p{margin:0;color:var(--rt-ink-soft);font-size:.88rem;}
+    .login-body{padding:1.5rem 2rem 2rem;}
 
-                {% if google_oauth_configured %}
-                <div class="mb-3">
-                    <a href="{% provider_login_url 'google' %}" class="btn btn-outline-dark w-100">
-                        <i class="fab fa-google me-2" style="color:#DB4437;"></i> Continue with Google
-                    </a>
-                </div>
-                <div class="d-flex align-items-center my-3">
-                    <hr class="flex-grow-1" style="border-top:1px solid var(--rt-border);">
-                    <span class="px-2 text-muted small">OR</span>
-                    <hr class="flex-grow-1" style="border-top:1px solid var(--rt-border);">
-                </div>
-                {% endif %}
+    .login-alert{padding:.75rem 1rem;border-radius:10px;font-size:.82rem;display:flex;align-items:flex-start;gap:.5rem;margin-bottom:1rem;}
+    .login-alert i{margin-top:.15rem;flex-shrink:0;}
+    .login-alert-warning{background:#fef3c7;color:#92400e;border:1px solid #fcd34d;}
+    .login-alert-info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;}
+    .login-alert-danger{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
 
-                <form method="POST">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="id_email" class="form-label">Email</label>
-                        {{ form.email }}
-                    </div>
-                    <div class="mb-3">
-                        <label for="id_password" class="form-label">Password</label>
-                        <div class="position-relative">
-                            {{ form.password }}
-                            <button class="btn position-absolute top-50 end-0 translate-middle-y me-3 p-1 border-0 bg-transparent text-muted" type="button" onclick="togglePassword('id_password', this)" style="z-index:5;">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-                    {% endif %}
-                    
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> 
-                        <strong>Note:</strong> Your account must be approved by an admin before you can login.
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-sign-in-alt"></i> Login
-                    </button>
-                </form>
-                <div class="mt-3 text-center">
-                    <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
-                </div>
-            </div>
+    .login-google-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.65rem;border-radius:10px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s;}
+    .login-google-btn:hover{background:#f9fafb;border-color:#d1d5db;}
+    .login-google-btn img{width:18px;height:18px;}
+
+    .login-divider{display:flex;align-items:center;gap:.75rem;margin:1.25rem 0;}
+    .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#e5e7eb;}
+    .login-divider span{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;}
+
+    .login-field{margin-bottom:1rem;}
+    .login-field label{display:block;margin-bottom:.35rem;font-size:.82rem;font-weight:600;color:var(--rt-navy);}
+    .login-field-input{position:relative;}
+    .login-field-input input{width:100%;padding:.65rem .85rem;border:1px solid #d1d5db;border-radius:10px;font-size:.88rem;color:var(--rt-navy);background:#fff;transition:border-color .2s;outline:none;}
+    .login-field-input input:focus{border-color:var(--rt-teal);box-shadow:0 0 0 3px rgba(14,124,134,.1);}
+    .login-field-input .login-eye{position:absolute;right:.5rem;top:50%;transform:translateY(-50%);border:none;background:none;color:#9ca3af;cursor:pointer;padding:.25rem;font-size:.85rem;}
+    .login-field-input .login-eye:hover{color:var(--rt-teal);}
+
+    .login-submit{width:100%;padding:.7rem;border:none;border-radius:10px;background:var(--rt-teal);color:#fff;font-size:.92rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:.25rem;}
+    .login-submit:hover{background:var(--rt-navy);transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,124,134,.2);}
+
+    .login-register-card{margin-top:1rem;padding:1rem;border-radius:12px;background:#f8fafc;border:1px solid #e5e7eb;text-align:center;}
+    .login-register-card p{margin:0;font-size:.84rem;color:var(--rt-ink-soft);}
+    .login-register-card a{color:var(--rt-teal);font-weight:600;text-decoration:none;}
+    .login-register-card a:hover{text-decoration:underline;color:var(--rt-navy);}
+
+    .login-back{display:inline-flex;align-items:center;gap:.35rem;margin-bottom:1rem;font-size:.82rem;font-weight:600;color:var(--rt-ink-soft);text-decoration:none;transition:color .2s;}
+    .login-back:hover{color:var(--rt-teal);}
+</style>
+
+<div class="login-wrap">
+    <a href="{% url 'home' %}" class="login-back">
+        <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-header-badge"><i class="fas fa-water"></i> ReefTrack</div>
+            <h2>Welcome Back</h2>
+            <p>Sign in to your account</p>
         </div>
+        <div class="login-body">
+            {% if status == 'pending' %}
+            <div class="login-alert login-alert-warning">
+                <i class="fas fa-clock"></i>
+                <div><strong>Pending Approval:</strong> Your account is waiting for an admin or curator to approve it. You will be able to log in once approved.</div>
+            </div>
+            {% endif %}
+
+            {% if form.non_field_errors %}
+            <div class="login-alert login-alert-danger">
+                <i class="fas fa-exclamation-circle"></i>
+                <div>{{ form.non_field_errors }}</div>
+            </div>
+            {% endif %}
+
+            {% if google_oauth_configured %}
+            <a href="{% provider_login_url 'google' %}" class="login-google-btn">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Continue with Google
+            </a>
+            <div class="login-divider"><span>or</span></div>
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="login-field">
+                    <label for="id_email">Email</label>
+                    <div class="login-field-input">
+                        <input type="email" id="id_email" name="email" placeholder="you@example.com" required>
+                    </div>
+                </div>
+                <div class="login-field">
+                    <label for="id_password">Password</label>
+                    <div class="login-field-input">
+                        <input type="password" id="id_password" name="password" placeholder="Enter your password" required>
+                        <button class="login-eye" type="button" onclick="togglePassword('id_password', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="login-alert login-alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <div>Your account must be approved by an admin before you can login.</div>
+                </div>
+
+                <button type="submit" class="login-submit">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="login-register-card">
+        <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
     </div>
 </div>
 

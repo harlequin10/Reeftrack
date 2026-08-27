@@ -315,7 +315,6 @@
     </div>
 </div>
 
-<!-- Thesis PDF -->
 {% if assessment.thesis_pdf %}
 <div class="dam-section">
     <div class="dam-section-header">
@@ -465,6 +464,11 @@
                     <i class="fas fa-info-circle"></i>
                     <span>{{ warn.message }}</span>
                 </div>
+                <div class="dam-warn-detail-row" style="margin-top:0.4rem; gap:1rem; flex-wrap:wrap;">
+                    <small class="text-muted"><i class="fas fa-hashtag"></i> Transect {{ warn.transect_number }}</small>
+                    <small class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ warn.location }}</small>
+                    <small class="text-muted"><i class="fas fa-calendar"></i> {{ warn.date }}</small>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -482,7 +486,8 @@
     </div>
     <div class="dam-section-body">
         {% for warn in duplicate_warnings %}
-        <div class="dam-warn-card {% if warn.severity == 'exact' %}exact{% elif warn.severity == 'high' %}high{% else %}moderate{% endif %}">
+        <a href="{% url 'public_assessment_detail' warn.assessment.id %}" target="_blank" class="text-decoration-none">
+        <div class="dam-warn-card {% if warn.severity == 'exact' %}exact{% elif warn.severity == 'high' %}high{% else %}moderate{% endif %}" style="cursor:pointer;">
             <div class="dam-warn-card-body">
                 <div class="dam-warn-title {% if warn.severity == 'exact' %}exact{% elif warn.severity == 'high' %}high{% else %}moderate{% endif %}">
                     <span class="warn-icon"><i class="fas {% if warn.severity == 'exact' %}fa-exclamation-circle{% else %}fa-exclamation-triangle{% endif %}"></i></span>
@@ -496,6 +501,7 @@
                     <span>Moderate Similarity</span>
                     <span class="dam-warn-badge info" style="margin-left:0.5rem;">{{ warn.match_pct }}% Match</span>
                     {% endif %}
+                    <small class="text-muted ms-auto"><i class="fas fa-external-link-alt"></i> View</small>
                 </div>
                 <div class="dam-warn-detail-row" style="margin-top:0.5rem;">
                     <i class="fas fa-map-marker-alt"></i>
@@ -519,6 +525,7 @@
                 {% endif %}
             </div>
         </div>
+        </a>
         {% endfor %}
     </div>
 </div>

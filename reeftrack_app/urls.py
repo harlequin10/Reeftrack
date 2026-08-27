@@ -27,6 +27,7 @@ urlpatterns = [
     
     # Curator Management URLs
     path('curator/manage-contributors/', views.curator_manage_contributors, name='curator_manage_contributors'),
+    path('curator/manage-contributors/create/', views.curator_create_contributor, name='curator_create_contributor'),
     path('curator/contributor/action/<int:user_id>/', views.curator_contributor_action, name='curator_contributor_action'),
     path('curator/contributor/edit/<int:user_id>/', views.curator_edit_contributor, name='curator_edit_contributor'),
     

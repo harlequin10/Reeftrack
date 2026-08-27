@@ -642,6 +642,8 @@ def curator_dashboard(request):
 @curator_required
 def curator_manage_contributors(request):
     """Manage contributors - View, filter, approve, reject"""
+    from django.core.paginator import Paginator
+
     contributors = User.objects.filter(profile__role='contributor').select_related('profile').order_by('-date_joined')
     total_contributors = contributors.count()
     pending_count = contributors.filter(profile__status='pending').count()
@@ -660,8 +662,12 @@ def curator_manage_contributors(request):
             Q(last_name__icontains=search_query)
         )
 
+    paginator = Paginator(contributors, 10)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
     context = {
-        'contributors': contributors,
+        'contributors': page_obj,
         'total_contributors': total_contributors,
         'pending_count': pending_count,
         'approved_count': approved_count,
@@ -671,6 +677,35 @@ def curator_manage_contributors(request):
         'status_choices': UserProfile.STATUS_CHOICES,
     }
     return render(request, 'curator/manage_contributors.html', context)
+
+
+@login_required
+@curator_required
+def curator_create_contributor(request):
+    """Curator: Create a new contributor account (auto-approved)."""
+    from .forms import CuratorCreateContributorForm
+
+    if request.method == 'POST':
+        form = CuratorCreateContributorForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'Contributor created successfully: {user.email} (Auto-approved)')
+            return redirect('curator_manage_contributors')
+        else:
+            error_list = []
+            for field, errors in form.errors.items():
+                label = form[field].label if field in form.fields else field.replace('_', ' ').title()
+                for err in errors:
+                    error_list.append(f"{label}: {err}")
+            messages.error(request, '\n'.join(error_list) if error_list else 'Please correct the errors below.')
+    else:
+        form = CuratorCreateContributorForm()
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'curator/create_contributor.html', context)
+
 
 @login_required
 @curator_required
@@ -728,7 +763,7 @@ def curator_contributor_action(request, user_id):
     else:
         messages.error(request, 'Invalid action selected.')
     
-    return redirect('curator_dashboard')
+    return redirect('curator_manage_contributors')
 
 @login_required
 @curator_required
@@ -775,7 +810,7 @@ def curator_edit_contributor(request, user_id):
         user.profile.save()
         
         messages.success(request, f'Contributor has been updated successfully!')
-        return redirect('curator_dashboard')
+        return redirect('curator_manage_contributors')
     
     context = {
         'edit_user': user,
@@ -1196,6 +1231,9 @@ def get_review_warnings(all_species, assessment):
                     'severity': 'exact',
                     'overlap_count': len(overlap),
                     'total': len(overlap),
+                    'transect_number': tnum,
+                    'location': f'{assessment.barangay.name}, {assessment.municipality.name}, {assessment.municipality.province.name}',
+                    'date': assessment.assessment_date,
                 })
             elif len(overlap) > 0:
                 within_warnings.append({
@@ -1203,6 +1241,9 @@ def get_review_warnings(all_species, assessment):
                     'severity': 'high',
                     'overlap_count': len(overlap),
                     'total': max(len(shallow), len(deep)),
+                    'transect_number': tnum,
+                    'location': f'{assessment.barangay.name}, {assessment.municipality.name}, {assessment.municipality.province.name}',
+                    'date': assessment.assessment_date,
                 })
 
     # 2. Duplicate against approved assessments (same barangay)
@@ -3337,6 +3378,8 @@ def admin_delete_family(request, family_name):
 @curator_required
 def curator_assessments(request):
     """Curator: List all assessments with filters."""
+    from django.core.paginator import Paginator
+
     assessments = Assessment.objects.select_related(
         'municipality', 'barangay', 'uploaded_by', 'reviewed_by'
     ).prefetch_related('transects').all()
@@ -3353,6 +3396,10 @@ def curator_assessments(request):
             Q(uploaded_by__email__icontains=search_query)
         )
 
+    paginator = Paginator(assessments, 10)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
     stats = {
         'total': Assessment.objects.count(),
         'submitted': Assessment.objects.filter(status='submitted').count(),
@@ -3361,7 +3408,7 @@ def curator_assessments(request):
     }
 
     context = {
-        'assessments': assessments,
+        'assessments': page_obj,
         'status_filter': status_filter,
         'search_query': search_query,
         'stats': stats,

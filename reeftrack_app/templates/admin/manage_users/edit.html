@@ -1,210 +1,312 @@
 {% extends 'admin/base_admin.html' %}
 
-{% block title %}Edit User - Admin Panel{% endblock %}
+{% block title %}Edit User - Admin - ReefTrack{% endblock %}
 
 {% block content %}
 <style>
-    .form-card {
-        max-width: 800px;
-        margin: 0 auto;
+    .ae-page{margin-bottom:2rem;}
+
+    .ae-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
+    .ae-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
+    .ae-breadcrumb a:hover{color:#dc2626;}
+    .ae-breadcrumb .sep{color:#d1d5db;}
+
+    .ae-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;}
+    .ae-header-left h3{margin:0;font-weight:800;color:var(--rt-navy);font-size:1.5rem;letter-spacing:-.02em;}
+    .ae-header-left h3 i{color:#dc2626;margin-right:.5rem;font-size:1.2rem;}
+    .ae-header-left p{margin:.2rem 0 0;color:#64748b;font-size:.85rem;}
+
+    .ae-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .ae-card-header{background:linear-gradient(135deg,#dc2626,#b91c1c);padding:1.25rem 1.5rem;color:#fff;display:flex;align-items:center;justify-content:space-between;}
+    .ae-card-header-left{display:flex;align-items:center;gap:.6rem;}
+    .ae-card-header-left i{font-size:1.1rem;}
+    .ae-card-header-left h5{margin:0;font-weight:700;font-size:1.05rem;}
+    .ae-card-body{padding:1.5rem;}
+
+    .ae-user-banner{display:flex;align-items:center;gap:1rem;padding:1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:1.25rem;}
+    .ae-user-avatar{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;font-weight:700;text-transform:uppercase;flex-shrink:0;}
+    .ae-user-avatar.role-admin{background:linear-gradient(135deg,#dc2626,#b91c1c);}
+    .ae-user-avatar.role-curator{background:linear-gradient(135deg,#d97706,#b45309);}
+    .ae-user-avatar.role-contributor{background:linear-gradient(135deg,#16a34a,#15803d);}
+    .ae-user-info{min-width:0;flex:1;}
+    .ae-user-name{font-weight:700;color:var(--rt-navy);font-size:1rem;}
+    .ae-user-email{font-size:.8rem;color:#94a3b8;}
+    .ae-user-badges{display:flex;gap:.35rem;margin-top:.3rem;flex-wrap:wrap;}
+    .ae-badge{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .55rem;border-radius:20px;font-size:.68rem;font-weight:600;}
+    .ae-badge-admin{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+    .ae-badge-curator{background:#fffbeb;color:#b45309;border:1px solid #fde68a;}
+    .ae-badge-contributor{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+    .ae-badge-approved{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+    .ae-badge-pending{background:#fffbeb;color:#b45309;border:1px solid #fde68a;}
+    .ae-badge-rejected{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+
+    .ae-alert{display:flex;align-items:flex-start;gap:.6rem;padding:.85rem 1rem;border-radius:10px;font-size:.84rem;line-height:1.5;}
+    .ae-alert i{margin-top:.1rem;flex-shrink:0;}
+    .ae-alert-warning{background:#fffbeb;color:#b45309;border:1px solid #fde68a;}
+
+    .ae-form-group{margin-bottom:1.1rem;}
+    .ae-form-group label{display:block;font-size:.8rem;font-weight:600;color:#334155;margin-bottom:.35rem;}
+    .ae-form-group label .req{color:#dc2626;}
+    .ae-form-group .form-control,.ae-form-group .form-select{width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:.55rem .75rem;font-size:.87rem;color:#1e293b;transition:all .15s;background:#fff;}
+    .ae-form-group .form-control:focus,.ae-form-group .form-select:focus{outline:none;border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.1);}
+    .ae-form-group .field-help{margin-top:.3rem;font-size:.76rem;color:#94a3b8;}
+
+    .ae-name-row{display:grid;grid-template-columns:2fr 0.6fr 2fr 0.8fr;gap:.75rem;}
+    @media(max-width:767px){
+        .ae-name-row{grid-template-columns:1fr 1fr;gap:.5rem;}
     }
-    .form-control:focus {
-        border-color: var(--rt-teal);
-        box-shadow: 0 0 0 0.2rem rgba(42, 127, 138, 0.25);
+
+    .ae-divider{height:1px;background:#f1f5f9;margin:1.25rem 0;}
+
+    .ae-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;}
+    .ae-info-item{display:flex;flex-direction:column;gap:.15rem;}
+    .ae-info-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
+    .ae-info-value{font-size:.85rem;color:#334155;font-weight:500;}
+    @media(max-width:575px){
+        .ae-info-grid{grid-template-columns:1fr;}
     }
+
+    .ae-pw-section{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:1.25rem;margin-bottom:1.1rem;}
+    .ae-pw-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;}
+    .ae-pw-header i{color:#b45309;font-size:.85rem;}
+    .ae-pw-header h6{margin:0;font-weight:700;font-size:.9rem;color:var(--rt-navy);}
+    .ae-pw-header small{font-weight:400;color:#94a3b8;font-size:.75rem;}
+    .ae-pw-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+    @media(max-width:575px){
+        .ae-pw-row{grid-template-columns:1fr;}
+    }
+    .ae-pw-help{font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
+
+    .ae-btn-row{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.25rem;}
+    .ae-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;padding:.6rem 1.2rem;border-radius:10px;font-size:.85rem;font-weight:600;border:none;cursor:pointer;transition:all .2s ease;text-decoration:none;line-height:1.4;font-family:inherit;}
+    .ae-btn i{font-size:.8rem;}
+    .ae-btn-primary{background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;box-shadow:0 2px 8px rgba(220,38,38,.25);}
+    .ae-btn-primary:hover{background:linear-gradient(135deg,#b91c1c,#991b1b);box-shadow:0 4px 14px rgba(220,38,38,.35);transform:translateY(-1px);color:#fff;}
+    .ae-btn-outline{background:#fff;color:#475569;border:1px solid #e2e8f0;}
+    .ae-btn-outline:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
+    .ae-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
 </style>
 
-<div class="row justify-content-center">
-    <div class="col-12 col-md-8">
-        <div class="card shadow form-card">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="fas fa-edit"></i> Edit User</h4>
-                <a href="{% url 'admin_manage_users' %}" class="btn btn-light btn-sm">
-                    <i class="fas fa-arrow-left"></i> Back
-                </a>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> 
-                    <strong>Editing:</strong> {{ edit_user.profile.get_full_name|default:edit_user.email }}
-                    <span class="badge 
-                        {% if edit_user.profile.role == 'admin' %}bg-danger
-                        {% elif edit_user.profile.role == 'curator' %}bg-warning text-dark
-                        {% else %}bg-success{% endif %} ms-2">
-                        {{ edit_user.profile.get_role_display }}
-                    </span>
+<div class="ae-page">
+    <!-- Breadcrumb -->
+    <div class="ae-breadcrumb">
+        <a href="{% url 'admin_dashboard' %}"><i class="fas fa-home"></i></a>
+        <span class="sep">/</span>
+        <a href="{% url 'admin_manage_users' %}">Manage Users</a>
+        <span class="sep">/</span>
+        <span>Edit User</span>
+    </div>
+
+    <!-- Header -->
+    <div class="ae-header">
+        <div class="ae-header-left">
+            <h3><i class="fas fa-user-edit"></i> Edit User</h3>
+            <p>Update user account details</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-7">
+            <div class="ae-card">
+                <div class="ae-card-header">
+                    <div class="ae-card-header-left">
+                        <i class="fas fa-user-edit"></i>
+                        <h5>Edit User</h5>
+                    </div>
                 </div>
-                
-                <form method="POST" id="editForm">
-                    {% csrf_token %}
-                    
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label for="first_name" class="form-label">First Name</label>
-                            <input type="text" name="first_name" id="first_name" 
-                                   class="form-control" value="{{ edit_user.first_name }}">
+                <div class="ae-card-body">
+                    <!-- User Banner -->
+                    <div class="ae-user-banner">
+                        <div class="ae-user-avatar role-{{ edit_user.profile.role }}">
+                            {% with name=edit_user.profile.get_full_name|default:edit_user.email %}
+                            {{ name|truncatechars:2 }}
+                            {% endwith %}
                         </div>
-                        <div class="col-md-2">
-                            <label for="middle_initial" class="form-label">M.I.</label>
-                                    <input type="text" name="middle_initial" id="middle_initial" 
-                                           class="form-control" value="{{ edit_user.profile.middle_initial }}" maxlength="1" style="text-transform: uppercase;">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="last_name" class="form-label">Last Name</label>
-                            <input type="text" name="last_name" id="last_name" 
-                                   class="form-control" value="{{ edit_user.last_name }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label for="suffix" class="form-label">Suffix</label>
-                            <input type="text" name="suffix" id="suffix" 
-                                   class="form-control" value="{{ edit_user.profile.suffix }}">
+                        <div class="ae-user-info">
+                            <div class="ae-user-name">{{ edit_user.profile.get_full_name|default:edit_user.email }}</div>
+                            <div class="ae-user-email">{{ edit_user.email }}</div>
+                            <div class="ae-user-badges">
+                                <span class="ae-badge {% if edit_user.profile.role == 'admin' %}ae-badge-admin{% elif edit_user.profile.role == 'curator' %}ae-badge-curator{% else %}ae-badge-contributor{% endif %}">
+                                    {% if edit_user.profile.role == 'admin' %}<i class="fas fa-shield-alt"></i>
+                                    {% elif edit_user.profile.role == 'curator' %}<i class="fas fa-user-check"></i>
+                                    {% else %}<i class="fas fa-user"></i>{% endif %}
+                                    {{ edit_user.profile.get_role_display }}
+                                </span>
+                                {% if edit_user.profile.role == 'contributor' %}
+                                <span class="ae-badge {% if edit_user.profile.status == 'approved' %}ae-badge-approved{% elif edit_user.profile.status == 'pending' %}ae-badge-pending{% else %}ae-badge-rejected{% endif %}">
+                                    {% if edit_user.profile.status == 'approved' %}<i class="fas fa-check-circle"></i>
+                                    {% elif edit_user.profile.status == 'pending' %}<i class="fas fa-clock"></i>
+                                    {% else %}<i class="fas fa-times-circle"></i>{% endif %}
+                                    {{ edit_user.profile.get_status_display }}
+                                </span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-12">
-                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" id="email" 
-                                   class="form-control" value="{{ edit_user.email }}" required>
-                        </div>
+                    {% if not is_superuser and edit_user.profile.role == 'admin' %}
+                    <div class="ae-alert ae-alert-warning" style="margin-bottom:1.25rem;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>Only superusers can assign Admin role.</div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
+                    {% endif %}
+
+                    <form method="POST" id="editForm">
+                        {% csrf_token %}
+
+                        <!-- Name fields -->
+                        <div class="ae-name-row">
+                            <div class="ae-form-group">
+                                <label>First Name</label>
+                                <input type="text" name="first_name" id="first_name" class="form-control" value="{{ edit_user.first_name }}">
+                            </div>
+                            <div class="ae-form-group">
+                                <label>M.I.</label>
+                                <input type="text" name="middle_initial" id="middle_initial" class="form-control" value="{{ edit_user.profile.middle_initial }}" maxlength="1" style="text-transform: uppercase;">
+                            </div>
+                            <div class="ae-form-group">
+                                <label>Last Name</label>
+                                <input type="text" name="last_name" id="last_name" class="form-control" value="{{ edit_user.last_name }}">
+                            </div>
+                            <div class="ae-form-group">
+                                <label>Suffix</label>
+                                <select name="suffix" id="suffix" class="form-select">
+                                    <option value="" {% if not edit_user.profile.suffix %}selected{% endif %}>None</option>
+                                    <option value="Jr." {% if edit_user.profile.suffix == 'Jr.' %}selected{% endif %}>Jr.</option>
+                                    <option value="Sr." {% if edit_user.profile.suffix == 'Sr.' %}selected{% endif %}>Sr.</option>
+                                    <option value="II" {% if edit_user.profile.suffix == 'II' %}selected{% endif %}>II</option>
+                                    <option value="III" {% if edit_user.profile.suffix == 'III' %}selected{% endif %}>III</option>
+                                    <option value="IV" {% if edit_user.profile.suffix == 'IV' %}selected{% endif %}>IV</option>
+                                    <option value="V" {% if edit_user.profile.suffix == 'V' %}selected{% endif %}>V</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="ae-divider"></div>
+
+                        <!-- Email -->
+                        <div class="ae-form-group">
+                            <label>Email Address <span class="req">*</span></label>
+                            <input type="email" name="email" id="email" class="form-control" value="{{ edit_user.email }}" required>
+                        </div>
+
+                        <!-- Role & Status -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                            <div class="ae-form-group">
+                                <label>Role <span class="req">*</span></label>
                                 <select name="role" id="role" class="form-select">
                                     {% for role_value, role_label in role_choices %}
-                                        <option value="{{ role_value }}" 
-                                            {% if edit_user.profile.role == role_value %}selected{% endif %}>
+                                        <option value="{{ role_value }}" {% if edit_user.profile.role == role_value %}selected{% endif %}>
                                             {{ role_label }}
                                         </option>
                                     {% endfor %}
                                 </select>
-                                <div class="form-text text-muted">
-                                    <i class="fas fa-info-circle"></i> 
-                                    Changing to Admin or Curator will auto-approve the user.
-                                    {% if not is_superuser %}
-                                    <br><i class="fas fa-exclamation-triangle text-warning"></i> 
-                                    Only superusers can assign Admin role.
-                                    {% endif %}
-                                </div>
+                                <div class="ae-field-help"><i class="fas fa-info-circle"></i> Changing to Admin or Curator will auto-approve.</div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="status" class="form-label">Status</label>
+                            <div class="ae-form-group">
+                                <label>Status</label>
                                 <select name="status" id="status" class="form-select">
                                     <option value="approved" {% if edit_user.profile.status == 'approved' %}selected{% endif %}>Approved</option>
                                     <option value="pending" {% if edit_user.profile.status == 'pending' %}selected{% endif %}>Pending</option>
                                     <option value="rejected" {% if edit_user.profile.status == 'rejected' %}selected{% endif %}>Rejected</option>
                                 </select>
-                                <div class="form-text text-muted">
-                                    <i class="fas fa-info-circle"></i> 
-                                    Status only applies to <strong>Contributors</strong>. Admins and Curators are auto-approved.
-                                </div>
+                                <div class="ae-field-help"><i class="fas fa-info-circle"></i> Status only applies to Contributors.</div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="card bg-light mb-3">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <strong>Current Role:</strong>
-                                    <span class="badge 
-                                        {% if edit_user.profile.role == 'admin' %}bg-danger
-                                        {% elif edit_user.profile.role == 'curator' %}bg-warning text-dark
-                                        {% else %}bg-success{% endif %}">
-                                        {{ edit_user.profile.get_role_display }}
-                                    </span>
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Current Status:</strong>
-                                    {% if edit_user.profile.role == 'contributor' %}
-                                        <span class="badge 
-                                            {% if edit_user.profile.status == 'approved' %}bg-success
-                                            {% elif edit_user.profile.status == 'pending' %}bg-warning text-dark
-                                            {% else %}bg-danger{% endif %}">
-                                            {{ edit_user.profile.get_status_display }}
-                                        </span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">N/A (Auto-approved)</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="row mt-2">
-                                <div class="col-md-6">
-                                    <strong>Active:</strong>
-                                    {% if edit_user.is_active %}
-                                        <span class="badge bg-success">Yes</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">No</span>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Joined:</strong> {{ edit_user.date_joined|date:"M d, Y H:i" }}
-                                </div>
-                            </div>
-                            {% if edit_user.profile.rejection_reason %}
-                            <div class="row mt-2">
-                                <div class="col-12">
-                                    <strong>Rejection Reason:</strong> {{ edit_user.profile.rejection_reason }}
-                                </div>
-                            </div>
-                            {% endif %}
-                            {% if edit_user.profile.approved_by %}
-                            <div class="row mt-2">
-                                <div class="col-12">
-                                    <strong>Approved By:</strong> {{ edit_user.profile.approved_by.email }}
-                                    <span class="text-muted ms-2">on {{ edit_user.profile.approved_at|date:"M d, Y H:i" }}</span>
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    {% if is_superuser %}
-                    <div class="card border-warning mb-3">
-                        <div class="card-header bg-warning text-dark">
-                            <h6 class="mb-0"><i class="fas fa-key"></i> Reset Password <small class="fw-normal">(Super Admin Only)</small></h6>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted small mb-3">Leave blank to keep the current password.</p>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="new_password" class="form-label">New Password</label>
-                                    <input type="password" name="new_password" id="new_password"
-                                           class="form-control" minlength="8" placeholder="Min. 8 characters">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="confirm_password" class="form-label">Confirm Password</label>
-                                    <input type="password" name="confirm_password" id="confirm_password"
-                                           class="form-control" minlength="8" placeholder="Re-enter password">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
 
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{% url 'admin_manage_users' %}" class="btn btn-secondary me-md-2">
-                            <i class="fas fa-times"></i> Cancel
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Update User
-                        </button>
-                    </div>
-                </form>
+                        <div class="ae-divider"></div>
+
+                        <!-- Account Info -->
+                        <div class="ae-info-grid">
+                            <div class="ae-info-item">
+                                <span class="ae-info-label">Joined</span>
+                                <span class="ae-info-value">{{ edit_user.date_joined|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="ae-info-item">
+                                <span class="ae-info-label">Active</span>
+                                <span class="ae-info-value">
+                                    {% if edit_user.is_active %}
+                                        <span style="color:#16a34a;"><i class="fas fa-circle" style="font-size:.45rem;"></i> Yes</span>
+                                    {% else %}
+                                        <span style="color:#dc2626;"><i class="fas fa-circle" style="font-size:.45rem;"></i> No</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% if edit_user.profile.approved_by %}
+                            <div class="ae-info-item">
+                                <span class="ae-info-label">Approved By</span>
+                                <span class="ae-info-value">{{ edit_user.profile.approved_by.profile.get_full_name|default:edit_user.profile.approved_by.email }}</span>
+                            </div>
+                            {% endif %}
+                            {% if edit_user.profile.approved_at %}
+                            <div class="ae-info-item">
+                                <span class="ae-info-label">Approved At</span>
+                                <span class="ae-info-value">{{ edit_user.profile.approved_at|date:"M d, Y H:i" }}</span>
+                            </div>
+                            {% endif %}
+                            {% if edit_user.profile.rejection_reason %}
+                            <div class="ae-info-item" style="grid-column:1/-1;">
+                                <span class="ae-info-label">Rejection Reason</span>
+                                <span class="ae-info-value" style="color:#dc2626;">{{ edit_user.profile.rejection_reason }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Reset Password (Superuser only) -->
+                        {% if is_superuser %}
+                        <div class="ae-pw-section">
+                            <div class="ae-pw-header">
+                                <i class="fas fa-key"></i>
+                                <h6>Reset Password <small>(Super Admin Only)</small></h6>
+                            </div>
+                            <div class="ae-pw-help">Leave blank to keep the current password.</div>
+                            <div class="ae-pw-row">
+                                <div class="ae-form-group">
+                                    <label>New Password</label>
+                                    <input type="password" name="new_password" id="new_password" class="form-control" minlength="8" placeholder="Min. 8 characters">
+                                </div>
+                                <div class="ae-form-group">
+                                    <label>Confirm Password</label>
+                                    <input type="password" name="confirm_password" id="confirm_password" class="form-control" minlength="8" placeholder="Re-enter password">
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Buttons -->
+                        <div class="ae-btn-row">
+                            <a href="{% url 'admin_manage_users' %}" class="ae-btn ae-btn-outline">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="ae-btn ae-btn-primary" id="submitBtn">
+                                <i class="fas fa-save"></i> Update User
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+// Auto-capitalize middle initial
 document.getElementById('middle_initial').addEventListener('input', function() {
     this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
 });
+
+// Auto-capitalize names
+['first_name', 'last_name'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function() {
+        var pos = this.selectionStart;
+        this.value = this.value.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+        this.setSelectionRange(pos, pos);
+    });
+});
+
+// Submit with password validation
 document.getElementById('editForm').addEventListener('submit', function(e) {
     var pw = document.getElementById('new_password');
     var cp = document.getElementById('confirm_password');
@@ -221,9 +323,9 @@ document.getElementById('editForm').addEventListener('submit', function(e) {
         }
         return;
     }
-    var submitBtn = this.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
 });
 </script>
 {% endblock %}

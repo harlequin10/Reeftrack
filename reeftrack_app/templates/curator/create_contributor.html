@@ -1,0 +1,225 @@
+{% extends 'curator/base_curator.html' %}
+
+{% block title %}Create Contributor - Curator - ReefTrack{% endblock %}
+
+{% block content %}
+<style>
+    .cc-page{margin-bottom:2rem;}
+
+    .cc-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
+    .cc-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
+    .cc-breadcrumb a:hover{color:var(--rt-primary);}
+    .cc-breadcrumb .sep{color:#d1d5db;}
+
+    .cc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;}
+    .cc-header-left h3{margin:0;font-weight:800;color:var(--rt-navy);font-size:1.5rem;letter-spacing:-.02em;}
+    .cc-header-left h3 i{color:var(--rt-primary);margin-right:.5rem;font-size:1.2rem;}
+    .cc-header-left p{margin:.2rem 0 0;color:#64748b;font-size:.85rem;}
+
+    .cc-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .cc-card-header{background:linear-gradient(135deg,#f59e0b,#d97706);padding:1.25rem 1.5rem;color:#fff;display:flex;align-items:center;gap:.6rem;}
+    .cc-card-header i{font-size:1.1rem;}
+    .cc-card-header h5{margin:0;font-weight:700;font-size:1.05rem;}
+    .cc-card-body{padding:1.5rem;}
+
+    .cc-alert{display:flex;align-items:flex-start;gap:.6rem;padding:.85rem 1rem;border-radius:10px;font-size:.84rem;line-height:1.5;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;}
+    .cc-alert i{margin-top:.1rem;flex-shrink:0;}
+
+    .cc-form-group{margin-bottom:1.1rem;}
+    .cc-form-group label{display:block;font-size:.8rem;font-weight:600;color:#334155;margin-bottom:.35rem;}
+    .cc-form-group label .req{color:#dc2626;}
+    .cc-form-group .form-control{width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:.55rem .75rem;font-size:.87rem;color:#1e293b;transition:all .15s;background:#fff;}
+    .cc-form-group .form-control:focus{outline:none;border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.12);}
+    .cc-form-group .form-control::placeholder{color:#b0b8c4;}
+    .cc-form-group .field-errors{margin-top:.3rem;font-size:.78rem;color:#dc2626;}
+    .cc-form-group .field-help{margin-top:.3rem;font-size:.76rem;color:#94a3b8;}
+
+    .cc-name-row{display:grid;grid-template-columns:2fr 0.6fr 2fr 0.8fr;gap:.75rem;}
+    @media(max-width:767px){
+        .cc-name-row{grid-template-columns:1fr 1fr;gap:.5rem;}
+    }
+
+    .cc-divider{height:1px;background:#f1f5f9;margin:1.25rem 0;}
+
+    .cc-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.7rem 1.2rem;border-radius:10px;font-size:.88rem;font-weight:600;border:none;cursor:pointer;transition:all .2s ease;text-decoration:none;line-height:1.4;font-family:inherit;}
+    .cc-btn i{font-size:.82rem;}
+    .cc-btn-primary{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;box-shadow:0 2px 8px rgba(245,158,11,.25);}
+    .cc-btn-primary:hover{background:linear-gradient(135deg,#d97706,#b45309);box-shadow:0 4px 14px rgba(245,158,11,.35);transform:translateY(-1px);color:#fff;}
+    .cc-btn-outline{background:#fff;color:#475569;border:1px solid #e2e8f0;}
+    .cc-btn-outline:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
+
+    .cc-preview{display:flex;align-items:center;gap:1rem;padding:1rem;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;margin-top:1rem;display:none;}
+    .cc-preview.active{display:flex;}
+    .cc-preview-avatar{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#16a34a,#15803d);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;font-weight:700;text-transform:uppercase;flex-shrink:0;}
+    .cc-preview-info{min-width:0;}
+    .cc-preview-name{font-weight:600;color:var(--rt-navy);font-size:.9rem;}
+    .cc-preview-email{font-size:.78rem;color:#94a3b8;}
+    .cc-preview-badge{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .55rem;border-radius:20px;font-size:.68rem;font-weight:600;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;margin-top:.25rem;}
+</style>
+
+<div class="cc-page">
+    <!-- Breadcrumb -->
+    <div class="cc-breadcrumb">
+        <a href="{% url 'curator_dashboard' %}"><i class="fas fa-home"></i></a>
+        <span class="sep">/</span>
+        <a href="{% url 'curator_manage_contributors' %}">Manage Contributors</a>
+        <span class="sep">/</span>
+        <span>Create Contributor</span>
+    </div>
+
+    <!-- Header -->
+    <div class="cc-header">
+        <div class="cc-header-left">
+            <h3><i class="fas fa-user-plus"></i> Create Contributor</h3>
+            <p>Add a new contributor account to the system</p>
+        </div>
+        <div>
+            <a href="{% url 'curator_manage_contributors' %}" class="cc-btn cc-btn-outline" style="width:auto;padding:.5rem 1rem;">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-7">
+            <div class="cc-card">
+                <div class="cc-card-header">
+                    <i class="fas fa-user-plus"></i>
+                    <h5>New Contributor Account</h5>
+                </div>
+                <div class="cc-card-body">
+                    <!-- Info alert -->
+                    <div class="cc-alert" style="margin-bottom:1.25rem;">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>Note:</strong> Contributors created by curators are <strong>auto-approved</strong> and can immediately start submitting reef data.
+                        </div>
+                    </div>
+
+                    <form method="POST" id="createForm">
+                        {% csrf_token %}
+
+                        <!-- Name fields -->
+                        <div class="cc-name-row">
+                            <div class="cc-form-group">
+                                <label>First Name <span class="req">*</span></label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="field-errors">{{ form.first_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="cc-form-group">
+                                <label>M.I.</label>
+                                {{ form.middle_initial }}
+                            </div>
+                            <div class="cc-form-group">
+                                <label>Last Name <span class="req">*</span></label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="field-errors">{{ form.last_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="cc-form-group">
+                                <label>Suffix</label>
+                                {{ form.suffix }}
+                            </div>
+                        </div>
+
+                        <div class="cc-divider"></div>
+
+                        <!-- Email -->
+                        <div class="cc-form-group">
+                            <label>Email Address <span class="req">*</span></label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="field-errors">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Password -->
+                        <div class="cc-form-group">
+                            <label>Password <span class="req">*</span></label>
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                                <div class="field-errors">{{ form.password.errors }}</div>
+                            {% endif %}
+                            <div class="field-help">Must be at least 8 characters. Avoid common passwords.</div>
+                        </div>
+
+                        <div class="cc-divider"></div>
+
+                        <!-- Live preview -->
+                        <div class="cc-preview" id="preview">
+                            <div class="cc-preview-avatar" id="previewAvatar">--</div>
+                            <div class="cc-preview-info">
+                                <div class="cc-preview-name" id="previewName">New Contributor</div>
+                                <div class="cc-preview-email" id="previewEmail">email@example.com</div>
+                                <div class="cc-preview-badge"><i class="fas fa-check-circle"></i> Auto-approved</div>
+                            </div>
+                        </div>
+
+                        <!-- Submit -->
+                        <div style="margin-top:1.25rem;">
+                            <button type="submit" class="cc-btn cc-btn-primary">
+                                <i class="fas fa-user-plus"></i> Create Contributor
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-capitalize names
+['id_first_name', 'id_last_name'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function() {
+        var pos = this.selectionStart;
+        this.value = this.value.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+        this.setSelectionRange(pos, pos);
+        updatePreview();
+    });
+});
+
+// Auto-capitalize middle initial
+var miEl = document.getElementById('id_middle_initial');
+if (miEl) {
+    miEl.addEventListener('input', function() {
+        this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
+        updatePreview();
+    });
+}
+
+// Live preview
+var fnEl = document.getElementById('id_first_name');
+var lnEl = document.getElementById('id_last_name');
+var emEl = document.getElementById('id_email');
+
+[fnEl, lnEl, emEl].forEach(function(el) {
+    if (el) el.addEventListener('input', updatePreview);
+});
+
+function updatePreview() {
+    var fn = fnEl ? fnEl.value.trim() : '';
+    var ln = lnEl ? lnEl.value.trim() : '';
+    var em = emEl ? emEl.value.trim() : '';
+
+    var fullName = [fn, ln].filter(Boolean).join(' ') || 'New Contributor';
+    var initials = ((fn ? fn[0] : '') + (ln ? ln[0] : '')).toUpperCase() || '--';
+
+    document.getElementById('previewName').textContent = fullName;
+    document.getElementById('previewEmail').textContent = em || 'email@example.com';
+    document.getElementById('previewAvatar').textContent = initials;
+
+    var preview = document.getElementById('preview');
+    if (fn || ln || em) {
+        preview.classList.add('active');
+    } else {
+        preview.classList.remove('active');
+    }
+}
+</script>
+{% endblock %}

@@ -17,9 +17,9 @@
         display: flex; align-items: flex-start; gap: 1rem;
         padding: 1rem 1.25rem; border-radius: 10px; margin-bottom: 0.5rem;
         border: 1px solid #e5e7eb; background: #fff;
-        transition: all 0.2s; cursor: default;
+        transition: all 0.2s; cursor: pointer; text-decoration: none; color: inherit;
     }
-    .notif-item:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .notif-item:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transform: translateY(-1px); }
     .notif-item.unread { background: linear-gradient(135deg, #f0f7ff, #e8f1ff); border-color: #bfdbfe; }
     .notif-icon {
         width: 40px; height: 40px; border-radius: 10px;
@@ -41,7 +41,6 @@
     }
     .notif-empty i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
 
-    .notif-actions { display: flex; gap: 0.5rem; }
     .notif-btn {
         padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #e2e8f0;
         background: #fff; color: #475569; font-size: 0.78rem; font-weight: 500;
@@ -75,7 +74,11 @@
 
 {% if notifications %}
     {% for notif in notifications %}
-    <div class="notif-item {% if not notif.is_read %}unread{% endif %}">
+    {% if notif.assessment %}
+    <a href="{% url 'admin_assessment_detail' notif.assessment.id %}" class="notif-item {% if not notif.is_read %}unread{% endif %}" data-notif-id="{{ notif.id }}">
+    {% else %}
+    <div class="notif-item {% if not notif.is_read %}unread{% endif %}" data-notif-id="{{ notif.id }}">
+    {% endif %}
         <div class="notif-icon {{ notif.notification_type }}">
             {% if notif.notification_type == 'approved' %}
             <i class="fas fa-check-circle"></i>
@@ -98,24 +101,11 @@
         {% if not notif.is_read %}
         <div class="notif-dot" title="Unread"></div>
         {% endif %}
-        <div class="notif-actions">
-            {% if notif.assessment %}
-            <a href="{% url 'admin_assessment_detail' notif.assessment.id %}" class="notif-btn" title="View Assessment">
-                <i class="fas fa-eye"></i>
-            </a>
-            {% endif %}
-            {% if not notif.is_read %}
-            <form method="POST" action="{% url 'notifications_list' %}" style="display:inline;">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="mark_read">
-                <input type="hidden" name="notification_id" value="{{ notif.id }}">
-                <button type="submit" class="notif-btn" title="Mark as Read">
-                    <i class="fas fa-check"></i>
-                </button>
-            </form>
-            {% endif %}
-        </div>
+    {% if notif.assessment %}
+    </a>
+    {% else %}
     </div>
+    {% endif %}
     {% endfor %}
 {% else %}
 <div class="notif-empty">
@@ -125,4 +115,20 @@
 </div>
 {% endif %}
 
+<script>
+document.querySelectorAll('.notif-item[data-notif-id]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+        if (e.target.closest('form') || e.target.closest('button') || e.target.closest('a.notif-btn')) return;
+        var id = this.getAttribute('data-notif-id');
+        if (id && !this.classList.contains('read-done')) {
+            this.classList.add('read-done');
+            fetch('/api/notifications/mark-read/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+                body: JSON.stringify({id: parseInt(id)})
+            });
+        }
+    });
+});
+</script>
 {% endblock %}

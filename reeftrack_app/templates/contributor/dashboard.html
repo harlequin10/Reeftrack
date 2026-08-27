@@ -4,151 +4,169 @@
 
 {% block content %}
 <style>
-    .stat-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-        border: none;
-        border-radius: 15px;
-    }
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    }
-    .stat-icon {
-        font-size: 2.5rem;
-        opacity: 0.3;
-    }
+    .cd-wrap{margin-bottom:2rem;}
+    .cd-banner{display:flex;align-items:center;gap:1.25rem;padding:1.75rem 2rem;border-radius:16px;background:linear-gradient(135deg,#15803d,#166534);color:#fff;position:relative;overflow:hidden;}
+    .cd-banner::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06);}
+    .cd-banner::after{content:'';position:absolute;bottom:-30px;left:30%;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.04);}
+    .cd-banner-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;background:rgba(255,255,255,.15);flex-shrink:0;position:relative;z-index:1;}
+    .cd-banner-text{position:relative;z-index:1;}
+    .cd-banner-text h2{margin:0 0 .2rem;font-size:1.3rem;font-weight:800;}
+    .cd-banner-text p{margin:0;font-size:.88rem;opacity:.85;}
+
+    .cd-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;}
+    @media(max-width:767px){.cd-stats{grid-template-columns:1fr;}}
+
+    .cd-stat{padding:1.25rem 1.5rem;border-radius:14px;background:#fff;border:1px solid #e5e7eb;display:flex;align-items:center;gap:1rem;transition:all .2s;}
+    .cd-stat:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.06);}
+    .cd-stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+    .cd-stat-info h6{margin:0 0 .15rem;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;}
+    .cd-stat-info .cd-stat-val{font-size:1.6rem;font-weight:800;color:var(--rt-navy);line-height:1.1;}
+
+    .cd-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+    .cd-section-header h5{margin:0;font-weight:700;color:var(--rt-navy);font-size:1rem;display:flex;align-items:center;gap:.4rem;}
+    .cd-section-header h5 i{color:#16a34a;}
+    .cd-section-link{font-size:.8rem;font-weight:600;color:#16a34a;text-decoration:none;display:flex;align-items:center;gap:.25rem;transition:color .2s;}
+    .cd-section-link:hover{color:#15803d;}
+
+    .cd-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;}
+    @media(max-width:767px){.cd-actions{grid-template-columns:1fr;}}
+
+    .cd-action{display:flex;align-items:flex-start;gap:.85rem;padding:1.25rem;border-radius:14px;background:#fff;border:1px solid #e5e7eb;text-decoration:none;color:inherit;transition:all .2s;}
+    .cd-action:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.06);border-color:#16a34a;color:inherit;}
+    .cd-action-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+    .cd-action-text h6{margin:0 0 .2rem;font-size:.88rem;font-weight:700;color:var(--rt-navy);}
+    .cd-action-text p{margin:0;font-size:.78rem;color:#6b7280;line-height:1.45;}
+
+    .cd-recent{border-radius:14px;background:#fff;border:1px solid #e5e7eb;overflow:hidden;}
+    .cd-recent-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid #f1f5f9;}
+    .cd-recent-header h6{margin:0;font-weight:700;color:var(--rt-navy);font-size:.9rem;display:flex;align-items:center;gap:.4rem;}
+    .cd-recent-header h6 i{color:#16a34a;}
+
+    .cd-table{width:100%;border-collapse:collapse;}
+    .cd-table thead th{padding:.65rem 1.5rem;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;background:#f8fafc;border-bottom:1px solid #f1f5f9;text-align:left;}
+    .cd-table tbody td{padding:.85rem 1.5rem;border-bottom:1px solid #f8fafc;font-size:.86rem;vertical-align:middle;}
+    .cd-table tbody tr:last-child td{border-bottom:none;}
+    .cd-table tbody tr:hover{background:#f0fdf4;}
+    .cd-table .cd-loc-name{font-weight:600;color:var(--rt-navy);}
+    .cd-table .cd-loc-sub{font-size:.78rem;color:#6b7280;}
+    .cd-table .cd-date{color:#6b7280;font-size:.84rem;}
+
+    .cd-badge{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;border-radius:20px;font-size:.72rem;font-weight:600;}
+    .cd-badge-approved{background:#dcfce7;color:#15803d;}
+    .cd-badge-submitted{background:#dbeafe;color:#2563eb;}
+    .cd-badge-pending{background:#fef3c7;color:#b45309;}
+    .cd-badge-rejected{background:#fee2e2;color:#dc2626;}
+
+    .cd-empty{text-align:center;padding:2.5rem 1.5rem;color:#9ca3af;}
+    .cd-empty i{font-size:2rem;color:#d1d5db;margin-bottom:.5rem;display:block;}
+    .cd-empty p{margin:0;font-size:.88rem;}
 </style>
 
-<!-- Welcome -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card bg-success text-white shadow-sm">
-            <div class="card-body d-flex align-items-center">
-                <div class="me-3">
-                    <i class="fas fa-pen fa-3x"></i>
-                </div>
-                <div>
-                    <h3 class="mb-1">Welcome back, {{ user.profile.get_full_name|default:user.email }}!</h3>
-                    <p class="mb-0 opacity-75">Submit and manage your coral reef assessment data.</p>
-                </div>
-            </div>
+<!-- Welcome Banner -->
+<div class="cd-wrap">
+    <div class="cd-banner">
+        <div class="cd-banner-icon"><i class="fas fa-pen"></i></div>
+        <div class="cd-banner-text">
+            <h2>Welcome back, {{ user.profile.get_full_name|default:user.email }}!</h2>
+            <p>Submit and manage your coral reef assessment data.</p>
         </div>
     </div>
 </div>
 
-<!-- Stats Row -->
-<div class="row mb-4">
-    <div class="col-md-4 col-sm-6 mb-3">
-        <div class="card stat-card bg-success text-white shadow-sm">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase mb-1">My Assessments</h6>
-                        <h2 class="mb-0">{{ total_assessments }}</h2>
-                    </div>
-                    <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
-                </div>
-            </div>
+<!-- Stats -->
+<div class="cd-stats">
+    <div class="cd-stat">
+        <div class="cd-stat-icon" style="background:#dcfce7;color:#16a34a;"><i class="fas fa-clipboard-list"></i></div>
+        <div class="cd-stat-info">
+            <h6>My Assessments</h6>
+            <div class="cd-stat-val">{{ total_assessments }}</div>
         </div>
     </div>
-    <div class="col-md-4 col-sm-6 mb-3">
-        <div class="card stat-card bg-primary text-white shadow-sm">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase mb-1">Account Status</h6>
-                        <h2 class="mb-0">Active</h2>
-                    </div>
-                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                </div>
-            </div>
+    <div class="cd-stat">
+        <div class="cd-stat-icon" style="background:#dbeafe;color:#2563eb;"><i class="fas fa-check-circle"></i></div>
+        <div class="cd-stat-info">
+            <h6>Account Status</h6>
+            <div class="cd-stat-val" style="font-size:1.2rem;color:#16a34a;">Active</div>
         </div>
     </div>
-    <div class="col-md-4 col-sm-6 mb-3">
-        <div class="card stat-card bg-warning text-dark shadow-sm">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase mb-1">Member Since</h6>
-                        <h2 class="mb-0">{{ user.date_joined|date:"M Y" }}</h2>
-                    </div>
-                    <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
-                </div>
-            </div>
+    <div class="cd-stat">
+        <div class="cd-stat-icon" style="background:#fef3c7;color:#b45309;"><i class="fas fa-calendar-alt"></i></div>
+        <div class="cd-stat-info">
+            <h6>Member Since</h6>
+            <div class="cd-stat-val" style="font-size:1.2rem;">{{ user.date_joined|date:"M Y" }}</div>
         </div>
     </div>
 </div>
 
 <!-- Quick Actions -->
-<div class="row mb-4">
-    <div class="col-12">
-        <h5 class="mb-3"><i class="fas fa-bolt"></i> Quick Actions</h5>
-    </div>
-    <div class="col-md-4 mb-3">
-        <a href="{% url 'upload_assessment' %}" class="btn btn-outline-success quick-action-btn w-100 text-start" style="border-radius:12px; padding:1.2rem;">
-            <i class="fas fa-upload fa-2x mb-2 d-block"></i>
-            <h6 class="mb-1">Upload Assessment</h6>
-            <small class="text-muted">Upload CPCe Excel file with reef data</small>
-        </a>
-    </div>
-    <div class="col-md-4 mb-3">
-        <a href="{% url 'my_assessments' %}" class="btn btn-outline-primary quick-action-btn w-100 text-start" style="border-radius:12px; padding:1.2rem;">
-            <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
-            <h6 class="mb-1">My Assessments</h6>
-            <small class="text-muted">View your submitted assessments</small>
-        </a>
-    </div>
-    <div class="col-md-4 mb-3">
-        <a href="{% url 'profile_view' %}" class="btn btn-outline-secondary quick-action-btn w-100 text-start" style="border-radius:12px; padding:1.2rem;">
-            <i class="fas fa-id-card fa-2x mb-2 d-block"></i>
-            <h6 class="mb-1">My Profile</h6>
-            <small class="text-muted">View or edit your profile</small>
-        </a>
-    </div>
+<div class="cd-section-header">
+    <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+</div>
+<div class="cd-actions">
+    <a href="{% url 'upload_assessment' %}" class="cd-action">
+        <div class="cd-action-icon" style="background:#dcfce7;color:#16a34a;"><i class="fas fa-upload"></i></div>
+        <div class="cd-action-text">
+            <h6>Upload Assessment</h6>
+            <p>Upload CPCe Excel file with reef data</p>
+        </div>
+    </a>
+    <a href="{% url 'my_assessments' %}" class="cd-action">
+        <div class="cd-action-icon" style="background:#dbeafe;color:#2563eb;"><i class="fas fa-clipboard-list"></i></div>
+        <div class="cd-action-text">
+            <h6>My Assessments</h6>
+            <p>View your submitted assessments</p>
+        </div>
+    </a>
+    <a href="{% url 'profile_view' %}" class="cd-action">
+        <div class="cd-action-icon" style="background:#f3e8ff;color:#7c3aed;"><i class="fas fa-id-card"></i></div>
+        <div class="cd-action-text">
+            <h6>My Profile</h6>
+            <p>View or edit your profile</p>
+        </div>
+    </a>
 </div>
 
 <!-- Recent Assessments -->
 {% if my_assessments %}
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="fas fa-clock"></i> Recent Assessments</h6>
-                <a href="{% url 'my_assessments' %}" class="btn btn-sm btn-outline-success">View All</a>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Location</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for a in my_assessments %}
-                        <tr>
-                            <td>
-                                <strong>{{ a.barangay.name }}</strong>
-                                <br><small class="text-muted">{{ a.municipality.name }}, {{ a.municipality.province.name }}</small>
-                            </td>
-                            <td>{{ a.assessment_date|date:"M d, Y" }}</td>
-                            <td>
-                                <span class="badge
-                                    {% if a.status == 'approved' %}bg-success
-                                    {% elif a.status == 'submitted' %}bg-info
-                                    {% elif a.status == 'rejected' %}bg-danger
-                                    {% else %}bg-secondary{% endif %}">
-                                    {{ a.get_status_display }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<div class="cd-recent">
+    <div class="cd-recent-header">
+        <h6><i class="fas fa-clock"></i> Recent Assessments</h6>
+        <a href="{% url 'my_assessments' %}" class="cd-section-link">View All <i class="fas fa-arrow-right"></i></a>
     </div>
+    <table class="cd-table">
+        <thead>
+            <tr>
+                <th>Location</th>
+                <th>Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in my_assessments %}
+            <tr>
+                <td>
+                    <div class="cd-loc-name">{{ a.barangay.name }}</div>
+                    <div class="cd-loc-sub">{{ a.municipality.name }}, {{ a.municipality.province.name }}</div>
+                </td>
+                <td class="cd-date">{{ a.assessment_date|date:"M d, Y" }}</td>
+                <td>
+                    <span class="cd-badge cd-badge-{{ a.status }}">
+                        {% if a.status == 'approved' %}<i class="fas fa-check-circle"></i>
+                        {% elif a.status == 'submitted' %}<i class="fas fa-paper-plane"></i>
+                        {% elif a.status == 'rejected' %}<i class="fas fa-times-circle"></i>
+                        {% else %}<i class="fas fa-clock"></i>{% endif %}
+                        {{ a.get_status_display }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="cd-empty">
+    <i class="fas fa-clipboard-list"></i>
+    <p>No assessments yet. Upload your first assessment to get started.</p>
 </div>
 {% endif %}
 {% endblock %}

@@ -90,6 +90,7 @@
                     </div>
                     {% endif %}
                 </div>
+
                 {% if assessment.thesis_pdf %}
                 <div class="mt-3">
                     <a href="{{ assessment.thesis_pdf.url }}" class="btn btn-sm btn-outline-danger" target="_blank">
@@ -97,6 +98,7 @@
                     </a>
                 </div>
                 {% endif %}
+
                 {% if assessment.notes %}
                 <div class="mt-3">
                     <small class="text-muted">Rejection Reason:</small><br>
@@ -106,25 +108,7 @@
             </div>
         </div>
 
-        {% if assessment.thesis_pdf %}
-        <div class="card mb-4 rt-card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-file-pdf"></i> Thesis / Reference PDF</h6>
-            </div>
-            <div class="card-body">
-                <a href="{{ assessment.thesis_pdf.url }}" target="_blank" class="pdf-link">
-                    <i class="fas fa-file-pdf fa-lg"></i>
-                    <div>
-                        <div style="font-weight:600;">{{ assessment.thesis_pdf.name|cut:"assessments/thesis/" }}</div>
-                        <small style="opacity:0.8;">Click to open in new tab</small>
-                    </div>
-                </a>
-                <div class="mt-3">
-                    <iframe src="{{ assessment.thesis_pdf.url }}" style="width:100%; height:500px; border:1px solid #dee2e6; border-radius:8px;" frameborder="0"></iframe>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+
 
         {% if assessment.images.all %}
         <div class="card mb-4 rt-card">
@@ -189,7 +173,8 @@
                         <small>
                             {% if t.shallow_start_lat or t.shallow_end_lat %}
                                 Start: {{ t.shallow_start_lat|default:"-" }}, {{ t.shallow_start_lng|default:"-" }}<br>
-                                End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}
+                                End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}<br>
+                                {% if t.shallow_length %}<strong>{{ t.shallow_length }} m</strong>{% endif %}
                             {% else %}
                                 <span class="text-muted">No coordinates</span>
                             {% endif %}
@@ -200,7 +185,8 @@
                         <small>
                             {% if t.deep_start_lat or t.deep_end_lat %}
                                 Start: {{ t.deep_start_lat|default:"-" }}, {{ t.deep_start_lng|default:"-" }}<br>
-                                End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}
+                                End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}<br>
+                                {% if t.deep_length %}<strong>{{ t.deep_length }} m</strong>{% endif %}
                             {% else %}
                                 <span class="text-muted">No coordinates</span>
                             {% endif %}

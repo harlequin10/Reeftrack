@@ -4,94 +4,279 @@
 {% block title %}Assessments - Curator - ReefTrack{% endblock %}
 
 {% block content %}
-<div class="rt-page-header">
-    <h4><i class="fas fa-clipboard-list"></i> Assessments</h4>
-</div>
+<style>
+    .am-page{margin-bottom:2rem;}
 
-<!-- Stats Cards -->
-<div class="row g-3 mb-4" id="statsRow">
-    <div class="col-6 col-md-4 col-lg-4">
-        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #6b7280, #4b5563);">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Total</div>
-                    <div class="stat-value">{{ stats.total }}</div>
-                </div>
-                <div class="stat-icon"><i class="fas fa-folder-open"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-lg-4">
-        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #d97706, #b45309);">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Pending Review</div>
-                    <div class="stat-value">{{ stats.submitted }}</div>
-                </div>
-                <div class="stat-icon"><i class="fas fa-clock"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-lg-4">
-        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #059669, #047857);">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Approved</div>
-                    <div class="stat-value">{{ stats.approved }}</div>
-                </div>
-                <div class="stat-icon"><i class="fas fa-check-double"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-lg-4">
-        <div class="card rt-assess-stat" style="background: linear-gradient(135deg, #dc2626, #b91c1c);">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Rejected</div>
-                    <div class="stat-value">{{ stats.rejected }}</div>
-                </div>
-                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
-            </div>
-        </div>
-    </div>
-</div>
+    .am-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
+    .am-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
+    .am-breadcrumb a:hover{color:#d97706;}
+    .am-breadcrumb .sep{color:#d1d5db;}
 
-<!-- Filters -->
-<div class="rt-filter-bar">
-    <form method="GET" class="row g-2 align-items-center">
-        <div class="col-sm-6 col-md-4">
-            <input type="text" class="form-control" name="search"
-                   placeholder="Search location or user..." value="{{ search_query }}">
+    .am-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;}
+    .am-header-left h3{margin:0;font-weight:800;color:var(--rt-navy);font-size:1.5rem;letter-spacing:-.02em;}
+    .am-header-left h3 i{color:#d97706;margin-right:.5rem;font-size:1.2rem;}
+    .am-header-left p{margin:.2rem 0 0;color:#64748b;font-size:.85rem;}
+
+    .am-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem;}
+    .am-stat{border-radius:12px;padding:1rem 1.15rem;color:#fff;position:relative;overflow:hidden;cursor:pointer;transition:all .2s ease;border:1px solid transparent;text-decoration:none;}
+    .am-stat:hover{transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,0,0,.18);color:#fff;}
+    .am-stat.active{border-color:rgba(255,255,255,.5);box-shadow:0 0 0 2px rgba(255,255,255,.3),0 8px 25px rgba(0,0,0,.18);}
+    .am-stat::before{content:'';position:absolute;top:-30px;right:-30px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08);}
+    .am-stat::after{content:'';position:absolute;bottom:-20px;left:-20px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.05);}
+    .am-stat-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+    .am-stat-val{font-size:1.8rem;font-weight:800;line-height:1;}
+    .am-stat-icon{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:.95rem;}
+    .am-stat-lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.6px;opacity:.8;margin-top:.5rem;font-weight:600;position:relative;z-index:1;}
+
+    .am-toolbar{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .am-toolbar-row{display:flex;align-items:center;height:48px;}
+    .am-search{display:flex;align-items:center;flex:1;min-width:0;padding:0 .75rem;gap:.6rem;}
+    .am-search i{color:#a1a1aa;font-size:.85rem;flex-shrink:0;}
+    .am-search input{flex:1;border:none;outline:none;font-size:.87rem;color:#1e293b;background:transparent;height:100%;padding:0;}
+    .am-search input::placeholder{color:#b0b8c4;}
+    .am-search-kbd{display:flex;align-items:center;padding:.1rem .4rem;border-radius:4px;background:#f1f5f9;border:1px solid #e5e7eb;font-size:.65rem;color:#94a3b8;flex-shrink:0;line-height:1;}
+    .am-divider{width:1px;height:24px;background:#e5e7eb;flex-shrink:0;}
+    .am-filter-btn{display:flex;align-items:center;gap:.4rem;padding:0 .75rem;height:100%;font-size:.82rem;color:#475569;cursor:pointer;transition:background .12s;white-space:nowrap;border:none;background:none;font-family:inherit;}
+    .am-filter-btn:hover{background:#f8fafc;}
+    .am-filter-btn i.icon{font-size:.75rem;color:#94a3b8;}
+    .am-filter-btn i.chevron{font-size:.5rem;color:#c0c6d0;margin-left:.15rem;}
+    .am-filter-btn .val{font-weight:600;color:#d97706;}
+    .am-right{display:flex;align-items:center;gap:.4rem;margin-left:auto;padding:0 .5rem;height:100%;}
+
+    .am-drop{position:relative;}
+    .am-drop-panel{display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.12);padding:.4rem;min-width:180px;z-index:50;}
+    .am-drop.open .am-drop-panel{display:block;}
+    .am-drop-opt{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-radius:8px;font-size:.83rem;color:#475569;cursor:pointer;transition:background .1s;}
+    .am-drop-opt:hover{background:#f1f5f9;}
+    .am-drop-opt.selected{background:#fffbeb;color:#92400e;font-weight:600;}
+    .am-drop-opt .check{width:18px;height:18px;border-radius:5px;border:1.5px solid #d1d5db;display:flex;align-items:center;justify-content:center;font-size:.6rem;flex-shrink:0;}
+    .am-drop-opt.selected .check{background:#f59e0b;border-color:#f59e0b;color:#fff;}
+
+    .am-chips{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.85rem;}
+    .am-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .65rem;border-radius:6px;font-size:.73rem;font-weight:500;background:#fffbeb;color:#92400e;border:1px solid #fde68a;transition:all .15s;}
+    .am-chip:hover{background:#fef3c7;}
+    .am-chip i.rm{font-size:.6rem;cursor:pointer;opacity:.45;transition:opacity .12s;margin-left:.1rem;}
+    .am-chip i.rm:hover{opacity:1;color:#dc2626;}
+    .am-chip-clear{background:#fef2f2;color:#b91c1c;border-color:#fecaca;}
+    .am-chip-clear:hover{background:#fee2e2;}
+
+    .am-info-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}
+    .am-info-bar span{font-size:.82rem;color:#64748b;}
+    .am-info-bar strong{color:var(--rt-navy);font-weight:700;}
+
+    .am-table-card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .am-tbl{width:100%;border-collapse:collapse;}
+    .am-tbl thead{position:sticky;top:0;z-index:2;}
+    .am-tbl th{background:#f8fafc;padding:.7rem .85rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.6px;color:#64748b;font-weight:700;border-bottom:2px solid #e5e7eb;white-space:nowrap;user-select:none;}
+    .am-tbl td{padding:.7rem .85rem;font-size:.85rem;color:#334155;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+    .am-tbl tbody tr{transition:background .1s;}
+    .am-tbl tbody tr:hover{background:#f8fafc;}
+    .am-tbl tbody tr:last-child td{border-bottom:none;}
+
+    .am-loc-cell{display:flex;flex-direction:column;gap:.1rem;}
+    .am-loc-name{font-weight:700;color:var(--rt-navy);font-size:.87rem;}
+    .am-loc-sub{font-size:.76rem;color:#94a3b8;}
+
+    .am-user-cell{display:flex;align-items:center;gap:.55rem;}
+    .am-avatar{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff;flex-shrink:0;text-transform:uppercase;background:linear-gradient(135deg,#f59e0b,#d97706);}
+    .am-user-name{font-weight:600;color:var(--rt-navy);font-size:.83rem;}
+    .am-user-email{font-size:.73rem;color:#94a3b8;}
+
+    .am-metric{font-size:.87rem;color:#334155;}
+    .am-metric strong{font-weight:700;}
+    .am-metric-none{color:#94a3b8;font-size:.85rem;}
+
+    .am-status{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:20px;font-size:.73rem;font-weight:600;}
+    .am-status.submitted{background:#fffbeb;color:#d97706;border:1px solid #fde68a;}
+    .am-status.approved{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+    .am-status.rejected{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+
+    .am-actions{display:flex;gap:.3rem;align-items:center;}
+    .am-act-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .7rem;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;transition:all .15s;font-size:.75rem;font-weight:600;text-decoration:none;white-space:nowrap;}
+    .am-act-btn:hover{background:#f1f5f9;border-color:#cbd5e1;color:#334155;}
+    .am-act-btn.view{color:#d97706;border-color:#fde68a;}
+    .am-act-btn.view:hover{background:#fffbeb;border-color:#fcd34d;}
+    .am-act-btn.review{color:#f59e0b;border-color:#fde68a;background:#fffbeb;}
+    .am-act-btn.review:hover{background:#fef3c7;border-color:#f59e0b;}
+    .am-act-btn i{font-size:.7rem;}
+
+    .am-empty{text-align:center;padding:3rem 1rem;}
+    .am-empty i{font-size:3rem;color:#d1d5db;margin-bottom:1rem;display:block;}
+    .am-empty h5{color:#64748b;font-weight:600;margin-bottom:.25rem;}
+    .am-empty p{color:#94a3b8;font-size:.85rem;}
+
+    .am-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem 1rem;border-radius:10px;font-size:.82rem;font-weight:600;border:1px solid transparent;cursor:pointer;transition:all .2s ease;white-space:nowrap;text-decoration:none;line-height:1.4;}
+    .am-btn i{font-size:.78rem;}
+    .am-btn-primary{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#f59e0b;box-shadow:0 2px 8px rgba(245,158,11,.25);}
+    .am-btn-primary:hover{background:linear-gradient(135deg,#d97706,#b45309);box-shadow:0 4px 14px rgba(245,158,11,.35);transform:translateY(-1px);color:#fff;}
+    .am-btn-success{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-color:#16a34a;box-shadow:0 2px 8px rgba(22,163,74,.25);}
+    .am-btn-success:hover{background:linear-gradient(135deg,#15803d,#166534);box-shadow:0 4px 14px rgba(22,163,74,.35);transform:translateY(-1px);color:#fff;}
+    .am-icon-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;transition:all .15s;font-size:.78rem;text-decoration:none;}
+    .am-icon-btn:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
+
+    .am-pagination{display:flex;align-items:center;justify-content:center;gap:.35rem;margin-top:1.1rem;flex-wrap:wrap;}
+    .am-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 .6rem;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:.85rem;font-weight:600;text-decoration:none;transition:all .15s;}
+    .am-page-btn:hover{background:#f1f5f9;color:#062E3F;text-decoration:none;}
+    .am-page-btn.active{background:linear-gradient(135deg,#f59e0b,#d97706);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(245,158,11,.3);}
+    .am-page-btn.disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
+
+    @media(max-width:991px){
+        .am-stats{grid-template-columns:repeat(2,1fr);}
+    }
+    @media(max-width:767px){
+        .am-stats{grid-template-columns:repeat(2,1fr);}
+        .am-toolbar-row{flex-wrap:wrap;height:auto;padding:.5rem;}
+        .am-search{width:100%;height:40px;}
+        .am-right{width:100%;justify-content:flex-end;}
+        .am-tbl{font-size:.8rem;}
+        .am-tbl th,.am-tbl td{padding:.5rem .6rem;}
+    }
+</style>
+
+<div class="am-page">
+    <!-- Breadcrumb -->
+    <div class="am-breadcrumb">
+        <a href="{% url 'curator_dashboard' %}"><i class="fas fa-home"></i></a>
+        <span class="sep">/</span>
+        <span>Assessments</span>
+    </div>
+
+    <!-- Header -->
+    <div class="am-header">
+        <div class="am-header-left">
+            <h3><i class="fas fa-clipboard-list"></i> Assessments</h3>
+            <p>Review and manage submitted reef assessments</p>
         </div>
-        <div class="col-sm-6 col-md-3">
-            <select class="form-select" name="status">
-                <option value="">All Status</option>
-                <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Pending Review</option>
-                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
-                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
-            </select>
-        </div>
-        <div class="col-sm-12 col-md-5 d-flex gap-2">
-            <button type="submit" class="btn btn-sm btn-primary">
-                <i class="fas fa-filter"></i> Filter
-            </button>
-            <a href="{% url 'curator_assessments' %}" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-times"></i> Clear
-            </a>
-            <a href="{% url 'upload_assessment' %}" class="btn btn-sm btn-success ms-auto">
+        <div>
+            <a href="{% url 'upload_assessment' %}" class="am-btn am-btn-success">
                 <i class="fas fa-upload"></i> Upload New
             </a>
         </div>
-    </form>
-</div>
+    </div>
 
-<!-- Assessments Table -->
-<div class="rt-table-card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle" id="assessmentsTable">
+    <!-- Stat Cards -->
+    <div class="am-stats">
+        <a class="am-stat {% if not status_filter %}active{% endif %}"
+           href="{% url 'curator_assessments' %}" style="background:linear-gradient(135deg,#64748b,#475569);">
+            <div class="am-stat-top">
+                <div class="am-stat-val">{{ stats.total }}</div>
+                <div class="am-stat-icon"><i class="fas fa-folder-open"></i></div>
+            </div>
+            <div class="am-stat-lbl">Total</div>
+        </a>
+        <a class="am-stat {% if status_filter == 'submitted' %}active{% endif %}"
+           href="{% url 'curator_assessments' %}?status=submitted" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+            <div class="am-stat-top">
+                <div class="am-stat-val">{{ stats.submitted }}</div>
+                <div class="am-stat-icon"><i class="fas fa-clock"></i></div>
+            </div>
+            <div class="am-stat-lbl">Pending Review</div>
+        </a>
+        <a class="am-stat {% if status_filter == 'approved' %}active{% endif %}"
+           href="{% url 'curator_assessments' %}?status=approved" style="background:linear-gradient(135deg,#16a34a,#15803d);">
+            <div class="am-stat-top">
+                <div class="am-stat-val">{{ stats.approved }}</div>
+                <div class="am-stat-icon"><i class="fas fa-check-double"></i></div>
+            </div>
+            <div class="am-stat-lbl">Approved</div>
+        </a>
+        <a class="am-stat {% if status_filter == 'rejected' %}active{% endif %}"
+           href="{% url 'curator_assessments' %}?status=rejected" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
+            <div class="am-stat-top">
+                <div class="am-stat-val">{{ stats.rejected }}</div>
+                <div class="am-stat-icon"><i class="fas fa-times-circle"></i></div>
+            </div>
+            <div class="am-stat-lbl">Rejected</div>
+        </a>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="am-toolbar">
+        <div class="am-toolbar-row">
+            <form id="amSearchForm" method="get" action="{% url 'curator_assessments' %}" style="display:inline;flex:1;min-width:0;">
+                {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+                <div class="am-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="amSearchInput" name="search" placeholder="Search by location or user..."
+                           value="{{ search_query }}" onkeydown="if(event.key==='Enter'){document.getElementById('amSearchForm').submit();}">
+                    <div class="am-search-kbd" title="Press Enter to search">/</div>
+                </div>
+            </form>
+            <div class="am-divider"></div>
+
+            <!-- Status filter -->
+            <div class="am-drop" id="statusDrop">
+                <button class="am-filter-btn" onclick="toggleDrop('statusDrop')">
+                    <i class="fas fa-signal icon"></i>
+                    <span>Status</span>
+                    {% if status_filter %}<span class="val">{{ status_filter }}</span>{% endif %}
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div class="am-drop-panel">
+                    <div class="am-drop-opt {% if not status_filter %}selected{% endif %}" onclick="setFilter('status','')">
+                        <div class="check">{% if not status_filter %}<i class="fas fa-check"></i>{% endif %}</div>
+                        All Status
+                    </div>
+                    <div class="am-drop-opt {% if status_filter == 'submitted' %}selected{% endif %}" onclick="setFilter('status','submitted')">
+                        <div class="check">{% if status_filter == 'submitted' %}<i class="fas fa-check"></i>{% endif %}</div>
+                        Pending Review
+                    </div>
+                    <div class="am-drop-opt {% if status_filter == 'approved' %}selected{% endif %}" onclick="setFilter('status','approved')">
+                        <div class="check">{% if status_filter == 'approved' %}<i class="fas fa-check"></i>{% endif %}</div>
+                        Approved
+                    </div>
+                    <div class="am-drop-opt {% if status_filter == 'rejected' %}selected{% endif %}" onclick="setFilter('status','rejected')">
+                        <div class="check">{% if status_filter == 'rejected' %}<i class="fas fa-check"></i>{% endif %}</div>
+                        Rejected
+                    </div>
+                </div>
+            </div>
+
+            <div class="am-right">
+                {% if status_filter or search_query %}
+                <a href="{% url 'curator_assessments' %}" class="am-icon-btn" title="Clear all filters">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Active filter chips -->
+    {% if status_filter or search_query %}
+    <div class="am-chips">
+        {% if search_query %}
+        <span class="am-chip">
+            <i class="fas fa-search"></i> "{{ search_query }}"
+            <a href="{% url 'curator_assessments' %}?status={{ status_filter }}" class="rm"><i class="fas fa-times rm"></i></a>
+        </span>
+        {% endif %}
+        {% if status_filter %}
+        <span class="am-chip">
+            Status: {{ status_filter }}
+            <a href="{% url 'curator_assessments' %}?search={{ search_query }}" class="rm"><i class="fas fa-times rm"></i></a>
+        </span>
+        {% endif %}
+        <a href="{% url 'curator_assessments' %}" class="am-chip am-chip-clear">
+            <i class="fas fa-times"></i> Clear all
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Info bar -->
+    <div class="am-info-bar">
+        <span>Showing <strong>{{ assessments|length }}</strong> assessment{{ assessments|length|pluralize }}</span>
+        {% if assessments.paginator.num_pages > 1 %}
+        <span style="font-size:.8rem;color:#94a3b8;">Page {{ assessments.number }} of {{ assessments.paginator.num_pages }}</span>
+        {% endif %}
+    </div>
+
+    <!-- Table -->
+    <div class="am-table-card">
+        <div style="overflow-x:auto;">
+        <table class="am-tbl">
             <thead>
                 <tr>
-                    <th>#</th>
                     <th>Location</th>
                     <th>Date</th>
                     <th>Uploaded By</th>
@@ -99,45 +284,71 @@
                     <th>Transects</th>
                     <th>Coral Cover</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th style="width:140px;text-align:center;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for a in assessments %}
                 <tr>
-                    <td><span class="badge bg-secondary">#{{ a.id }}</span></td>
                     <td>
-                        <strong>{{ a.barangay.name }}</strong>
-                        <br><small class="text-muted">{{ a.municipality.name }}, {{ a.municipality.province.name }}</small>
+                        <div class="am-loc-cell">
+                            <span class="am-loc-name">{{ a.barangay.name }}</span>
+                            <span class="am-loc-sub">{{ a.municipality.name }}, {{ a.municipality.province.name }}</span>
+                        </div>
                     </td>
-                    <td>{{ a.assessment_date|date:"M d, Y" }}</td>
-                    <td><small>{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</small></td>
+                    <td><span class="am-metric">{{ a.assessment_date|date:"M d, Y" }}</span></td>
+                    <td>
+                        <div class="am-user-cell">
+                            <div class="am-avatar">
+                                {% with name=a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email %}
+                                {{ name|truncatechars:2 }}
+                                {% endwith %}
+                            </div>
+                            <div>
+                                <div class="am-user-name">{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</div>
+                            </div>
+                        </div>
+                    </td>
                     <td>
                         {% if a.reviewed_by %}
-                            <small>{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}</small>
+                            <div class="am-user-cell">
+                                <div class="am-avatar">
+                                    {% with name=a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email %}
+                                    {{ name|truncatechars:2 }}
+                                    {% endwith %}
+                                </div>
+                                <div>
+                                    <div class="am-user-name">{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}</div>
+                                </div>
+                            </div>
                         {% else %}
-                            <small class="text-muted">—</small>
+                            <span class="am-metric-none">—</span>
                         {% endif %}
                     </td>
-                    <td>{{ a.transects.count }}</td>
-                    <td>{% if a.overall_coral_cover %}{{ a.overall_coral_cover }}%{% else %}—{% endif %}</td>
+                    <td><span class="am-metric">{{ a.transects.count }}</span></td>
                     <td>
-                        <span class="rt-badge
-                            {% if a.status == 'approved' %}rt-badge-approved
-                            {% elif a.status == 'submitted' %}rt-badge-submitted
-                            {% elif a.status == 'rejected' %}rt-badge-rejected
-                            {% endif %}">
+                        {% if a.overall_coral_cover %}
+                            <span class="am-metric"><strong>{{ a.overall_coral_cover }}</strong>%</span>
+                        {% else %}
+                            <span class="am-metric-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="am-status {{ a.status }}">
+                            {% if a.status == 'approved' %}<i class="fas fa-check-circle"></i>
+                            {% elif a.status == 'submitted' %}<i class="fas fa-clock"></i>
+                            {% else %}<i class="fas fa-times-circle"></i>{% endif %}
                             {{ a.get_status_display }}
                         </span>
                     </td>
                     <td>
-                        <div class="rt-action-group">
-                            <a href="{% url 'curator_assessment_detail' a.id %}" class="rt-action-btn rt-action-btn-view" title="View assessment">
-                                <i class="fas fa-eye"></i> <span class="btn-label">View</span>
+                        <div class="am-actions" style="justify-content:center;">
+                            <a href="{% url 'curator_assessment_detail' a.id %}" class="am-act-btn view" title="View assessment">
+                                <i class="fas fa-eye"></i> View
                             </a>
                             {% if a.status == 'submitted' %}
-                            <a href="{% url 'curator_confirm_approval' a.id %}" class="rt-action-btn rt-action-btn-review" title="Review & approve">
-                                <i class="fas fa-check"></i> <span class="btn-label">Review</span>
+                            <a href="{% url 'curator_confirm_approval' a.id %}" class="am-act-btn review" title="Review & approve">
+                                <i class="fas fa-check"></i> Review
                             </a>
                             {% endif %}
                         </div>
@@ -145,9 +356,9 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9">
-                        <div class="rt-empty-state">
-                            <div class="rt-empty-icon"><i class="fas fa-clipboard"></i></div>
+                    <td colspan="8">
+                        <div class="am-empty">
+                            <i class="fas fa-clipboard"></i>
                             <h5>No assessments found</h5>
                             <p>No assessments match your current filters.</p>
                         </div>
@@ -156,11 +367,67 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
+
+    <!-- Pagination -->
+    {% if assessments.has_other_pages %}
+    <div class="am-pagination">
+        {% if assessments.has_previous %}
+        <a class="am-page-btn" href="?page={{ assessments.previous_page_number }}&status={{ status_filter }}&search={{ search_query }}"><i class="fas fa-chevron-left"></i></a>
+        {% else %}
+        <span class="am-page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+        {% endif %}
+
+        {% for num in assessments.paginator.page_range %}
+            {% if assessments.number == num %}
+            <span class="am-page-btn active">{{ num }}</span>
+            {% elif num > assessments.number|add:'-3' and num < assessments.number|add:'3' %}
+            <a class="am-page-btn" href="?page={{ num }}&status={{ status_filter }}&search={{ search_query }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if assessments.has_next %}
+        <a class="am-page-btn" href="?page={{ assessments.next_page_number }}&status={{ status_filter }}&search={{ search_query }}"><i class="fas fa-chevron-right"></i></a>
+        {% else %}
+        <span class="am-page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <script src="{% static 'js/assessment_sync.js' %}"></script>
 <script>
 RTAssessmentSync.init({ role: 'curator', csrfToken: '{{ csrf_token }}', filters: 'status={{ status_filter }}&search={{ search_query }}' });
+
+function toggleDrop(id) {
+    var el = document.getElementById(id);
+    var wasOpen = el.classList.contains('open');
+    document.querySelectorAll('.am-drop').forEach(function(d) { d.classList.remove('open'); });
+    if (!wasOpen) el.classList.add('open');
+}
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.am-drop')) {
+        document.querySelectorAll('.am-drop').forEach(function(d) { d.classList.remove('open'); });
+    }
+});
+
+function setFilter(param, val) {
+    var url = new URL(window.location);
+    if (val) {
+        url.searchParams.set(param, val);
+    } else {
+        url.searchParams.delete(param);
+    }
+    url.searchParams.delete('page');
+    window.location = url;
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === '/' && !e.target.matches('input,textarea,select')) {
+        e.preventDefault();
+        document.getElementById('amSearchInput').focus();
+    }
+});
 </script>
 {% endblock %}

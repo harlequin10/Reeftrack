@@ -1,290 +1,467 @@
 {% extends 'curator/base_curator.html' %}
+{% load static %}
 
-{% block title %}Manage Contributors - ReefTrack{% endblock %}
+{% block title %}Manage Contributors - Curator - ReefTrack{% endblock %}
 
 {% block content %}
 <style>
-    .stat-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-        border: none;
-        border-radius: 15px;
+    .um-page{margin-bottom:2rem;}
+
+    .um-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
+    .um-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
+    .um-breadcrumb a:hover{color:var(--rt-primary);}
+    .um-breadcrumb .sep{color:#d1d5db;}
+
+    .um-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;}
+    .um-header-left h3{margin:0;font-weight:800;color:var(--rt-navy);font-size:1.5rem;letter-spacing:-.02em;}
+    .um-header-left h3 i{color:var(--rt-primary);margin-right:.5rem;font-size:1.2rem;}
+    .um-header-left p{margin:.2rem 0 0;color:#64748b;font-size:.85rem;}
+
+    .um-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem;}
+    .um-stat{border-radius:12px;padding:1rem 1.15rem;color:#fff;position:relative;overflow:hidden;cursor:pointer;transition:all .2s ease;border:1px solid transparent;text-decoration:none;}
+    .um-stat:hover{transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,0,0,.18);color:#fff;}
+    .um-stat.active{border-color:rgba(255,255,255,.5);box-shadow:0 0 0 2px rgba(255,255,255,.3),0 8px 25px rgba(0,0,0,.18);}
+    .um-stat::before{content:'';position:absolute;top:-30px;right:-30px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08);}
+    .um-stat::after{content:'';position:absolute;bottom:-20px;left:-20px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.05);}
+    .um-stat-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+    .um-stat-val{font-size:1.8rem;font-weight:800;line-height:1;}
+    .um-stat-icon{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:.95rem;}
+    .um-stat-lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.6px;opacity:.8;margin-top:.5rem;font-weight:600;position:relative;z-index:1;}
+
+    .um-toolbar{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .um-toolbar-row{display:flex;align-items:center;height:48px;}
+    .um-search{display:flex;align-items:center;flex:1;min-width:0;padding:0 .75rem;gap:.6rem;}
+    .um-search i{color:#a1a1aa;font-size:.85rem;flex-shrink:0;}
+    .um-search input{flex:1;border:none;outline:none;font-size:.87rem;color:#1e293b;background:transparent;height:100%;padding:0;}
+    .um-search input::placeholder{color:#b0b8c4;}
+    .um-search-kbd{display:flex;align-items:center;padding:.1rem .4rem;border-radius:4px;background:#f1f5f9;border:1px solid #e5e7eb;font-size:.65rem;color:#94a3b8;flex-shrink:0;line-height:1;}
+    .um-divider{width:1px;height:24px;background:#e5e7eb;flex-shrink:0;}
+    .um-filter-btn{display:flex;align-items:center;gap:.4rem;padding:0 .75rem;height:100%;font-size:.82rem;color:#475569;cursor:pointer;transition:background .12s;white-space:nowrap;border:none;background:none;font-family:inherit;position:relative;}
+    .um-filter-btn:hover{background:#f8fafc;}
+    .um-filter-btn i.icon{font-size:.75rem;color:#94a3b8;}
+    .um-filter-btn i.chevron{font-size:.5rem;color:#c0c6d0;margin-left:.15rem;}
+    .um-filter-btn .val{font-weight:600;color:#d97706;}
+    .um-right{display:flex;align-items:center;gap:.4rem;margin-left:auto;padding:0 .5rem;height:100%;}
+    .um-icon-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;transition:all .15s;font-size:.78rem;text-decoration:none;}
+    .um-icon-btn:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
+
+    .um-drop{position:relative;}
+    .um-drop-panel{display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.12);padding:.4rem;min-width:180px;z-index:50;}
+    .um-drop.open .um-drop-panel{display:block;}
+    .um-drop-opt{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-radius:8px;font-size:.83rem;color:#475569;cursor:pointer;transition:background .1s;}
+    .um-drop-opt:hover{background:#f1f5f9;}
+    .um-drop-opt.selected{background:#fffbeb;color:#92400e;font-weight:600;}
+    .um-drop-opt .check{width:18px;height:18px;border-radius:5px;border:1.5px solid #d1d5db;display:flex;align-items:center;justify-content:center;font-size:.6rem;flex-shrink:0;}
+    .um-drop-opt.selected .check{background:#f59e0b;border-color:#f59e0b;color:#fff;}
+
+    .um-chips{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.85rem;}
+    .um-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .65rem;border-radius:6px;font-size:.73rem;font-weight:500;background:#fffbeb;color:#92400e;border:1px solid #fde68a;transition:all .15s;}
+    .um-chip:hover{background:#fef3c7;}
+    .um-chip i.rm{font-size:.6rem;cursor:pointer;opacity:.45;transition:opacity .12s;margin-left:.1rem;}
+    .um-chip i.rm:hover{opacity:1;color:#dc2626;}
+    .um-chip-clear{background:#fef2f2;color:#b91c1c;border-color:#fecaca;}
+    .um-chip-clear:hover{background:#fee2e2;}
+
+    .um-info-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;}
+    .um-info-bar span{font-size:.82rem;color:#64748b;}
+    .um-info-bar strong{color:var(--rt-navy);font-weight:700;}
+
+    .um-table-card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+    .um-tbl{width:100%;border-collapse:collapse;}
+    .um-tbl thead{position:sticky;top:0;z-index:2;}
+    .um-tbl th{background:#f8fafc;padding:.7rem .85rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.6px;color:#64748b;font-weight:700;border-bottom:2px solid #e5e7eb;white-space:nowrap;user-select:none;}
+    .um-tbl td{padding:.7rem .85rem;font-size:.85rem;color:#334155;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+    .um-tbl tbody tr{transition:background .1s;}
+    .um-tbl tbody tr:hover{background:#f8fafc;}
+    .um-tbl tbody tr:last-child td{border-bottom:none;}
+
+    .um-user-cell{display:flex;align-items:center;gap:.65rem;}
+    .um-avatar{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#fff;flex-shrink:0;text-transform:uppercase;background:linear-gradient(135deg,#16a34a,#15803d);}
+    .um-user-info{min-width:0;}
+    .um-user-name{font-weight:600;color:var(--rt-navy);font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .um-user-email{font-size:.75rem;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+    .um-status{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:20px;font-size:.73rem;font-weight:600;}
+    .um-status.approved{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+    .um-status.pending{background:#fffbeb;color:#d97706;border:1px solid #fde68a;}
+    .um-status.rejected{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+
+    .um-active{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .6rem;border-radius:20px;font-size:.72rem;font-weight:600;}
+    .um-active.yes{background:#f0fdf4;color:#16a34a;}
+    .um-active.no{background:#fef2f2;color:#dc2626;}
+
+    .um-date{font-size:.82rem;color:#64748b;white-space:nowrap;}
+
+    .um-actions{display:flex;gap:.3rem;align-items:center;}
+    .um-act-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;transition:all .15s;font-size:.72rem;text-decoration:none;}
+    .um-act-btn:hover{background:#f1f5f9;border-color:#cbd5e1;color:#334155;}
+    .um-act-btn.edit{color:#d97706;border-color:#fde68a;}
+    .um-act-btn.edit:hover{background:#fffbeb;border-color:#fcd34d;}
+    .um-act-btn.approve{color:#16a34a;border-color:#bbf7d0;}
+    .um-act-btn.approve:hover{background:#f0fdf4;border-color:#86efac;}
+    .um-act-btn.reject{color:#dc2626;border-color:#fecaca;}
+    .um-act-btn.reject:hover{background:#fef2f2;border-color:#fca5a5;}
+    .um-act-btn.deactivate{color:#d97706;border-color:#fde68a;}
+    .um-act-btn.deactivate:hover{background:#fffbeb;border-color:#fcd34d;}
+    .um-act-btn.activate{color:#16a34a;border-color:#bbf7d0;}
+    .um-act-btn.activate:hover{background:#f0fdf4;border-color:#86efac;}
+    .um-act-btn[title]:hover::after{content:attr(title);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:.25rem .5rem;border-radius:6px;font-size:.68rem;white-space:nowrap;z-index:100;pointer-events:none;font-weight:500;}
+
+    .um-empty{text-align:center;padding:3rem 1rem;}
+    .um-empty i{font-size:3rem;color:#d1d5db;margin-bottom:1rem;display:block;}
+    .um-empty h5{color:#64748b;font-weight:600;margin-bottom:.25rem;}
+    .um-empty p{color:#94a3b8;font-size:.85rem;}
+
+    .um-modal .modal-content{border-radius:14px;border:none;overflow:hidden;}
+    .um-modal .modal-header{padding:1rem 1.25rem;border-bottom:none;}
+    .um-modal .modal-header .modal-title{font-weight:700;font-size:1rem;}
+    .um-modal .modal-body{padding:0 1.25rem 1.25rem;}
+    .um-modal .modal-footer{padding:.85rem 1.25rem;border-top:1px solid #f1f5f9;}
+
+    .um-pagination{display:flex;align-items:center;justify-content:center;gap:.35rem;margin-top:1.1rem;flex-wrap:wrap;}
+    .um-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 .6rem;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:.85rem;font-weight:600;text-decoration:none;transition:all .15s;}
+    .um-page-btn:hover{background:#f1f5f9;color:#062E3F;text-decoration:none;}
+    .um-page-btn.active{background:linear-gradient(135deg,#f59e0b,#d97706);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(245,158,11,.3);}
+    .um-page-btn.disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
+
+    .um-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem 1rem;border-radius:10px;font-size:.82rem;font-weight:600;border:1px solid transparent;cursor:pointer;transition:all .2s ease;white-space:nowrap;text-decoration:none;line-height:1.4;}
+    .um-btn i{font-size:.78rem;}
+    .um-btn-primary{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#f59e0b;box-shadow:0 2px 8px rgba(245,158,11,.25);}
+    .um-btn-primary:hover{background:linear-gradient(135deg,#d97706,#b45309);box-shadow:0 4px 14px rgba(245,158,11,.35);transform:translateY(-1px);color:#fff;}
+
+    @media(max-width:991px){
+        .um-stats{grid-template-columns:repeat(2,1fr);}
     }
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    }
-    .stat-icon {
-        font-size: 2.5rem;
-        opacity: 0.3;
-    }
-    .badge-status {
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-weight: 500;
-    }
-    .action-dropdown .dropdown-menu {
-        min-width: 200px;
-    }
-    .action-dropdown .dropdown-item {
-        padding: 8px 20px;
-        cursor: pointer;
-    }
-    .action-dropdown .dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-    .action-dropdown .dropdown-item i {
-        width: 20px;
-        margin-right: 10px;
+    @media(max-width:767px){
+        .um-stats{grid-template-columns:repeat(2,1fr);}
+        .um-toolbar-row{flex-wrap:wrap;height:auto;padding:.5rem;}
+        .um-search{width:100%;height:40px;}
+        .um-right{width:100%;justify-content:flex-end;}
+        .um-tbl{font-size:.8rem;}
+        .um-tbl th,.um-tbl td{padding:.5rem .6rem;}
     }
 </style>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow">
-            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="fas fa-users"></i> Manage Contributors</h4>
-                {% if pending_count > 0 %}
-                    <a href="{% url 'curator_manage_contributors' %}?status=pending" class="btn btn-danger btn-sm">
-                        <i class="fas fa-clock"></i> {{ pending_count }} Pending Approvals
-                    </a>
-                {% endif %}
+<div class="um-page">
+    <!-- Breadcrumb -->
+    <div class="um-breadcrumb">
+        <a href="{% url 'curator_dashboard' %}"><i class="fas fa-home"></i></a>
+        <span class="sep">/</span>
+        <span>Manage Contributors</span>
+    </div>
+
+    <!-- Header -->
+    <div class="um-header">
+        <div class="um-header-left">
+            <h3><i class="fas fa-users"></i> Manage Contributors</h3>
+            <p>View and manage all contributor accounts</p>
+        </div>
+        <div>
+            <a href="{% url 'curator_create_contributor' %}" class="um-btn um-btn-primary">
+                <i class="fas fa-user-plus"></i> Create Contributor
+            </a>
+        </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="um-stats">
+        <a class="um-stat {% if not status_filter %}active{% endif %}"
+           href="{% url 'curator_manage_contributors' %}" style="background:linear-gradient(135deg,#64748b,#475569);">
+            <div class="um-stat-top">
+                <div class="um-stat-val">{{ total_contributors }}</div>
+                <div class="um-stat-icon"><i class="fas fa-users"></i></div>
             </div>
-            <div class="card-body">
-                <!-- Stats Row -->
-                <div class="row g-3 mb-4">
-                    <div class="col-sm-6 col-md-3">
-                        <div class="card stat-card bg-primary text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="text-uppercase mb-1">Total Contributors</h6>
-                                        <h2 class="mb-0">{{ total_contributors }}</h2>
-                                    </div>
-                                    <div class="stat-icon">
-                                        <i class="fas fa-users"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <div class="card stat-card bg-success text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="text-uppercase mb-1">Approved</h6>
-                                        <h2 class="mb-0">{{ approved_count }}</h2>
-                                    </div>
-                                    <div class="stat-icon">
-                                        <i class="fas fa-check-circle"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <div class="card stat-card bg-warning text-dark">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="text-uppercase mb-1">Pending</h6>
-                                        <h2 class="mb-0">{{ pending_count }}</h2>
-                                    </div>
-                                    <div class="stat-icon">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <div class="card stat-card bg-danger text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="text-uppercase mb-1">Rejected</h6>
-                                        <h2 class="mb-0">{{ rejected_count }}</h2>
-                                    </div>
-                                    <div class="stat-icon">
-                                        <i class="fas fa-times-circle"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="um-stat-lbl">Total Contributors</div>
+        </a>
+        <a class="um-stat {% if status_filter == 'approved' %}active{% endif %}"
+           href="{% url 'curator_manage_contributors' %}?status=approved" style="background:linear-gradient(135deg,#16a34a,#15803d);">
+            <div class="um-stat-top">
+                <div class="um-stat-val">{{ approved_count }}</div>
+                <div class="um-stat-icon"><i class="fas fa-check-circle"></i></div>
+            </div>
+            <div class="um-stat-lbl">Approved</div>
+        </a>
+        <a class="um-stat {% if status_filter == 'pending' %}active{% endif %}"
+           href="{% url 'curator_manage_contributors' %}?status=pending" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+            <div class="um-stat-top">
+                <div class="um-stat-val">{{ pending_count }}</div>
+                <div class="um-stat-icon"><i class="fas fa-clock"></i></div>
+            </div>
+            <div class="um-stat-lbl">Pending</div>
+        </a>
+        <a class="um-stat {% if status_filter == 'rejected' %}active{% endif %}"
+           href="{% url 'curator_manage_contributors' %}?status=rejected" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
+            <div class="um-stat-top">
+                <div class="um-stat-val">{{ rejected_count }}</div>
+                <div class="um-stat-icon"><i class="fas fa-times-circle"></i></div>
+            </div>
+            <div class="um-stat-lbl">Rejected</div>
+        </a>
+    </div>
 
-                <!-- Filter Bar -->
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <form method="GET" class="row g-2">
-                            <div class="col-sm-6 col-md-4">
-                                <input type="text" name="search" class="form-control" 
-                                       placeholder="Search by name or email..." value="{{ search_query }}">
-                            </div>
-                            <div class="col-sm-6 col-md-3">
-                                <select name="status" class="form-select">
-                                    <option value="">All Status</option>
-                                    {% for status_value, status_label in status_choices %}
-                                        <option value="{{ status_value }}" {% if status_filter == status_value %}selected{% endif %}>
-                                            {{ status_label }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-sm-6 col-md-3">
-                                <button type="submit" class="btn btn-warning w-100">
-                                    <i class="fas fa-filter"></i> Filter
-                                </button>
-                            </div>
-                            <div class="col-sm-6 col-md-2">
-                                <a href="{% url 'curator_manage_contributors' %}" class="btn btn-secondary w-100">
-                                    <i class="fas fa-undo"></i> Reset
-                                </a>
-                            </div>
-                        </form>
+    <!-- Toolbar -->
+    <div class="um-toolbar">
+        <div class="um-toolbar-row">
+            <form id="umSearchForm" method="get" action="{% url 'curator_manage_contributors' %}" style="display:inline;flex:1;min-width:0;">
+                {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+                <div class="um-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="umSearchInput" name="search" placeholder="Search by name or email..."
+                           value="{{ search_query }}" onkeydown="if(event.key==='Enter'){document.getElementById('umSearchForm').submit();}">
+                    <div class="um-search-kbd" title="Press Enter to search">/</div>
+                </div>
+            </form>
+            <div class="um-divider"></div>
+
+            <!-- Status filter -->
+            <div class="um-drop" id="statusDrop">
+                <button class="um-filter-btn {% if status_filter %}active{% endif %}" onclick="toggleDrop('statusDrop')">
+                    <i class="fas fa-signal icon"></i>
+                    <span>Status</span>
+                    {% if status_filter %}<span class="val">{{ status_filter }}</span>{% endif %}
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div class="um-drop-panel">
+                    <div class="um-drop-opt {% if not status_filter %}selected{% endif %}" onclick="setFilter('status','')">
+                        <div class="check">{% if not status_filter %}<i class="fas fa-check"></i>{% endif %}</div>
+                        All Status
                     </div>
+                    {% for sv, sl in status_choices %}
+                    <div class="um-drop-opt {% if status_filter == sv %}selected{% endif %}" onclick="setFilter('status','{{ sv }}')">
+                        <div class="check">{% if status_filter == sv %}<i class="fas fa-check"></i>{% endif %}</div>
+                        {{ sl }}
+                    </div>
+                    {% endfor %}
                 </div>
+            </div>
 
-                <!-- Contributors Table -->
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Status</th>
-                                <th>Active</th>
-                                <th>Joined</th>
-                                <th style="min-width: 180px;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for contributor in contributors %}
-                            <tr>
-                                <td>{{ forloop.counter }}</td>
-                                <td>
-                                    {{ contributor.profile.get_full_name|default:contributor.email }}
-                                    {% if contributor == request.user %}
-                                        <span class="badge bg-info ms-1">You</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ contributor.email }}</td>
-                                <td>
-                                    <span class="badge-status 
-                                        {% if contributor.profile.status == 'approved' %}bg-success text-white
-                                        {% elif contributor.profile.status == 'pending' %}bg-warning text-dark
-                                        {% else %}bg-danger text-white{% endif %}">
-                                        {{ contributor.profile.get_status_display }}
-                                    </span>
-                                </td>
-                                <td>
-                                    {% if contributor.is_active %}
-                                        <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
-                                    {% else %}
-                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Inactive</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ contributor.date_joined|date:"M d, Y" }}</td>
-                                <td>
-                                    {% if contributor != request.user %}
-                                        <div class="dropdown action-dropdown">
-                                            <button class="btn btn-warning btn-sm dropdown-toggle" type="button" 
-                                                    id="dropdownMenuButton{{ contributor.id }}" 
-                                                    data-bs-toggle="dropdown" 
-                                                    aria-expanded="false">
-                                                <i class="fas fa-cog"></i> Actions
-                                            </button>
-                                            
-                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ contributor.id }}">
-                                                <li>
-                                                    <a class="dropdown-item text-primary" 
-                                                       href="{% url 'curator_edit_contributor' contributor.id %}">
-                                                        <i class="fas fa-edit"></i> Edit Contributor
-                                                    </a>
-                                                </li>
-                                                
-                                                <li><hr class="dropdown-divider"></li>
-                                                
-                                                {% if contributor.profile.status == 'pending' %}
-                                                    <li>
-                                                        <form method="POST" action="{% url 'curator_contributor_action' contributor.id %}" style="display: inline;">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="action" value="approve">
-                                                            <button type="submit" class="dropdown-item text-success">
-                                                                <i class="fas fa-check-circle"></i> Approve
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item text-danger" 
-                                                                data-bs-toggle="modal" data-bs-target="#rejectModal{{ contributor.id }}">
-                                                            <i class="fas fa-times-circle"></i> Reject
-                                                        </button>
-                                                    </li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                {% endif %}
-                                                
-                                                <li>
-                                                    <form method="POST" action="{% url 'curator_contributor_action' contributor.id %}" style="display: inline;">
-                                                        {% csrf_token %}
-                                                        <input type="hidden" name="action" value="{% if contributor.is_active %}deactivate{% else %}activate{% endif %}">
-                                                        <button type="submit" class="dropdown-item {% if contributor.is_active %}text-warning{% else %}text-success{% endif %}">
-                                                            <i class="fas {% if contributor.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
-                                                            {% if contributor.is_active %}Deactivate{% else %}Activate{% endif %}
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                            </ul>
-                                        </div>
-
-                                        <!-- Reject Modal -->
-                                        <div class="modal fade" id="rejectModal{{ contributor.id }}" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header bg-danger text-white">
-                                                        <h5 class="modal-title"><i class="fas fa-times-circle"></i> Reject Contributor</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <form method="POST" action="{% url 'curator_contributor_action' contributor.id %}">
-                                                        {% csrf_token %}
-                                                        <div class="modal-body">
-                                                            <p>Are you sure you want to reject <strong>{{ contributor.profile.get_full_name|default:contributor.email }}</strong>?</p>
-                                                            <input type="hidden" name="action" value="reject">
-                                                            <div class="mb-3">
-                                                                <label for="rejection_reason" class="form-label">Rejection Reason</label>
-                                                                <textarea name="rejection_reason" class="form-control" rows="3" 
-                                                                          placeholder="Provide a reason for rejection (optional)"></textarea>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                            <button type="submit" class="btn btn-danger">Reject</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    {% else %}
-                                        <span class="text-muted">Cannot modify yourself</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="text-center py-4">
-                                    <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
-                                    <h5>No contributors found</h5>
-                                    <p class="text-muted">Try adjusting your filters or wait for users to register.</p>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="um-right">
+                {% if status_filter or search_query %}
+                <a href="{% url 'curator_manage_contributors' %}" class="um-icon-btn" title="Clear all filters">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
+
+    <!-- Active filter chips -->
+    {% if status_filter or search_query %}
+    <div class="um-chips">
+        {% if search_query %}
+        <span class="um-chip">
+            <i class="fas fa-search"></i> "{{ search_query }}"
+            <a href="{% url 'curator_manage_contributors' %}?status={{ status_filter }}" class="rm"><i class="fas fa-times rm"></i></a>
+        </span>
+        {% endif %}
+        {% if status_filter %}
+        <span class="um-chip">
+            Status: {{ status_filter }}
+            <a href="{% url 'curator_manage_contributors' %}?search={{ search_query }}" class="rm"><i class="fas fa-times rm"></i></a>
+        </span>
+        {% endif %}
+        <a href="{% url 'curator_manage_contributors' %}" class="um-chip um-chip-clear">
+            <i class="fas fa-times"></i> Clear all
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Info bar -->
+    <div class="um-info-bar">
+        <span>Showing <strong>{{ contributors|length }}</strong> contributor{{ contributors|length|pluralize }}</span>
+        {% if contributors.paginator.num_pages > 1 %}
+        <span style="font-size:.8rem;color:#94a3b8;">Page {{ contributors.number }} of {{ contributors.paginator.num_pages }}</span>
+        {% endif %}
+    </div>
+
+    <!-- Table -->
+    <div class="um-table-card">
+        <div style="overflow-x:auto;">
+        <table class="um-tbl">
+            <thead>
+                <tr>
+                    <th>Contributor</th>
+                    <th>Status</th>
+                    <th>Active</th>
+                    <th>Joined</th>
+                    <th style="width:140px;text-align:center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in contributors %}
+                <tr>
+                    <td>
+                        <div class="um-user-cell">
+                            <div class="um-avatar">
+                                {% with name=c.profile.get_full_name|default:c.email %}
+                                {{ name|truncatechars:2 }}
+                                {% endwith %}
+                            </div>
+                            <div class="um-user-info">
+                                <div class="um-user-name">
+                                    {{ c.profile.get_full_name|default:c.email }}
+                                    {% if c == request.user %}<span class="badge bg-info" style="font-size:.6rem;padding:.15rem .4rem;border-radius:4px;font-weight:600;">You</span>{% endif %}
+                                </div>
+                                <div class="um-user-email">{{ c.email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="um-status {{ c.profile.status }}">
+                            {% if c.profile.status == 'approved' %}<i class="fas fa-check-circle"></i>
+                            {% elif c.profile.status == 'pending' %}<i class="fas fa-clock"></i>
+                            {% else %}<i class="fas fa-times-circle"></i>{% endif %}
+                            {{ c.profile.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if c.is_active %}
+                            <span class="um-active yes"><i class="fas fa-circle" style="font-size:.45rem;"></i> Active</span>
+                        {% else %}
+                            <span class="um-active no"><i class="fas fa-circle" style="font-size:.45rem;"></i> Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="um-date">{{ c.date_joined|date:"M d, Y" }}</span>
+                    </td>
+                    <td>
+                        <div class="um-actions" style="justify-content:center;">
+                            {% if c != request.user %}
+                                <a href="{% url 'curator_edit_contributor' c.id %}" class="um-act-btn edit" title="Edit">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+
+                                {% if c.profile.status == 'pending' %}
+                                    <form method="POST" action="{% url 'curator_contributor_action' c.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="approve">
+                                        <button type="submit" class="um-act-btn approve" title="Approve">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </form>
+                                    <button type="button" class="um-act-btn reject" title="Reject"
+                                            data-bs-toggle="modal" data-bs-target="#rejectModal{{ c.id }}">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                {% endif %}
+
+                                <form method="POST" action="{% url 'curator_contributor_action' c.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="{% if c.is_active %}deactivate{% else %}activate{% endif %}">
+                                    <button type="submit" class="um-act-btn {% if c.is_active %}deactivate{% else %}activate{% endif %}"
+                                            title="{% if c.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                        <i class="fas {% if c.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span style="font-size:.75rem;color:#94a3b8;">You</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="um-empty">
+                            <i class="fas fa-users-slash"></i>
+                            <h5>No contributors found</h5>
+                            <p>Try adjusting your filters or wait for users to register.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if contributors.paginator.num_pages > 1 %}
+    <div class="um-pagination">
+        {% if contributors.has_previous %}
+        <a class="um-page-btn" href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ contributors.previous_page_number }}"><i class="fas fa-chevron-left"></i></a>
+        {% else %}
+        <span class="um-page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+        {% endif %}
+
+        {% for num in contributors.paginator.page_range %}
+            {% if contributors.number == num %}
+            <span class="um-page-btn active">{{ num }}</span>
+            {% elif num > contributors.number|add:-3 and num < contributors.number|add:3 %}
+            <a class="um-page-btn" href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if contributors.has_next %}
+        <a class="um-page-btn" href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ contributors.next_page_number }}"><i class="fas fa-chevron-right"></i></a>
+        {% else %}
+        <span class="um-page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
+
+<!-- Reject Modals -->
+{% for c in contributors %}
+    {% if c != request.user and c.profile.status == 'pending' %}
+    <div class="modal fade um-modal" id="rejectModal{{ c.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-times-circle"></i> Reject Contributor</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{% url 'curator_contributor_action' c.id %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <p style="color:#475569;">Are you sure you want to reject <strong>{{ c.profile.get_full_name|default:c.email }}</strong>?</p>
+                        <input type="hidden" name="action" value="reject">
+                        <div>
+                            <label class="form-label fw-bold" style="font-size:.82rem;">Rejection Reason</label>
+                            <textarea name="rejection_reason" class="form-control" rows="3"
+                                      placeholder="Provide a reason for rejection (optional)" style="border-radius:8px;"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Reject Contributor</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+<script>
+function toggleDrop(id) {
+    var el = document.getElementById(id);
+    var wasOpen = el.classList.contains('open');
+    document.querySelectorAll('.um-drop').forEach(function(d) { d.classList.remove('open'); });
+    if (!wasOpen) el.classList.add('open');
+}
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.um-drop')) {
+        document.querySelectorAll('.um-drop').forEach(function(d) { d.classList.remove('open'); });
+    }
+});
+
+function setFilter(param, val) {
+    var url = new URL(window.location);
+    if (val) {
+        url.searchParams.set(param, val);
+    } else {
+        url.searchParams.delete(param);
+    }
+    url.searchParams.delete('page');
+    window.location = url;
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === '/' && !e.target.matches('input,textarea,select')) {
+        e.preventDefault();
+        document.getElementById('umSearchInput').focus();
+    }
+});
+</script>
 {% endblock %}

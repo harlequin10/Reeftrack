@@ -116,10 +116,19 @@ class GoogleProfileForm(forms.Form):
 
 
 class AdminCreateUserForm(forms.ModelForm):
+    SUFFIX_CHOICES = (
+        ('', 'None'),
+        ('Jr.', 'Jr.'),
+        ('Sr.', 'Sr.'),
+        ('II', 'II'),
+        ('III', 'III'),
+        ('IV', 'IV'),
+        ('V', 'V'),
+    )
     first_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
-    suffix = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    suffix = forms.ChoiceField(choices=SUFFIX_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
     email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
     role = forms.ChoiceField(
@@ -182,6 +191,78 @@ class AdminCreateUserForm(forms.ModelForm):
             profile.suffix = self.cleaned_data.get('suffix', '')
             profile.role = self.cleaned_data['role']
             profile.status = 'approved'
+            profile.save()
+
+        return user
+
+
+class CuratorCreateContributorForm(forms.ModelForm):
+    SUFFIX_CHOICES = (
+        ('', 'None'),
+        ('Jr.', 'Jr.'),
+        ('Sr.', 'Sr.'),
+        ('II', 'II'),
+        ('III', 'III'),
+        ('IV', 'IV'),
+        ('V', 'V'),
+    )
+    first_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
+    suffix = forms.ChoiceField(choices=SUFFIX_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
+    email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'password']
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError('Email already exists')
+        return email
+
+    def clean_middle_initial(self):
+        mi = self.cleaned_data.get('middle_initial', '')
+        if mi:
+            mi = mi.strip()[0].upper()
+        return mi
+
+    def clean_first_name(self):
+        name = self.cleaned_data.get('first_name', '')
+        return name.strip().title() if name else name
+
+    def clean_last_name(self):
+        name = self.cleaned_data.get('last_name', '')
+        return name.strip().title() if name else name
+
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        if password:
+            from django.contrib.auth.password_validation import validate_password
+            try:
+                validate_password(password, user=None)
+            except forms.ValidationError as e:
+                raise forms.ValidationError(e.messages)
+        return password
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        user.username = self.cleaned_data['email']
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.set_password(self.cleaned_data['password'])
+
+        if commit:
+            user.save()
+            profile = user.profile
+            profile.middle_initial = self.cleaned_data.get('middle_initial', '')
+            profile.suffix = self.cleaned_data.get('suffix', '')
+            profile.role = 'contributor'
+            profile.status = 'approved'
+            profile.approved_by = None
             profile.save()
 
         return user

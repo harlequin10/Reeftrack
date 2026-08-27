@@ -3,294 +3,446 @@
 {% block title %}Assessment - ReefTrack{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-12 col-lg-10">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="mb-0">
-                    <i class="fas fa-clipboard-list"></i> Assessment
-                    <span class="badge bg-success ms-2">Approved</span>
-                </h4>
-            </div>
-            <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to Home
+<style>
+    .pd-page{margin-bottom:2rem;}
+
+    .pd-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
+    .pd-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
+    .pd-breadcrumb a:hover{color:var(--rt-teal);}
+    .pd-breadcrumb .sep{color:#d1d5db;}
+
+    .pd-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;}
+    .pd-header-left h3{margin:0;font-weight:800;color:var(--rt-navy);font-size:1.5rem;letter-spacing:-.02em;}
+    .pd-header-left h3 i{color:var(--rt-teal);margin-right:.5rem;font-size:1.2rem;}
+    .pd-header-left p{margin:.2rem 0 0;color:#64748b;font-size:.85rem;}
+    .pd-header-right{display:flex;gap:.5rem;align-items:center;}
+
+    .pd-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:1.25rem;}
+    .pd-card-header{padding:1rem 1.25rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid #f1f5f9;}
+    .pd-card-header i{color:var(--rt-teal);font-size:.85rem;}
+    .pd-card-header h6{margin:0;font-weight:700;font-size:.92rem;color:var(--rt-navy);}
+    .pd-card-body{padding:1.25rem;}
+
+    .pd-info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;}
+    .pd-info-item{display:flex;flex-direction:column;gap:.15rem;}
+    .pd-info-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
+    .pd-info-value{font-size:.88rem;color:#1e293b;font-weight:600;}
+    .pd-info-value small{font-weight:400;color:#64748b;}
+    @media(max-width:767px){
+        .pd-info-grid{grid-template-columns:repeat(2,1fr);gap:.75rem;}
+    }
+
+    .pd-badge{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:20px;font-size:.73rem;font-weight:600;}
+    .pd-badge-success{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+    .pd-badge-excellent{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+    .pd-badge-good{background:#f0f9ff;color:var(--rt-teal);border:1px solid #bae6fd;}
+    .pd-badge-fair{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
+    .pd-badge-poor{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+
+    .pd-contributor{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .6rem;border-radius:8px;font-size:.76rem;font-weight:600;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;margin:.15rem .2rem .15rem 0;}
+    .pd-contributor-avatar{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--rt-teal),var(--rt-navy));color:#fff;display:flex;align-items:center;justify-content:center;font-size:.5rem;font-weight:700;text-transform:uppercase;}
+
+    .pd-user-cell{display:flex;align-items:center;gap:.5rem;}
+    .pd-user-avatar{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;flex-shrink:0;text-transform:uppercase;background:linear-gradient(135deg,var(--rt-teal),var(--rt-navy));}
+    .pd-user-name{font-weight:600;color:var(--rt-navy);font-size:.85rem;}
+
+    .pd-pdf{display:flex;align-items:center;gap:1rem;padding:1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-decoration:none;color:inherit;transition:all .2s;}
+    .pd-pdf:hover{background:#f0f9ff;border-color:#bae6fd;transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,165,233,.1);color:inherit;}
+    .pd-pdf-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+    .pd-pdf-info{min-width:0;}
+    .pd-pdf-name{font-weight:700;color:var(--rt-navy);font-size:.87rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pd-pdf-sub{font-size:.76rem;color:#94a3b8;}
+
+    .pd-login-pdf{display:flex;align-items:center;gap:1rem;padding:1rem;background:#f8fafc;border:1px dashed #d1d5db;border-radius:10px;text-decoration:none;color:inherit;transition:all .2s;opacity:.75;}
+    .pd-login-pdf:hover{opacity:1;background:#f0f9ff;border-color:#bae6fd;color:inherit;}
+    .pd-login-icon{width:44px;height:44px;border-radius:12px;background:#f1f5f9;color:var(--rt-navy);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+    .pd-login-info{min-width:0;}
+    .pd-login-title{font-weight:700;color:var(--rt-navy);font-size:.87rem;}
+    .pd-login-sub{font-size:.76rem;color:#94a3b8;}
+
+    .pd-map-container{height:350px;border-radius:10px;border:1px solid #e5e7eb;overflow:hidden;}
+    .pd-map-legend{display:flex;gap:1.25rem;margin-top:.75rem;}
+    .pd-map-legend-item{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#64748b;}
+    .pd-map-legend-line{width:20px;height:3px;border-radius:2px;}
+
+    .pd-transect{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:1.25rem;}
+    .pd-transect-header{padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;}
+    .pd-transect-header-left{display:flex;align-items:center;gap:.5rem;}
+    .pd-transect-header-left i{color:var(--rt-teal);font-size:.85rem;}
+    .pd-transect-header-left h6{margin:0;font-weight:700;font-size:.92rem;color:var(--rt-navy);}
+    .pd-transect-body{padding:1.25rem;}
+
+    .pd-depth-card{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:1rem;}
+    .pd-depth-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+    .pd-depth-title h6{margin:0;font-weight:700;font-size:.88rem;display:flex;align-items:center;gap:.4rem;}
+    .pd-health-badge{display:inline-flex;align-items:center;gap:.3rem;border-radius:6px;padding:.2rem .55rem;font-size:.7rem;font-weight:600;}
+
+    .pd-species-table{width:100%;border-collapse:collapse;}
+    .pd-species-table th{background:#f8fafc;padding:.5rem .75rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:#64748b;font-weight:700;border-bottom:2px solid #e5e7eb;text-align:left;}
+    .pd-species-table td{padding:.5rem .75rem;font-size:.83rem;color:#334155;border-bottom:1px solid #f1f5f9;}
+    .pd-species-table tbody tr:hover{background:#f8fafc;}
+    .pd-species-table tbody tr:last-child td{border-bottom:none;}
+    .pd-species-table .text-end{text-align:right;}
+
+    .pd-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem 1rem;border-radius:10px;font-size:.82rem;font-weight:600;border:1px solid transparent;cursor:pointer;transition:all .2s ease;white-space:nowrap;text-decoration:none;line-height:1.4;}
+    .pd-btn i{font-size:.78rem;}
+    .pd-btn-outline{background:#fff;color:#475569;border:1px solid #e2e8f0;}
+    .pd-btn-outline:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
+
+    .pd-empty{text-align:center;padding:2rem 1rem;color:#94a3b8;}
+    .pd-empty i{font-size:2rem;color:#d1d5db;margin-bottom:.75rem;display:block;}
+</style>
+
+<div class="pd-page">
+    <!-- Breadcrumb -->
+    <div class="pd-breadcrumb">
+        <a href="{% url 'home' %}"><i class="fas fa-home"></i></a>
+        <span class="sep">/</span>
+        <a href="{% url 'home' %}">Assessments</a>
+        <span class="sep">/</span>
+        <span>{{ assessment.barangay.name }}</span>
+    </div>
+
+    <!-- Header -->
+    <div class="pd-header">
+        <div class="pd-header-left">
+            <h3><i class="fas fa-clipboard-list"></i> Assessment</h3>
+            <p>{{ assessment.barangay.name }}, {{ assessment.municipality.name }}, {{ assessment.municipality.province.name }}</p>
+        </div>
+        <div class="pd-header-right">
+            <span class="pd-badge pd-badge-success"><i class="fas fa-check-circle"></i> {{ assessment.get_status_display }}</span>
+            <a href="{% url 'home' %}" class="pd-btn pd-btn-outline">
+                <i class="fas fa-arrow-left"></i> Back
             </a>
         </div>
+    </div>
 
-        <!-- Assessment Info -->
-        <div class="card mb-4">
-            <div class="card-header bg-light">
-                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Assessment Details</h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Province</small><br>
-                        <strong>{{ assessment.municipality.province.name }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Municipality</small><br>
-                        <strong>{{ assessment.municipality.name }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Barangay</small><br>
-                        <strong>{{ assessment.barangay.name }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Date</small><br>
-                        <strong>{{ assessment.assessment_date|date:"M d, Y" }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Methodology</small><br>
-                        <strong>{{ assessment.get_methodology_display_name }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Uploaded By</small><br>
-                        <div class="d-flex align-items-center">
-                            {% if assessment.uploaded_by.profile.profile_picture %}
-                            <img src="{{ assessment.uploaded_by.profile.profile_picture.url }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;margin-right:6px;">
-                            {% endif %}
-                            <strong>{{ assessment.uploaded_by.profile.get_full_name|default:assessment.uploaded_by.email }}</strong>
+    <!-- Assessment Info -->
+    <div class="pd-card">
+        <div class="pd-card-header">
+            <i class="fas fa-info-circle"></i>
+            <h6>Assessment Details</h6>
+        </div>
+        <div class="pd-card-body">
+            <div class="pd-info-grid">
+                <div class="pd-info-item">
+                    <span class="pd-info-label">Province</span>
+                    <span class="pd-info-value">{{ assessment.municipality.province.name }}</span>
+                </div>
+                <div class="pd-info-item">
+                    <span class="pd-info-label">Municipality</span>
+                    <span class="pd-info-value">{{ assessment.municipality.name }}</span>
+                </div>
+                <div class="pd-info-item">
+                    <span class="pd-info-label">Barangay</span>
+                    <span class="pd-info-value">{{ assessment.barangay.name }}</span>
+                </div>
+                <div class="pd-info-item">
+                    <span class="pd-info-label">Date</span>
+                    <span class="pd-info-value">{{ assessment.assessment_date|date:"M d, Y" }}</span>
+                </div>
+                <div class="pd-info-item">
+                    <span class="pd-info-label">Methodology</span>
+                    <span class="pd-info-value">{{ assessment.get_methodology_display_name }}</span>
+                </div>
+                <div class="pd-info-item">
+                    <span class="pd-info-label">Uploaded By</span>
+                    <div class="pd-user-cell">
+                        <div class="pd-user-avatar">
+                            {% with name=assessment.uploaded_by.profile.get_full_name|default:assessment.uploaded_by.email %}
+                            {{ name|truncatechars:2 }}
+                            {% endwith %}
                         </div>
+                        <span class="pd-user-name">{{ assessment.uploaded_by.profile.get_full_name|default:assessment.uploaded_by.email }}</span>
                     </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Coral Cover</small><br>
-                        <strong>{% if assessment.overall_coral_cover %}{{ assessment.overall_coral_cover }}%{% else %}-{% endif %}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Condition</small><br>
+                </div>
+                <div class="pd-info-item">
+                    <span class="pd-info-label">Coral Cover</span>
+                    <span class="pd-info-value">{% if assessment.overall_coral_cover %}{{ assessment.overall_coral_cover }}%{% else %}—{% endif %}</span>
+                </div>
+                <div class="pd-info-item">
+                    <span class="pd-info-label">Condition</span>
+                    <span class="pd-info-value">
                         {% if assessment.condition %}
-                            <span class="badge
-                                {% if assessment.condition == 'excellent' %}bg-success
-                                {% elif assessment.condition == 'good' %}bg-primary
-                                {% elif assessment.condition == 'fair' %}bg-warning text-dark
-                                {% else %}bg-danger{% endif %}">
+                            <span class="pd-badge
+                                {% if assessment.condition == 'excellent' %}pd-badge-excellent
+                                {% elif assessment.condition == 'good' %}pd-badge-good
+                                {% elif assessment.condition == 'fair' %}pd-badge-fair
+                                {% else %}pd-badge-poor{% endif %}">
                                 {{ assessment.get_condition_display }}
                             </span>
-                        {% else %}-{% endif %}
-                    </div>
-                    {% if assessment.description %}
-                    <div class="col-12">
-                        <small class="text-muted">Description</small><br>
-                        <strong>{{ assessment.description }}</strong>
-                    </div>
-                    {% endif %}
-                    {% if assessment.contributors.all %}
-                    <div class="col-12">
-                        <small class="text-muted">Contributors</small><br>
+                        {% else %}—{% endif %}
+                    </span>
+                </div>
+                {% if assessment.description %}
+                <div class="pd-info-item" style="grid-column:1/-1;">
+                    <span class="pd-info-label">Description</span>
+                    <span class="pd-info-value" style="font-weight:400;">{{ assessment.description }}</span>
+                </div>
+                {% endif %}
+                {% if assessment.contributors.all %}
+                <div class="pd-info-item" style="grid-column:1/-1;">
+                    <span class="pd-info-label">Contributors</span>
+                    <div style="margin-top:.2rem;">
                         {% for c in assessment.contributors.all %}
-                        <span class="badge bg-secondary me-1">{{ c.get_full_name }}</span>
+                        <span class="pd-contributor">
+                            <span class="pd-contributor-avatar">{{ c.first_name|truncatechars:1 }}</span>
+                            {{ c.get_full_name }}
+                        </span>
                         {% endfor %}
                     </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        {% if assessment.thesis_pdf %}
-        <div class="card mb-4 rt-card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-file-pdf"></i> Thesis / Reference PDF</h6>
-            </div>
-            <div class="card-body">
-                {% if user.is_authenticated %}
-                <a href="{{ assessment.thesis_pdf.url }}" target="_blank" class="pdf-link">
-                    <i class="fas fa-file-pdf fa-lg"></i>
-                    <div>
-                        <div style="font-weight:600;">{{ assessment.thesis_pdf.name|cut:"assessments/thesis/" }}</div>
-                        <small style="opacity:0.8;">Click to open in new tab</small>
-                    </div>
-                </a>
-                {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-lock fa-2x text-muted mb-2"></i>
-                    <p class="text-muted mb-2">You must be logged in to view the thesis document.</p>
-                    <a href="{% url 'login' %}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-sign-in-alt"></i> Log In
-                    </a>
-                    <a href="{% url 'register' %}" class="btn btn-outline-primary btn-sm ms-2">
-                        <i class="fas fa-user-plus"></i> Register
-                    </a>
                 </div>
                 {% endif %}
             </div>
         </div>
-        {% endif %}
+    </div>
 
-        {% if assessment.images.all %}
-        <div class="card mb-4 rt-card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-images"></i> Assessment Images ({{ assessment.images.count }})</h6>
-            </div>
-            <div class="card-body">
-                <div id="imgCarousel" class="carousel slide" data-bs-ride="false">
-                    <div class="carousel-inner" style="border-radius:8px; overflow:hidden; background:#000;">
-                        {% for img in assessment.images.all %}
-                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                            <img src="{{ img.image.url }}" class="d-block w-100" style="max-height:500px; object-fit:contain;" alt="{{ img.caption|default:'Assessment image' }}">
-                            {% if img.caption %}
-                            <div class="carousel-caption d-none d-md-block" style="background:rgba(0,0,0,0.5); border-radius:4px; padding:4px 12px;">
-                                <small>{{ img.caption }}</small>
-                            </div>
-                            {% endif %}
+    <!-- Thesis / Reference PDF -->
+    {% if assessment.thesis_pdf %}
+    <div class="pd-card">
+        <div class="pd-card-header">
+            <i class="fas fa-file-pdf"></i>
+            <h6>Thesis / Reference PDF</h6>
+        </div>
+        <div class="pd-card-body">
+            {% if user.is_authenticated %}
+            <a href="{{ assessment.thesis_pdf.url }}" target="_blank" class="pd-pdf">
+                <div class="pd-pdf-icon" style="background:#fef2f2;color:#dc2626;">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <div class="pd-pdf-info">
+                    <div class="pd-pdf-name">{{ assessment.thesis_pdf.name|cut:"assessments/thesis/" }}</div>
+                    <div class="pd-pdf-sub"><i class="fas fa-external-link-alt"></i> Click to open in new tab</div>
+                </div>
+            </a>
+            {% else %}
+            <a href="{% url 'login' %}?next={{ request.path }}" class="pd-login-pdf">
+                <div class="pd-login-icon"><i class="fas fa-lock"></i></div>
+                <div class="pd-login-info">
+                    <div class="pd-login-title">Login to view the thesis</div>
+                    <div class="pd-login-sub">You need to be logged in to access this file</div>
+                </div>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Images -->
+    {% if assessment.images.all %}
+    <div class="pd-card">
+        <div class="pd-card-header">
+            <i class="fas fa-images"></i>
+            <h6>Assessment Images ({{ assessment.images.count }})</h6>
+        </div>
+        <div class="pd-card-body">
+            <div id="imgCarousel" class="carousel slide" data-bs-ride="false">
+                <div class="carousel-inner" style="border-radius:10px;overflow:hidden;background:#000;">
+                    {% for img in assessment.images.all %}
+                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                        <img src="{{ img.image.url }}" class="d-block w-100" style="max-height:500px;object-fit:contain;" alt="{{ img.caption|default:'Assessment image' }}">
+                        {% if img.caption %}
+                        <div class="carousel-caption d-none d-md-block" style="background:rgba(0,0,0,.55);border-radius:8px;padding:6px 14px;">
+                            <small>{{ img.caption }}</small>
                         </div>
-                        {% endfor %}
+                        {% endif %}
                     </div>
-                    {% if assessment.images.count > 1 %}
-                    <button class="carousel-control-prev" type="button" data-bs-target="#imgCarousel" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.6));"></span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#imgCarousel" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.6));"></span>
-                    </button>
-                    {% endif %}
+                    {% endfor %}
                 </div>
                 {% if assessment.images.count > 1 %}
-                <div class="text-center mt-2">
-                    <small class="text-muted">Use arrows to navigate ({{ assessment.images.count }} images)</small>
-                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#imgCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#imgCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));"></span>
+                </button>
                 {% endif %}
             </div>
-        </div>
-        {% endif %}
-
-        <!-- Transects -->
-        <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
-        <div class="card mb-4 border-primary">
-            <div class="card-header bg-primary text-white">
-                <h6 class="mb-0"><i class="fas fa-map-marked-alt"></i> Transect Locations</h6>
+            {% if assessment.images.count > 1 %}
+            <div style="text-align:center;margin-top:.5rem;">
+                <small style="color:#94a3b8;">Use arrows to navigate ({{ assessment.images.count }} images)</small>
             </div>
-            <div class="card-body">
-                <div id="transectMap" style="height:350px; border-radius:8px; border:1px solid #dee2e6; margin-bottom:1rem;"></div>
-                <div class="d-flex gap-3 mb-0">
-                    <small><span style="display:inline-block;width:14px;height:3px;background:#0dcaf0;vertical-align:middle;"></span> Shallow transect</small>
-                    <small><span style="display:inline-block;width:14px;height:3px;background:#0d6efd;vertical-align:middle;"></span> Deep transect</small>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Map -->
+    <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+    <div class="pd-card">
+        <div class="pd-card-header">
+            <i class="fas fa-map-marked-alt"></i>
+            <h6>Transect Locations</h6>
+        </div>
+        <div class="pd-card-body">
+            <div id="transectMap" class="pd-map-container"></div>
+            <div class="pd-map-legend">
+                <div class="pd-map-legend-item">
+                    <span class="pd-map-legend-line" style="background:#0dcaf0;"></span> Shallow transect
+                </div>
+                <div class="pd-map-legend-item">
+                    <span class="pd-map-legend-line" style="background:#0d6efd;"></span> Deep transect
                 </div>
             </div>
         </div>
-        {% for t in transects %}
-        <div class="card mb-4 border-primary">
-            <div class="card-header bg-primary text-white d-flex justify-content-between">
-                <h6 class="mb-0"><i class="fas fa-ruler-horizontal"></i> Transect {{ t.transect_number }}</h6>
+    </div>
+
+    <!-- Transects -->
+    {% for t in transects %}
+    <div class="pd-transect">
+        <div class="pd-transect-header">
+            <div class="pd-transect-header-left">
+                <i class="fas fa-ruler-horizontal"></i>
+                <h6>Transect {{ t.transect_number }}</h6>
             </div>
-            <div class="card-body">
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <h6 class="text-info"><i class="fas fa-water"></i> Shallow</h6>
-                        <small>
+            <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+                {% with h=t.shallow_health %}
+                {% if h %}
+                <span class="pd-health-badge" style="background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ h.color }};"></span>
+                    Shallow: {{ h.label }} · {{ h.avg|floatformat:1 }}%
+                </span>
+                {% endif %}
+                {% endwith %}
+                {% with h=t.deep_health %}
+                {% if h %}
+                <span class="pd-health-badge" style="background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ h.color }};"></span>
+                    Deep: {{ h.label }} · {{ h.avg|floatformat:1 }}%
+                </span>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+        <div class="pd-transect-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="pd-depth-card">
+                        <div class="pd-depth-title">
+                            <h6 style="color:#0ea5e9;"><i class="fas fa-water"></i> Shallow</h6>
+                        </div>
+                        <small style="color:#64748b;line-height:1.6;">
                             {% if t.shallow_start_lat or t.shallow_end_lat %}
                                 Start: {{ t.shallow_start_lat|default:"-" }}, {{ t.shallow_start_lng|default:"-" }}<br>
                                 End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}<br>
-                                {% if t.shallow_length %}<strong>{{ t.shallow_length }} m</strong>{% endif %}
+                                {% if t.shallow_length %}<strong style="color:#1e293b;">{{ t.shallow_length }} m</strong>{% endif %}
                             {% else %}
-                                <span class="text-muted">No coordinates</span>
+                                <span style="color:#94a3b8;">No coordinates</span>
                             {% endif %}
                         </small>
                     </div>
-                    <div class="col-md-6">
-                        <h6 class="text-primary"><i class="fas fa-water"></i> Deep</h6>
-                        <small>
+                </div>
+                <div class="col-md-6">
+                    <div class="pd-depth-card">
+                        <div class="pd-depth-title">
+                            <h6 style="color:#0d6efd;"><i class="fas fa-water"></i> Deep</h6>
+                        </div>
+                        <small style="color:#64748b;line-height:1.6;">
                             {% if t.deep_start_lat or t.deep_end_lat %}
                                 Start: {{ t.deep_start_lat|default:"-" }}, {{ t.deep_start_lng|default:"-" }}<br>
                                 End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}<br>
-                                {% if t.deep_length %}<strong>{{ t.deep_length }} m</strong>{% endif %}
+                                {% if t.deep_length %}<strong style="color:#1e293b;">{{ t.deep_length }} m</strong>{% endif %}
                             {% else %}
-                                <span class="text-muted">No coordinates</span>
+                                <span style="color:#94a3b8;">No coordinates</span>
                             {% endif %}
                         </small>
                     </div>
                 </div>
+            </div>
 
-                {% if has_species_records %}
-                {% regroup t.species_data.all by depth as depth_groups %}
-                {% for depth_group in depth_groups %}
-                <h6 class="{% if depth_group.grouper == 'shallow' %}text-info{% else %}text-primary{% endif %} mt-3" style="display:flex;align-items:center;justify-content:space-between;">
-                    <span><i class="fas fa-table"></i> {{ depth_group.grouper|title }} Species ({{ depth_group.list|length }})</span>
-                    {% if depth_group.grouper == 'shallow' %}
-                    {% with h=t.shallow_health %}
-                    <span style="display:inline-flex;align-items:center;gap:0.3rem;border-radius:5px;padding:0.15rem 0.55rem;font-size:0.75rem;font-weight:600;background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
-                        <span style="width:7px;height:7px;border-radius:50%;background:{{ h.color }};flex-shrink:0;"></span>
-                        {{ h.label }} · {{ h.avg|floatformat:1 }}%
-                    </span>
-                    {% endwith %}
-                    {% else %}
-                    {% with h=t.deep_health %}
-                    <span style="display:inline-flex;align-items:center;gap:0.3rem;border-radius:5px;padding:0.15rem 0.55rem;font-size:0.75rem;font-weight:600;background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
-                        <span style="width:7px;height:7px;border-radius:50%;background:{{ h.color }};flex-shrink:0;"></span>
-                        {{ h.label }} · {{ h.avg|floatformat:1 }}%
-                    </span>
-                    {% endwith %}
-                    {% endif %}
+            {% if has_species_records %}
+            {% regroup t.species_data.all by depth as depth_groups %}
+            {% for depth_group in depth_groups %}
+            <div class="pd-depth-title" style="margin-top:1rem;margin-bottom:.75rem;">
+                <h6 style="{% if depth_group.grouper == 'shallow' %}color:#0ea5e9;{% else %}color:#0d6efd;{% endif %}">
+                    <i class="fas fa-table"></i> {{ depth_group.grouper|title }} Species ({{ depth_group.list|length }})
                 </h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Species</th>
-                                <th>Family</th>
-                                <th class="text-end">Cover %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for ts in depth_group.list %}
-                            <tr>
-                                <td>{{ forloop.counter }}</td>
-                                <td>{{ ts.species.sub_category }}</td>
-                                <td><span class="badge bg-secondary">{{ ts.species.major_category }}</span></td>
-                                <td class="text-end"><strong>{{ ts.cover }}</strong></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endfor %}
+                {% if depth_group.grouper == 'shallow' %}
+                {% with h=t.shallow_health %}
+                <span class="pd-health-badge" style="background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ h.color }};"></span>
+                    {{ h.label }} · {{ h.avg|floatformat:1 }}%
+                </span>
+                {% endwith %}
+                {% else %}
+                {% with h=t.deep_health %}
+                <span class="pd-health-badge" style="background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ h.color }};"></span>
+                    {{ h.label }} · {{ h.avg|floatformat:1 }}%
+                </span>
+                {% endwith %}
                 {% endif %}
             </div>
-        </div>
-        {% endfor %}
-
-        {% if not has_species_records and parsed_species %}
-        <div class="card mb-4 rt-card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-file-excel"></i> Parsed Species from Excel Files</h6>
+            <div style="overflow-x:auto;">
+                <table class="pd-species-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Species</th>
+                            <th>Family</th>
+                            <th class="text-end">Cover %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ts in depth_group.list %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ ts.species.sub_category }}</td>
+                            <td><span class="pd-contributor" style="margin:0;">{{ ts.species.major_category }}</span></td>
+                            <td class="text-end"><strong>{{ ts.cover }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <div class="card-body">
-                {% regroup parsed_species by depth as parsed_depth_groups %}
-                {% for depth_group in parsed_depth_groups %}
-                <h6 class="{% if depth_group.grouper == 'Shallow' %}text-info{% else %}text-primary{% endif %} mt-3">
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not has_species_records and parsed_species %}
+    <div class="pd-card">
+        <div class="pd-card-header">
+            <i class="fas fa-file-excel"></i>
+            <h6>Parsed Species from Excel Files</h6>
+        </div>
+        <div class="pd-card-body">
+            {% regroup parsed_species by depth as parsed_depth_groups %}
+            {% for depth_group in parsed_depth_groups %}
+            <div class="pd-depth-title" style="{% if not forloop.first %}margin-top:1rem;{% endif %}margin-bottom:.75rem;">
+                <h6 style="{% if depth_group.grouper == 'Shallow' %}color:#0ea5e9;{% else %}color:#0d6efd;{% endif %}">
                     <i class="fas fa-table"></i> {{ depth_group.grouper }} Species ({{ depth_group.list|length }})
                 </h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Transect</th>
-                                <th>Species</th>
-                                <th>Family</th>
-                                <th class="text-end">Cover %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for sp in depth_group.list %}
-                            <tr>
-                                <td>{{ forloop.counter }}</td>
-                                <td>T{{ sp.transect_number }}</td>
-                                <td>{{ sp.sub_category }}</td>
-                                <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
-                                <td class="text-end"><strong>{{ sp.cover|floatformat:1 }}</strong></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endfor %}
             </div>
+            <div style="overflow-x:auto;">
+                <table class="pd-species-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Transect</th>
+                            <th>Species</th>
+                            <th>Family</th>
+                            <th class="text-end">Cover %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sp in depth_group.list %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>T{{ sp.transect_number }}</td>
+                            <td>{{ sp.sub_category }}</td>
+                            <td><span class="pd-contributor" style="margin:0;">{{ sp.major_category }}</span></td>
+                            <td class="text-end"><strong>{{ sp.cover|floatformat:1 }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
         </div>
-        {% endif %}
     </div>
+    {% endif %}
 </div>
 
 <script src="/static/vendor/leaflet/leaflet.js"></script>
@@ -324,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function makeIcon(color, num) {
         return L.divIcon({
             className: '',
-            html: '<div style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:' + color + ';color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);line-height:1;">' + num + '</div>',
+            html: '<div style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:' + color + ';color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);line-height:1;">' + num + '</div>',
             iconSize: [26, 26],
             iconAnchor: [13, 13]
         });
