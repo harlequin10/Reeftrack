@@ -5,7 +5,8 @@
 
 {% block content %}
 <style>
-    .am-page{margin-bottom:2rem;}
+    .am-page-wrap{margin-bottom:2rem;}
+    .am-page-btn{margin-bottom:0;}
 
     .am-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
     .am-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
@@ -38,22 +39,25 @@
 
     .am-toolbar{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.04);}
     .am-toolbar-row{display:flex;align-items:center;height:48px;}
-    .am-search{display:flex;align-items:center;flex:1;min-width:0;padding:0 .75rem;gap:.6rem;}
+    .am-search{display:flex;align-items:center;flex:1;min-width:0;padding:0 .75rem;gap:.6rem;order:1;}
     .am-search i{color:#a1a1aa;font-size:.85rem;flex-shrink:0;}
     .am-search input{flex:1;border:none;outline:none;font-size:.87rem;color:#1e293b;background:transparent;height:100%;padding:0;}
     .am-search input::placeholder{color:#b0b8c4;}
     .am-search-divider{width:1px;height:24px;background:#e5e7eb;flex-shrink:0;margin:0 .25rem;}
     .am-search-kbd{display:flex;align-items:center;padding:.1rem .4rem;border-radius:4px;background:#f1f5f9;border:1px solid #e5e7eb;font-size:.65rem;color:#94a3b8;flex-shrink:0;line-height:1;}
-    .am-divider{width:1px;height:24px;background:#e5e7eb;flex-shrink:0;}
+    .am-divider{width:1px;height:24px;background:#e5e7eb;flex-shrink:0;order:2;}
     .am-filter-btn{display:flex;align-items:center;gap:.4rem;padding:0 .75rem;height:100%;font-size:.82rem;color:#475569;cursor:pointer;transition:background .12s;white-space:nowrap;border:none;background:none;font-family:inherit;}
     .am-filter-btn:hover{background:#f8fafc;}
     .am-filter-btn i.icon{font-size:.75rem;color:#94a3b8;}
     .am-filter-btn i.chevron{font-size:.5rem;color:#c0c6d0;margin-left:.15rem;}
     .am-filter-btn .val{font-weight:600;color:#0ea5e9;}
     .am-filter-btn.active{background:#f0f7ff;}
+    .am-filter-btn:disabled{color:#b6c2cf;cursor:not-allowed;opacity:.7;}
+    .am-filter-btn:disabled:hover{background:none;}
     .am-filter-btn.active::after{content:'';position:absolute;bottom:0;left:75px;right:75px;height:2px;background:#0ea5e9;border-radius:1px;}
     .am-filter-btn{position:relative;}
-    .am-right{display:flex;align-items:center;gap:.4rem;margin-left:auto;padding:0 .5rem;height:100%;}
+    .am-filter-group{display:flex;align-items:stretch;order:3;}
+    .am-right{display:flex;align-items:center;gap:.4rem;margin-left:auto;padding:0 .5rem;height:100%;order:4;}
     .am-icon-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;transition:all .15s;font-size:.78rem;}
     .am-icon-btn:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
     .am-icon-btn.primary{background:#0ea5e9;border-color:#0ea5e9;color:#fff;}
@@ -151,20 +155,32 @@
         .am-stat{padding:.75rem .85rem;}
         .am-stat-val{font-size:1.4rem;}
         .am-header-left h3{font-size:1.2rem;}
+        .am-table-card{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
+        .am-tbl{min-width:600px;}
         .am-tbl th:nth-child(5),.am-tbl td:nth-child(5),
         .am-tbl th:nth-child(6),.am-tbl td:nth-child(6){display:none;}
+        .am-tbl th,.am-tbl td{padding:.7rem .6rem;}
         .am-user{flex-direction:column;align-items:flex-start;gap:0;}
-        .am-toolbar-row{flex-wrap:wrap;}
-        .am-search{border-right:none;border-bottom:1px solid #f1f5f9;min-width:100%;}
-        .am-ctrls{flex-wrap:wrap;}
+        .am-toolbar{display:inline-block;width:auto;overflow:hidden;}
+        .am-toolbar-row{display:flex;height:auto;flex-wrap:nowrap;}
+        .am-divider{display:none;}
+        .am-search{flex:0 1 auto;min-width:0;height:48px;order:1;padding:0 .75rem;}
+        .am-search input{width:160px;}
+        .am-right{flex:0 0 auto;order:2;margin-left:0;}
+        .am-filter-group{display:none;}
         .am-search-kbd{display:none;}
+        .am-info-bar{flex-wrap:wrap;gap:.4rem;}
     }
     @media(max-width:576px){
         .am-header{flex-direction:column;align-items:flex-start;}
         .am-header-right{width:100%;}
         .am-btn{flex:1;justify-content:center;padding:.6rem .75rem;font-size:.78rem;}
-        .am-ctrl{padding:0 .6rem;font-size:.75rem;}
-        .am-ctrl span{display:none;}
+        .am-filter-btn{font-size:.8rem;padding:0 .55rem;}
+        .am-filter-btn .chevron{display:none;}
+        .am-stats{grid-template-columns:repeat(2,1fr);}
+        .am-drop-panel{width:calc(100vw - 1.5rem)!important;max-width:340px;}
+        .am-pagination{gap:.3rem;}
+        .am-page-btn{min-width:34px;height:34px;}
     }
 
     .am-pagination{display:flex;align-items:center;justify-content:center;gap:.35rem;margin-top:1.1rem;flex-wrap:wrap;}
@@ -174,7 +190,7 @@
     .am-page-btn.disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
 </style>
 
-<div class="am-page">
+<div class="am-page-wrap">
     <div class="am-breadcrumb">
         <a href="{% url 'admin_dashboard' %}"><i class="fas fa-home"></i></a>
         <span class="sep">/</span>
@@ -197,19 +213,19 @@
     </div>
 
     <div class="am-stats">
-        <a href="?status=&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if not status_filter %}active{% endif %}" style="background:linear-gradient(135deg,#475569,#334155);text-decoration:none;color:#fff;">
+        <a href="?status=&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&province={{ province_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat-link am-stat {% if not status_filter %}active{% endif %}" data-status="" style="background:linear-gradient(135deg,#475569,#334155);text-decoration:none;color:#fff;">
             <div class="am-stat-top"><div class="am-stat-val">{{ stats.total }}</div><div class="am-stat-icon"><i class="fas fa-layer-group"></i></div></div>
             <div class="am-stat-lbl">Total Assessments</div>
         </a>
-        <a href="?status=submitted&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if status_filter == 'submitted' %}active{% endif %}" style="background:linear-gradient(135deg,#f59e0b,#d97706);text-decoration:none;color:#fff;">
+        <a href="?status=submitted&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&province={{ province_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat-link am-stat {% if status_filter == 'submitted' %}active{% endif %}" data-status="submitted" style="background:linear-gradient(135deg,#f59e0b,#d97706);text-decoration:none;color:#fff;">
             <div class="am-stat-top"><div class="am-stat-val">{{ stats.submitted }}</div><div class="am-stat-icon"><i class="fas fa-clock"></i></div></div>
             <div class="am-stat-lbl">Pending Review</div>
         </a>
-        <a href="?status=approved&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if status_filter == 'approved' %}active{% endif %}" style="background:linear-gradient(135deg,#22c55e,#16a34a);text-decoration:none;color:#fff;">
+        <a href="?status=approved&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&province={{ province_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat-link am-stat {% if status_filter == 'approved' %}active{% endif %}" data-status="approved" style="background:linear-gradient(135deg,#22c55e,#16a34a);text-decoration:none;color:#fff;">
             <div class="am-stat-top"><div class="am-stat-val">{{ stats.approved }}</div><div class="am-stat-icon"><i class="fas fa-check-double"></i></div></div>
             <div class="am-stat-lbl">Approved</div>
         </a>
-        <a href="?status=rejected&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat {% if status_filter == 'rejected' %}active{% endif %}" style="background:linear-gradient(135deg,#ef4444,#dc2626);text-decoration:none;color:#fff;">
+        <a href="?status=rejected&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&province={{ province_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat-link am-stat {% if status_filter == 'rejected' %}active{% endif %}" data-status="rejected" style="background:linear-gradient(135deg,#ef4444,#dc2626);text-decoration:none;color:#fff;">
             <div class="am-stat-top"><div class="am-stat-val">{{ stats.rejected }}</div><div class="am-stat-icon"><i class="fas fa-times-circle"></i></div></div>
             <div class="am-stat-lbl">Rejected</div>
         </a>
@@ -220,13 +236,20 @@
             <div class="am-toolbar-row">
                 <div class="am-search">
                     <i class="fas fa-magnifying-glass"></i>
-                    <input type="text" name="search" placeholder="Search ID, location, contributor..." value="{{ search_query }}" autocomplete="off" id="searchInput">
+                    <input type="text" name="search" placeholder="Search location, contributor..." value="{{ search_query }}" autocomplete="off" id="searchInput">
                     <span class="am-search-kbd">/</span>
                 </div>
 
                 <div class="am-divider"></div>
 
-                <div class="am-drop" id="statusDrop">
+                <div class="am-right">
+                    <input type="hidden" name="sort" value="{{ sort_by }}">
+                    <button type="submit" class="am-icon-btn primary" title="Search"><i class="fas fa-magnifying-glass"></i></button>
+                    <a href="{% url 'admin_assessments' %}" class="am-icon-btn am-reset" title="Reset filters"><i class="fas fa-rotate-left"></i></a>
+                </div>
+
+                <div class="am-filter-group">
+                    <div class="am-drop" id="statusDrop">
                     <button type="button" class="am-filter-btn {% if status_filter %}active{% endif %}" onclick="toggleDrop('statusDrop')">
                         <i class="fas fa-circle-half-stroke icon"></i>
                         Status{% if status_filter %}: <span class="val">{{ status_filter|title }}</span>{% endif %}
@@ -248,13 +271,36 @@
                     </div>
                 </div>
 
-                <div class="am-drop" id="muniDrop">
-                    <button type="button" class="am-filter-btn {% if municipality_filter %}active{% endif %}" onclick="toggleDrop('muniDrop')">
-                        <i class="fas fa-location-dot icon"></i>
-                        Municipality{% if municipality_filter %}: <span class="val">Filtered</span>{% endif %}
+                <div class="am-drop" id="provinceDrop">
+                    <button type="button" id="provDropBtn" class="am-filter-btn {% if province_filter %}active{% endif %}" onclick="toggleDrop('provinceDrop')">
+                        <i class="fas fa-map-location-dot icon"></i>
+                        Province<span class="val-wrap" id="provVal">{% if selected_province %}: <span class="val">{{ selected_province.name }}</span>{% endif %}</span>
                         <i class="fas fa-chevron-down chevron"></i>
                     </button>
                     <div class="am-drop-panel" style="min-width:240px;max-height:320px;overflow-y:auto;">
+                        <div class="am-drop-opt {% if not province_filter %}selected{% endif %}" data-field="province" data-val="">
+                            <span class="check">{% if not province_filter %}<i class="fas fa-check"></i>{% endif %}</span> All Provinces
+                        </div>
+                        {% for p in provinces %}
+                        <div class="am-drop-opt {% if province_filter == p.id|stringformat:"d" %}selected{% endif %}" data-field="province" data-val="{{ p.id }}">
+                            <span class="check">{% if province_filter == p.id|stringformat:"d" %}<i class="fas fa-check"></i>{% endif %}</span> {{ p.name }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="am-drop" id="muniDrop">
+                    <button type="button" id="muniDropBtn" class="am-filter-btn {% if municipality_filter %}active{% endif %}" {% if not province_filter %}disabled{% endif %} onclick="toggleDrop('muniDrop')">
+                        <i class="fas fa-location-dot icon"></i>
+                        Municipality<span class="val-wrap" id="muniVal">{% if selected_municipality %}: <span class="val">{{ selected_municipality.name }}</span>{% endif %}</span>
+                        <i class="fas fa-chevron-down chevron"></i>
+                    </button>
+                    <div class="am-drop-panel" id="muniPanel" style="min-width:240px;max-height:320px;overflow-y:auto;">
+                        {% if not province_filter %}
+                        <div class="am-drop-opt" style="cursor:default;opacity:.55;pointer-events:none;">
+                            <span class="check" style="visibility:hidden;"><i class="fas fa-check"></i></span> Select a province first
+                        </div>
+                        {% else %}
                         <div class="am-drop-opt {% if not municipality_filter %}selected{% endif %}" data-field="municipality" data-val="">
                             <span class="check">{% if not municipality_filter %}<i class="fas fa-check"></i>{% endif %}</span> All Municipalities
                         </div>
@@ -263,6 +309,7 @@
                             <span class="check">{% if municipality_filter == m.id|stringformat:"d" %}<i class="fas fa-check"></i>{% endif %}</span> {{ m.name }}
                         </div>
                         {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
 
@@ -285,148 +332,14 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="am-right">
-                    <input type="hidden" name="sort" value="{{ sort_by }}">
-                    <button type="submit" class="am-icon-btn primary" title="Search"><i class="fas fa-magnifying-glass"></i></button>
-                    <a href="{% url 'admin_assessments' %}" class="am-icon-btn" title="Reset filters"><i class="fas fa-rotate-left"></i></a>
                 </div>
             </div>
         </div>
     </form>
 
-    {% if status_filter or search_query or municipality_filter or date_from or date_to %}
-    <div class="am-chips">
-        {% if status_filter %}<span class="am-chip"><i class="fas fa-circle" style="font-size:.35rem;"></i> Status: {{ status_filter|title }} <i class="fas fa-xmark rm" data-clear="status"></i></span>{% endif %}
-        {% if search_query %}<span class="am-chip"><i class="fas fa-magnifying-glass" style="font-size:.5rem;"></i> "{{ search_query }}" <i class="fas fa-xmark rm" data-clear="search"></i></span>{% endif %}
-        {% if municipality_filter %}<span class="am-chip"><i class="fas fa-location-dot" style="font-size:.5rem;"></i> Municipality <i class="fas fa-xmark rm" data-clear="municipality"></i></span>{% endif %}
-        {% if date_from %}<span class="am-chip"><i class="fas fa-calendar" style="font-size:.5rem;"></i> From: {{ date_from }} <i class="fas fa-xmark rm" data-clear="date_from"></i></span>{% endif %}
-        {% if date_to %}<span class="am-chip"><i class="fas fa-calendar-check" style="font-size:.5rem;"></i> To: {{ date_to }} <i class="fas fa-xmark rm" data-clear="date_to"></i></span>{% endif %}
-        <a href="{% url 'admin_assessments' %}" class="am-chip am-chip-clear"><i class="fas fa-circle-xmark"></i> Clear all</a>
-    </div>
-    {% endif %}
-
-    <div class="am-info-bar">
-        <span>Showing <strong>{{ assessments|length }}</strong> assessment{{ assessments|length|pluralize }}</span>
-    </div>
-
-    <div class="am-table-card">
-        <table class="am-tbl" id="assessTable">
-            <thead>
-                <tr>
-                    <th style="width:36px;"><input type="checkbox" id="selectAll" class="form-check-input" title="Select all"></th>
-                    {% with base="status="|add:status_filter|add:"&search="|add:search_query|add:"&municipality="|add:municipality_filter|add:"&date_from="|add:date_from|add:"&date_to="|add:date_to %}
-                    <th><a href="?sort={% if sort_by == 'barangay' %}-barangay{% else %}barangay{% endif %}&{{ base }}" class="{% if sort_by == 'barangay' or sort_by == '-barangay' %}on{% endif %}">Location <i class="fas fa-sort si"></i></a></th>
-                    <th><a href="?sort={% if sort_by == 'assessment_date' %}-assessment_date{% else %}assessment_date{% endif %}&{{ base }}" class="{% if sort_by == 'assessment_date' or sort_by == '-assessment_date' %}on{% endif %}">Date <i class="fas fa-sort si"></i></a></th>
-                    <th><a href="?sort={% if sort_by == 'uploaded_by' %}-uploaded_by{% else %}uploaded_by{% endif %}&{{ base }}" class="{% if sort_by == 'uploaded_by' or sort_by == '-uploaded_by' %}on{% endif %}">Uploaded By <i class="fas fa-sort si"></i></a></th>
-                    <th>Reviewed By</th>
-                    <th><a href="?sort={% if sort_by == 'transects' %}-id{% else %}transects{% endif %}&{{ base }}" class="{% if sort_by == 'transects' %}on{% endif %}">Transects <i class="fas fa-sort si"></i></a></th>
-                    <th><a href="?sort={% if sort_by == 'coral_cover' %}-coral_cover{% else %}coral_cover{% endif %}&{{ base }}" class="{% if sort_by == 'coral_cover' or sort_by == '-coral_cover' %}on{% endif %}">Cover <i class="fas fa-sort si"></i></a></th>
-                    <th><a href="?sort={% if sort_by == 'status' %}-status{% else %}status{% endif %}&{{ base }}" class="{% if sort_by == 'status' or sort_by == '-status' %}on{% endif %}">Status <i class="fas fa-sort si"></i></a></th>
-                    <th style="width:90px;">Actions</th>
-                    {% endwith %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for a in assessments %}
-                <tr class="assess-row" data-id="{{ a.id }}" data-status="{{ a.status }}" onclick="window.location='{% url 'admin_assessment_detail' a.id %}'">
-                    <td onclick="event.stopPropagation()">
-                        {% if a.status == 'rejected' %}
-                        <input type="checkbox" class="form-check-input assess-check" value="{{ a.id }}">
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="am-loc">
-                            <strong>{{ a.barangay.name }}</strong>
-                            <small>{{ a.municipality.name }}, {{ a.municipality.province.name }}</small>
-                        </div>
-                    </td>
-                    <td>{{ a.assessment_date|date:"M d, Y" }}</td>
-                    <td>
-                        <div class="am-user">
-                            <div class="am-avatar">{{ a.uploaded_by.first_name.0|default:a.uploaded_by.email.0|upper }}</div>
-                            <div class="am-user-info">
-                                {{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        {% if a.reviewed_by %}
-                        <div class="am-user">
-                            <div class="am-avatar" style="background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;">{{ a.reviewed_by.first_name.0|default:a.reviewed_by.email.0|upper }}</div>
-                            <div class="am-user-info">
-                                {{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}
-                            </div>
-                        </div>
-                        {% else %}
-                        <span class="am-nodata">—</span>
-                        {% endif %}
-                    </td>
-                    <td><span class="am-transect-pill">{{ a.transects.count }}</span></td>
-                    <td>
-                        {% if a.overall_coral_cover %}
-                        <span class="am-cover {% if a.overall_coral_cover >= 65 %}excellent{% elif a.overall_coral_cover >= 45 %}good{% elif a.overall_coral_cover >= 25 %}fair{% else %}poor{% endif %}">{{ a.overall_coral_cover }}%</span>
-                        {% else %}
-                        <span class="am-nodata">—</span>
-                        {% endif %}
-                    </td>
-                    <td><span class="am-badge {{ a.status }}">{{ a.get_status_display }}</span></td>
-                    <td onclick="event.stopPropagation()">
-                        <div class="am-acts">
-                            <a href="{% url 'admin_assessment_detail' a.id %}" class="am-act am-act-v" title="View details"><i class="fas fa-arrow-up-right-from-square"></i></a>
-                            {% if a.status == 'submitted' %}
-                            <a href="{% url 'admin_confirm_approval' a.id %}" class="am-act am-act-r" title="Review & approve"><i class="fas fa-eye"></i></a>
-                            {% endif %}
-                            {% if a.status == 'rejected' %}
-                            <form method="POST" action="{% url 'delete_assessment' a.id %}" class="d-inline" style="margin:0;" onclick="event.stopPropagation()">
-                                {% csrf_token %}
-                                <button type="submit" class="am-act am-act-d" title="Delete" onclick="return confirm('Delete Assessment #{{ a.id }}?')"><i class="fas fa-trash-can"></i></button>
-                            </form>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="9">
-                        <div class="am-empty">
-                            <div class="am-empty-icon"><i class="fas fa-clipboard-question"></i></div>
-                            <h5>No assessments found</h5>
-                            <p>{% if search_query or status_filter or municipality_filter %}Try adjusting your search or filters.{% else %}Assessments will appear here once contributors submit them.{% endif %}</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Pagination -->
-    {% if page_obj.paginator.num_pages > 1 %}
-    <div class="am-pagination">
-        {% with pl="status="|add:status_filter|add:"&search="|add:search_query|add:"&municipality="|add:municipality_filter|add:"&date_from="|add:date_from|add:"&date_to="|add:date_to|add:"&sort="|add:sort_by %}
-        {% if page_obj.has_previous %}
-        <a class="am-page-btn" href="?{{ pl }}&page={{ page_obj.previous_page_number }}"><i class="fas fa-chevron-left"></i></a>
-        {% else %}
-        <span class="am-page-btn disabled"><i class="fas fa-chevron-left"></i></span>
-        {% endif %}
-
-        {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-            <span class="am-page-btn active">{{ num }}</span>
-            {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
-            <a class="am-page-btn" href="?{{ pl }}&page={{ num }}">{{ num }}</a>
-            {% endif %}
-        {% endfor %}
-
-        {% if page_obj.has_next %}
-        <a class="am-page-btn" href="?{{ pl }}&page={{ page_obj.next_page_number }}"><i class="fas fa-chevron-right"></i></a>
-        {% else %}
-        <span class="am-page-btn disabled"><i class="fas fa-chevron-right"></i></span>
-        {% endif %}
-        {% endwith %}
-    </div>
-    {% endif %}
+<div id="resultsContainer">
+    {% include "admin/assessments/_results.html" %}
+</div>
 </div>
 
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
@@ -457,18 +370,61 @@
 <script src="{% static 'js/assessment_sync.js' %}"></script>
 <script>
 (function(){
-    var selAll=document.getElementById('selectAll');
-    var bulkBtn=document.getElementById('bulkDeleteBtn');
-    var cntSpan=document.getElementById('bulkCount');
+    var RTASSESS={
+        'ajaxUrl':'{% url 'admin_assessments_ajax' %}',
+        'provinces':{
+            {% for p in provinces %}
+            "{{ p.id }}":{"name":"{{ p.name|escapejs }}","munis":[{% for m in p.municipalities.all %}{% if not forloop.first %},{% endif %}["{{ m.id }}","{{ m.name|escapejs }}"]{% endfor %}]}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        }
+    };
 
-    if(selAll)selAll.addEventListener('change',function(){var c=this.checked;document.querySelectorAll('.assess-check').forEach(function(cb){cb.checked=c;});updBulk();});
-    document.querySelectorAll('.assess-check').forEach(function(cb){cb.addEventListener('change',updBulk);});
+    function cur(){return new URLSearchParams(window.location.search);}
 
-    function updBulk(){
-        var n=document.querySelectorAll('.assess-check:checked').length;
-        if(cntSpan)cntSpan.textContent=n;
-        if(bulkBtn)bulkBtn.classList.toggle('d-none',n===0);
+    function applyParams(pStr){
+        if(typeof history.replaceState==='function'){history.replaceState(null,'',pStr?('?'+pStr):window.location.pathname);}
+        updateDropdownUI();
+        loadResults(pStr);
     }
+
+    function loadResults(pStr){
+        var u=RTASSESS.ajaxUrl+(pStr?('?'+pStr):'');
+        fetch(u,{headers:{'X-Requested-With':'XMLHttpRequest'}})
+            .then(function(r){return r.text();})
+            .then(function(html){var c=document.getElementById('resultsContainer');if(c){c.innerHTML=html;bindBulk();var pg=c.querySelector('.am-pagination,.um-pagination');if(pg){pg.scrollIntoView({behavior:'smooth',block:'nearest'});}}})
+            .catch(function(){});
+    }
+
+    function muniOptions(prov,muni){
+        var pts=RTASSESS.provinces[prov];
+        var h='<div class="am-drop-opt'+(muni?'':' selected')+'" data-field="municipality" data-val=""><span class="check">'+(muni?'':'<i class="fas fa-check"></i>')+'</span> All Municipalities</div>';
+        if(!pts)return h;
+        for(var i=0;i<pts.munis.length;i++){var id=pts.munis[i][0],nm=pts.munis[i][1],sel=(id.toString()===muni.toString());
+            h+='<div class="am-drop-opt'+(sel?' selected':'')+'" data-field="municipality" data-val="'+id+'"><span class="check">'+(sel?'<i class="fas fa-check"></i>':'')+'</span> '+nm+'</div>';}
+        return h;
+    }
+
+    function updateDropdownUI(){
+        var p=cur(),prov=p.get('province')||'',muni=p.get('municipality')||'';
+        var pv=document.getElementById('provVal');
+        if(pv){var pn=prov?(RTASSESS.provinces[prov]?RTASSESS.provinces[prov].name:prov):'';pv.innerHTML=pn?(': <span class="val">'+pn+'</span>'):'';}
+        var pbtn=document.getElementById('provDropBtn');if(pbtn)pbtn.classList.toggle('active',!!prov);
+        var mbtn=document.getElementById('muniDropBtn');if(mbtn){mbtn.classList.toggle('active',!!muni);mbtn.disabled=!prov;}
+        var mv=document.getElementById('muniVal');
+        if(mv){var mn='';var pts=RTASSESS.provinces[prov];if(pts&&muni){for(var i=0;i<pts.munis.length;i++){if(pts.munis[i][0].toString()===muni.toString()){mn=pts.munis[i][1];break;}}}mv.innerHTML=mn?(': <span class="val">'+mn+'</span>'):'';}
+        var mp=document.getElementById('muniPanel');
+        if(mp){mp.innerHTML=prov?muniOptions(prov,muni):'<div class="am-drop-opt" style="cursor:default;opacity:.55;pointer-events:none;"><span class="check" style="visibility:hidden;"><i class="fas fa-check"></i></span> Select a province first</div>';}
+        // mark province option selected
+        var popts=document.querySelectorAll('#provinceDrop .am-drop-opt');
+        for(var j=0;j<popts.length;j++){var o=popts[j],v=o.getAttribute('data-val')||'';var s=prov&&v.toString()===prov.toString();o.classList.toggle('selected',s);o.querySelector('.check').innerHTML=s?'<i class="fas fa-check"></i>':'';}
+        var sopts=document.querySelectorAll('#statusDrop .am-drop-opt');
+        var st=p.get('status')||'';
+        for(var k=0;k<sopts.length;k++){var so=sopts[k],sv=so.getAttribute('data-val')||'';var ss=st&&sv===st;so.classList.toggle('selected',ss);so.querySelector('.check').innerHTML=ss?'<i class="fas fa-check"></i>':'';}
+        var si=document.getElementById('searchInput');if(si)si.value=p.get('search')||'';
+    }
+
+    function updBulk(){var n=document.querySelectorAll('.assess-check:checked').length;var cnt=document.getElementById('bulkCount');if(cnt)cnt.textContent=n;var b=document.getElementById('bulkDeleteBtn');if(b)b.classList.toggle('d-none',n===0);}
+    function bindBulk(){var sa=document.getElementById('selectAll');if(sa){sa.onchange=function(){var c=this.checked;document.querySelectorAll('.assess-check').forEach(function(cb){cb.checked=c;});updBulk();};}document.querySelectorAll('.assess-check').forEach(function(cb){cb.onchange=updBulk;});updBulk();}
 
     window.confirmBulkDelete=function(){
         var sel=[],skip=[];
@@ -489,51 +445,40 @@
         new bootstrap.Modal(document.getElementById('bulkDeleteModal')).show();
     };
 
-    RTAssessmentSync.init({role:'admin',csrfToken:'{{ csrf_token }}',filters:'status={{ status_filter }}&search={{ search_query }}'});
-
-    document.querySelectorAll('[data-clear]').forEach(function(el){
-        el.addEventListener('click',function(e){
-            e.stopPropagation();
-            var p=new URLSearchParams(window.location.search);
-            p.delete(this.getAttribute('data-clear'));
-            window.location.href='?'+p.toString();
-        });
-    });
-
-    window.toggleDrop=function(id){
-        var d=document.getElementById(id);
-        var wasOpen=d.classList.contains('open');
-        document.querySelectorAll('.am-drop.open').forEach(function(el){el.classList.remove('open');});
-        if(!wasOpen)d.classList.add('open');
-    };
+    window.toggleDrop=function(id){var d=document.getElementById(id),wasOpen=d.classList.contains('open');document.querySelectorAll('.am-drop.open').forEach(function(el){el.classList.remove('open');});if(!wasOpen)d.classList.add('open');};
     window.closeAllDrops=function(){document.querySelectorAll('.am-drop.open').forEach(function(el){el.classList.remove('open');});};
+    document.addEventListener('click',function(e){if(!e.target.closest('.am-drop'))closeAllDrops();});
+
     document.addEventListener('click',function(e){
-        if(!e.target.closest('.am-drop'))closeAllDrops();
+        var opt=e.target.closest('.am-drop-opt');
+        if(opt){e.preventDefault();e.stopPropagation();var drop=opt.closest('.am-drop');if(!drop)return;var name=null;
+            if(drop.id==='statusDrop')name='status';else if(drop.id==='provinceDrop')name='province';else if(drop.id==='muniDrop')name='municipality';
+            if(!name)return;var val=opt.getAttribute('data-val')||'';var p=cur();
+            if(val)p.set(name,val);else p.delete(name);
+            if(name==='province')p.delete('municipality');
+            closeAllDrops();applyParams(p.toString());return;
+        }
+        var clr=e.target.closest('[data-clear]');
+        if(clr){e.preventDefault();e.stopPropagation();var p2=cur();p2.delete(clr.getAttribute('data-clear'));applyParams(p2.toString());return;}
+        var rs=e.target.closest('.am-reset,.clear-all');
+        if(rs){e.preventDefault();closeAllDrops();applyParams('');return;}
+        var stl=e.target.closest('a.am-stat-link');
+        if(stl){e.preventDefault();var stv=stl.getAttribute('data-status')||'';var ps=cur();if(stv)ps.set('status',stv);else ps.delete('status');ps.delete('page');closeAllDrops();applyParams(ps.toString());return;}
+        var sl=e.target.closest('a.am-sort,a.am-page');
+        if(sl){e.preventDefault();var href=sl.getAttribute('href')||'?';var qs=href.indexOf('?')>=0?href.slice(href.indexOf('?')+1):'';closeAllDrops();applyParams(qs);return;}
     });
 
-    document.querySelectorAll('.am-drop-opt').forEach(function(opt){
-        opt.addEventListener('click',function(){
-            var drop=this.closest('.am-drop');
-            var panel=drop.querySelector('.am-drop-panel');
-            var name='';
-            if(drop.id==='statusDrop')name='status';
-            else if(drop.id==='muniDrop')name='municipality';
-            if(!name)return;
-            var val=this.getAttribute('data-val');
-            var h=document.createElement('input');h.type='hidden';h.name=name;h.value=val;
-            var existing=document.querySelector('#filterForm input[name="'+name+'"]');
-            if(existing)existing.remove();
-            document.getElementById('filterForm').appendChild(h);
-            document.getElementById('filterForm').submit();
-        });
-    });
+    var f=document.getElementById('filterForm');
+    if(f)f.addEventListener('submit',function(e){e.preventDefault();var q=document.getElementById('searchInput').value;var p=cur();if(q)p.set('search',q);else p.delete('search');applyParams(p.toString());});
 
     document.addEventListener('keydown',function(e){
-        if(e.key==='/'&&!e.target.closest('input,textarea,select')){
-            e.preventDefault();document.getElementById('searchInput').focus();
-        }
-        if(e.key==='Escape')document.querySelectorAll('.am-drop.open').forEach(function(el){el.classList.remove('open');});
+        if(e.key==='/'&&!e.target.closest('input,textarea,select')){e.preventDefault();var s=document.getElementById('searchInput');if(s)s.focus();}
+        if(e.key==='Escape')closeAllDrops();
     });
+
+    RTAssessmentSync.init({role:'admin',csrfToken:'{{ csrf_token }}',filters:'status={{ status_filter }}&search={{ search_query }}'});
+    bindBulk();
+    updateDropdownUI();
 })();
 </script>
 {% endblock %}

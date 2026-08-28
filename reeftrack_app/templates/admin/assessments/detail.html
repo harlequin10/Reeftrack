@@ -492,7 +492,7 @@
         {% regroup t.species_data.all by depth as depth_groups %}
         {% for depth_group in depth_groups %}
         <div class="dam-depth-header {% if depth_group.grouper == 'shallow' %}shallow{% else %}deep{% endif %}" style="display:flex;align-items:center;justify-content:space-between;">
-            <div><i class="fas fa-layer-group"></i> {{ depth_group.grouper|title }} Species ({{ depth_group.list|length }})</div>
+            <div><i class="fas fa-layer-group"></i> {{ depth_group.grouper|title }} Sub Categories ({{ depth_group.list|length }})</div>
             {% if depth_group.grouper == 'shallow' %}
             {% with h=t.shallow_health %}
             <span class="dam-depth-health-badge" style="background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
@@ -514,7 +514,7 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Species</th>
+                        <th>Sub Category</th>
                         <th>Family</th>
                         <th class="text-end">Cover %</th>
                     </tr>
@@ -541,13 +541,13 @@
 {% if not has_species_records and parsed_species %}
 <div class="dam-section">
     <div class="dam-section-header">
-        <i class="fas fa-file-excel"></i> Parsed Species from Excel Files
+        <i class="fas fa-file-excel"></i> Parsed Sub Categories from Excel Files
     </div>
     <div class="dam-section-body">
         {% regroup parsed_species by depth as parsed_depth_groups %}
         {% for depth_group in parsed_depth_groups %}
         <div class="dam-depth-header {% if depth_group.grouper == 'Shallow' %}shallow{% else %}deep{% endif %}">
-            <i class="fas fa-layer-group"></i> {{ depth_group.grouper }} Species ({{ depth_group.list|length }})
+            <i class="fas fa-layer-group"></i> {{ depth_group.grouper }} Sub Categories ({{ depth_group.list|length }})
         </div>
         <div style="overflow-x:auto;">
             <table class="dam-species-table">
@@ -555,7 +555,7 @@
                     <tr>
                         <th>#</th>
                         <th>Transect</th>
-                        <th>Species</th>
+                        <th>Sub Category</th>
                         <th>Family</th>
                         <th class="text-end">Cover %</th>
                     </tr>
@@ -615,7 +615,7 @@
                 </div>
                 <div class="dam-warn-detail-row">
                     <i class="fas fa-paw"></i>
-                    <span>{{ sim.match_count }}/{{ sim.total }} species match exactly</span>
+                    <span>{{ sim.match_count }}/{{ sim.total }} sub categories match exactly</span>
                 </div>
             </div>
         </div>

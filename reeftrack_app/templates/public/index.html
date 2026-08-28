@@ -220,7 +220,7 @@
         <div class="hp-map-wrap">
             <div class="hp-section-header">
                 <h2><i class="fas fa-map-marked-alt" style="color:var(--rt-teal);"></i> Reef Map</h2>
-                <p>Explore coral reef monitoring sites across Sarangani Bay</p>
+                <p>Explore coral reef monitoring sites</p>
             </div>
             <div class="hp-map-container" style="cursor:pointer;" onclick="window.location='{% url 'public_dashboard' %}'">
                 <div id="reef-map" style="width:100%;height:400px;"></div>
@@ -236,15 +236,22 @@
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-    var m=L.map('reef-map',{zoomControl:true,attributionControl:true}).setView([6.05,125.15],10);
+    var m=L.map('reef-map',{zoomControl:true,attributionControl:true}).setView([12.8797,121.7740],6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap',maxZoom:18}).addTo(m);
+    var latProv=null;
+    fetch('{% url "public_location_options" %}').then(function(r){return r.json();}).then(function(f){latProv=f.latest_province_id;}).catch(function(){});
     fetch('{% url "public_dashboard_data" %}').then(function(r){return r.json();}).then(function(d){
+        var focus=[];
         d.m.forEach(function(mi){
             if(!mi.lat||!mi.lng)return;
+            if(latProv!==null&&String(mi.province_id)===String(latProv))focus.push([mi.lat,mi.lng]);
             var ta=0;mi.b.forEach(function(b){ta+=b.ac;});
             var ic=L.divIcon({className:'',html:'<div style="width:34px;height:34px;background:var(--rt-teal,#0E7C86);border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6rem;font-weight:700;"><span>'+ta+'</span></div>',iconSize:[34,34],iconAnchor:[17,17]});
             L.marker([mi.lat,mi.lng],{icon:ic}).addTo(m).bindPopup('<div style="text-align:center;font-family:Inter,sans-serif;"><strong style="color:#062E3f;font-size:14px;">'+mi.name+'</strong><br><small style="color:#4D6269;">'+mi.b.length+' barangays &middot; '+ta+' assessments</small></div>');
         });
+        if(focus.length){
+            m.fitBounds(L.latLngBounds(focus),{padding:[40,40],maxZoom:10});
+        }
     }).catch(function(){});
 });
 </script>

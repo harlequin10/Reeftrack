@@ -176,15 +176,20 @@ body{visibility:visible!important;opacity:1!important;overflow:hidden!important;
 .rt-dash-mobile-toggle:hover{background:var(--rt-navy);}
 @media(min-width:1025px){.rt-dash-mobile-toggle{display:none!important;}}
 @media(max-width:1024px){
-  .rt-dash-filters{display:none!important;position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:10003!important;background:var(--rt-white)!important;border-bottom:1px solid var(--rt-border)!important;box-shadow:0 4px 16px rgba(0,0,0,.12)!important;padding:.75rem!important;max-height:60vh!important;overflow-y:auto!important;}
-  .rt-dash-filters.rt-dash-mobile-filters-open{display:flex!important;flex-direction:column!important;gap:.6rem!important;}
+  .rt-dash-filters{display:none!important;position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important;max-width:100vw!important;box-sizing:border-box!important;z-index:10003!important;background:var(--rt-white)!important;border-bottom:1px solid var(--rt-border)!important;box-shadow:0 4px 16px rgba(0,0,0,.12)!important;padding:.75rem!important;max-height:80vh!important;overflow-y:auto!important;overflow-x:hidden!important;}
+  .rt-dash-filters.rt-dash-mobile-filters-open{display:flex!important;flex-direction:column!important;gap:.45rem!important;}
   .rt-dash-filters.rt-dash-mobile-filters-open .rt-dash-fg{min-width:100%!important;width:100%!important;}
   .rt-dash-filters.rt-dash-mobile-filters-open .rt-dash-fg label{margin-bottom:4px;}
   .rt-dash-filters.rt-dash-mobile-filters-open .rt-dash-fg select,
-  .rt-dash-filters.rt-dash-mobile-filters-open .rt-dash-fg input{width:100%!important;padding:.55rem .75rem!important;font-size:.85rem!important;}
+  .rt-dash-filters.rt-dash-mobile-filters-open .rt-dash-fg input{width:100%!important;padding:.45rem .6rem!important;font-size:.83rem!important;box-sizing:border-box!important;}
   .rt-dash-filters.rt-dash-mobile-filters-open .rt-dash-yr{width:100%;}
   .rt-dash-filters.rt-dash-mobile-filters-open .rt-dash-yr input{flex:1!important;width:auto!important;}
-  .rt-dash-filters.rt-dash-mobile-filters-open .rt-dash-tbtn{width:100%!important;padding:.6rem!important;text-align:center;}
+  .rt-dash-filters.rt-dash-mobile-filters-open .rt-dash-tbtn{width:100%!important;padding:.5rem!important;text-align:center;}
+  .rt-dash-filters.rt-dash-mobile-filters-open{padding-bottom:.6rem!important;}
+  .rt-dash-filters.rt-dash-mobile-filters-open{scrollbar-width:auto!important;scrollbar-color:var(--rt-teal)#e2e8f0!important;}
+  .rt-dash-filters.rt-dash-mobile-filters-open::-webkit-scrollbar{width:10px!important;}
+  .rt-dash-filters.rt-dash-mobile-filters-open::-webkit-scrollbar-track{background:#f1f5f9!important;}
+  .rt-dash-filters.rt-dash-mobile-filters-open::-webkit-scrollbar-thumb{background:var(--rt-teal)!important;border-radius:8px!important;border:2px solid #f1f5f9!important;}
   .rt-dash-legendbar{display:none!important;}
   .rt-dash-mobile-toggle{display:flex!important;}
   .rt-dash-sidecol{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:100%!important;height:auto!important;max-height:70vh!important;border-left:none!important;border-top:none!important;border-radius:20px 20px 0 0!important;z-index:10001!important;background:var(--rt-sand-light)!important;transform:translateY(100%)!important;transition:transform .4s cubic-bezier(.32,.72,0,1)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;box-shadow:0 -4px 30px rgba(0,0,0,.18)!important;will-change:transform!important;}
@@ -196,6 +201,21 @@ body{visibility:visible!important;opacity:1!important;overflow:hidden!important;
   .rt-tour-replay:hover{background:var(--rt-navy)!important;color:#fff!important;}
   .rt-dash-mobile-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:10000;display:none;opacity:0;transition:opacity .3s;}
   .rt-dash-mobile-backdrop.rt-dash-mb-show{display:block;opacity:1;}
+  }
+}
+@media(min-width:1025px){
+  .rt-tour-tooltip{width:560px;}
+  .rt-tour-head{padding:1.25rem 1.5rem;gap:.9rem;}
+  .rt-tour-head i{font-size:1.75rem;}
+  .rt-tour-head span{font-size:1.5rem;}
+  .rt-tour-body{padding:1.5rem 1.75rem;}
+  .rt-tour-body p{font-size:1.3rem;line-height:1.75;}
+  .rt-tour-step{font-size:1rem;padding:.3rem .85rem;}
+  .rt-tour-foot{padding:1rem 1.5rem;}
+  .rt-tour-dot{width:9px;height:9px;}
+  .rt-tour-dot.active{width:24px;}
+  .rt-tour-btn{padding:.6rem 1.25rem;font-size:1.15rem;}
+  .rt-tour-replay{font-size:1.15rem;padding:.5rem 1.25rem;}
 }
 </style>
 {% endblock %}
@@ -211,11 +231,11 @@ body{visibility:visible!important;opacity:1!important;overflow:hidden!important;
 <div class="rt-dash-root">
   <div class="rt-dash-mapcol">
     <div class="rt-dash-filters">
+      <div class="rt-dash-fg"><label><i class="fas fa-globe-asia"></i> Province</label><select id="fProv"><option value="all">All</option></select></div>
       <div class="rt-dash-fg"><label><i class="fas fa-city"></i> Municipality</label><select id="fMuni"><option value="all">All</option></select></div>
-      <div class="rt-dash-fg"><label><i class="fas fa-search"></i> Barangay</label><input type="text" id="fBrgy" placeholder="Search..."></div>
+      <div class="rt-dash-fg"><label><i class="fas fa-home"></i> Barangay</label><select id="fBrgy"><option value="all">All</option></select></div>
       <div class="rt-dash-fg"><label><i class="fas fa-calendar"></i> Year</label><div class="rt-dash-yr"><input type="number" id="fYearFrom" placeholder="From" min="2015" max="2030"><span>—</span><input type="number" id="fYearTo" placeholder="To" min="2015" max="2030"></div></div>
       <div class="rt-dash-fg"><label><i class="fas fa-heartbeat"></i> Health</label><select id="fHealth"><option value="all">All</option><option value="excellent">Excellent &gt;65%</option><option value="good">Good 45-65%</option><option value="fair">Fair 25-45%</option><option value="poor">Poor &lt;25%</option></select></div>
-      <button id="btnMapFilter" class="rt-dash-tbtn"><i class="fas fa-crosshairs"></i> Map Filter</button>
       <button id="btnTransects" class="rt-dash-tbtn rt-dash-tbtn-green"><i class="fas fa-draw-polygon"></i> Transects</button>
       <button id="btnResetFilters" class="rt-dash-tbtn" style="color:#dc2626;border-color:#fecaca;" onclick="resetFilters()"><i class="fas fa-times"></i> Reset</button>
     </div>
@@ -243,7 +263,7 @@ body{visibility:visible!important;opacity:1!important;overflow:hidden!important;
           <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:var(--rt-teal)" id="sTotalAssess">0</div><div class="rt-dash-hl">Assessments</div></div>
           <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#8b5cf6" id="sTotalTran">0</div><div class="rt-dash-hl">Transects</div></div>
           <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#0ea5e9" id="sAvgCover">0%</div><div class="rt-dash-hl">Avg Cover</div></div>
-          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#16a34a" id="sTotalSpecies">0</div><div class="rt-dash-hl">Species</div></div>
+          <div class="rt-dash-hs"><div class="rt-dash-hc" style="color:#16a34a" id="sTotalSpecies">0</div><div class="rt-dash-hl">Coral Life Forms</div></div>
         </div>
       </div>
     </div>
@@ -316,18 +336,21 @@ body{display:grid!important;grid-template-rows:auto 1fr!important;min-height:100
 try{
 var map,chart,mCluster,tLayer,bLayer;
 var D={m:[],s:{},t:[]};
-var showT=false,mapF=false;
+var showT=false;
 var selMuni=null,selBrgy=null;
+var _firstLoc=true;
 var _aPage=0,_aFiltered=null,_aPP=10;
 var _tlPage=0,_tlFiltered=null,_tlPP=10;
+var _latestProv=null;
+var _provsWithData={};
 var HC={excellent:'#16a34a',good:'#2563eb',fair:'#d97706',poor:'#dc2626'};
 
 document.addEventListener('DOMContentLoaded',function(){
-  try{init();load({});}catch(err2){console.error('Dashboard init failed:',err2);var el=document.getElementById('dashMap');if(el){el.classList.remove('rt-map-loading');el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#f1f5f9;border-radius:8px;"><div style="text-align:center;padding:2rem;"><i class="fas fa-exclamation-triangle" style="font-size:2rem;color:#d97706;margin-bottom:1rem;display:block;"></i><p style="color:#475569;margin:0;">Unable to load the map. Please check your internet connection and reload the page.</p></div></div>';}}
+  try{init();}catch(err2){console.error('Dashboard init failed:',err2);var el=document.getElementById('dashMap');if(el){el.classList.remove('rt-map-loading');el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#f1f5f9;border-radius:8px;"><div style="text-align:center;padding:2rem;"><i class="fas fa-exclamation-triangle" style="font-size:2rem;color:#d97706;margin-bottom:1rem;display:block;"></i><p style="color:#475569;margin:0;">Unable to load the map. Please check your internet connection and reload the page.</p></div></div>';}}
 });
 
 function init(){
-  map=L.map('dashMap',{zoomControl:true}).setView([6.05,125.25],10);
+  map=L.map('dashMap',{zoomControl:true}).setView([12.8797,121.7740],6);
   var tl=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap',maxZoom:18}).addTo(map);
   var rmLd=function(){var el=document.getElementById('dashMap');if(el)el.classList.remove('rt-map-loading');};
   tl.on('load',rmLd);setTimeout(rmLd,4000);
@@ -336,27 +359,70 @@ function init(){
   tLayer=L.layerGroup();
   bLayer=L.layerGroup();
 
-  map.on('moveend',function(){if(mapF)load(gf());});
-  document.getElementById('btnMapFilter').onclick=function(){mapF=!mapF;this.classList.toggle('rt-dash-active');load(gf());};
   document.getElementById('btnTransects').onclick=function(){
     showT=!showT;
     if(showT){this.classList.add('rt-dash-active');this.innerHTML='<i class="fas fa-eye-slash"></i> Hide Transects';showLines();}
     else{this.classList.remove('rt-dash-active');this.innerHTML='<i class="fas fa-draw-polygon"></i> Transects';tLayer.clearLayers();map.removeLayer(tLayer);}
   };
-  document.getElementById('fMuni').onchange=function(){load(gf());};
+  document.getElementById('fProv').onchange=function(){
+    document.getElementById('fMuni').value='all';
+    document.getElementById('fBrgy').value='all';
+    loadLocOpts();
+    load(gf());
+  };
+  document.getElementById('fMuni').onchange=function(){
+    document.getElementById('fBrgy').value='all';
+    loadLocOpts();
+    load(gf());
+  };
+  document.getElementById('fBrgy').onchange=function(){load(gf());};
   document.getElementById('fHealth').onchange=function(){load(gf());};
   document.getElementById('fYearFrom').onchange=function(){load(gf());};
   document.getElementById('fYearTo').onchange=function(){load(gf());};
-  var st;document.getElementById('fBrgy').oninput=function(){clearTimeout(st);st=setTimeout(fB,300);};
+  _firstLoc=true;
+  loadLocOpts();
+  fetch('{% url "public_dashboard_data" %}').then(function(r){return r.json();}).then(function(d){
+    d.m.forEach(function(mx){if(mx.province_id!=null)_provsWithData[String(mx.province_id)]=true;});
+  }).catch(function(){});
+}
+
+function loadLocOpts(){
+  var p=new URLSearchParams();
+  var pv=document.getElementById('fProv').value;
+  var m=document.getElementById('fMuni').value;
+  if(pv!=='all')p.set('province_id',pv);
+  if(m!=='all')p.set('municipality_id',m);
+  fetch('{% url "public_location_options" %}?'+p).then(function(r){return r.json();}).then(function(d){
+    if(d.latest_province_id)_latestProv=d.latest_province_id;
+    if(_firstLoc){
+      var want=d.latest_province_id||((d.provinces&&d.provinces[0])?d.provinces[0].id:null);
+      if(want){
+        document.getElementById('fProv').value=want;
+        p.set('province_id',want);
+      }
+    }
+    popProvSel(d.provinces||[],d.latest_province_id);
+    popMuniSel(d.municipalities||[]);
+    popBrgySel(d.barangays||[]);
+    if(_firstLoc){
+      _firstLoc=false;
+      load(gf());
+      return;
+    }
+  }).catch(function(e){console.error('Location options fetch failed:',e);if(_firstLoc){_firstLoc=false;load({});}});
 }
 
 function gf(){
   var f={};
+  var p=document.getElementById('fProv').value;
   var m=document.getElementById('fMuni').value;
+  var b=document.getElementById('fBrgy').value;
   var yf=document.getElementById('fYearFrom').value;
   var yt=document.getElementById('fYearTo').value;
   var h=document.getElementById('fHealth').value;
+  if(p!=='all')f.province_id=p;
   if(m!=='all')f.municipality_id=m;
+  if(b!=='all')f.barangay_id=b;
   if(yf)f.year_from=yf;
   if(yt)f.year_to=yt;
   if(h!=='all')f.condition=h;
@@ -365,17 +431,40 @@ function gf(){
 
 function load(f){
   var p=new URLSearchParams();
+  if(f.province_id)p.set('province_id',f.province_id);
   if(f.municipality_id)p.set('municipality_id',f.municipality_id);
+  if(f.barangay_id)p.set('barangay_id',f.barangay_id);
   if(f.year_from)p.set('year_from',f.year_from);
   if(f.year_to)p.set('year_to',f.year_to);
   if(f.condition)p.set('condition',f.condition);
   fetch('{% url "public_dashboard_data" %}?'+p).then(function(r){return r.json();}).then(function(d){
     D=d;
-    popMuniSel(d.m);
+    selMuni=null;selBrgy=null;
+    document.getElementById('backToMuniBtn').style.display='none';
+    document.getElementById('timelineCard').style.display='none';
     dispMarkers(d);
     updStats(d.s);
     updChart(d.t);
     updHealth(d.m);
+    if(f.barangay_id){
+      autoDrillBrgy(f.barangay_id);
+    }else{
+      document.getElementById('pDetails').innerHTML='<div class="rt-dash-empty"><i class="fas fa-map-marker-alt"></i><p>Click a marker on the map to view barangay details</p></div>';
+      if(f.municipality_id){
+        var fm=null;d.m.forEach(function(x){if(String(x.id)===String(f.municipality_id))fm=x;});
+        var coords=[];
+        if(fm){fm.b.forEach(function(b){if(b.lat&&b.lng)coords.push([b.lat,b.lng]);});}
+        if(coords.length)map.fitBounds(L.latLngBounds(coords),{padding:[40,40],maxZoom:14});
+        else if(fm&&fm.lat&&fm.lng)map.setView([fm.lat,fm.lng],12);
+      }else if(f.province_id){
+        var pcoords=[];
+        d.m.forEach(function(mx){if(mx.lat&&mx.lng)pcoords.push([mx.lat,mx.lng]);});
+        if(pcoords.length)map.fitBounds(L.latLngBounds(pcoords),{padding:[50,50],maxZoom:11});
+        else if(!_provsWithData[String(f.province_id)])map.setView([12.8797,121.7740],6);
+      }else{
+        map.setView([12.8797,121.7740],6);
+      }
+    }
   }).catch(function(e){
     console.error('Dashboard data fetch failed:',e);
     document.getElementById('sTotalAssess').textContent='—';
@@ -386,9 +475,37 @@ function load(f){
   });
 }
 
+function popProvSel(ps,defId){
+  var s=document.getElementById('fProv'),c=s.value,h='';
+  if(!ps)ps=[];
+  if(ps.length===0){s.innerHTML='';return;}
+  var want=c;
+  var valid=false;
+  ps.forEach(function(pr){if(c!==''&&String(c)===String(pr.id))valid=true;});
+  if(!valid)want=defId;
+  if(!valid||!defId){
+    var valid2=false;
+    ps.forEach(function(pr){if(String(want)===String(pr.id))valid2=true;});
+    if(!valid2)want=ps[0].id;
+  }
+  ps.forEach(function(pr){
+    var sel=String(want)===String(pr.id);
+    h+='<option value="'+pr.id+'"'+(sel?' selected':'')+'>'+pr.name+'</option>';
+  });
+  s.innerHTML=h;
+}
+
 function popMuniSel(ms){
   var s=document.getElementById('fMuni'),c=s.value,h='<option value="all">All</option>';
-  ms.forEach(function(m){h+='<option value="'+m.id+'"'+(c==m.id?' selected':'')+'>'+m.name+'</option>';});
+  if(!ms)ms=[];
+  ms.forEach(function(m){h+='<option value="'+m.id+'"'+(String(c)===String(m.id)?' selected':'')+'>'+m.name+'</option>';});
+  s.innerHTML=h;
+}
+
+function popBrgySel(bs){
+  var s=document.getElementById('fBrgy'),c=s.value,h='<option value="all">All</option>';
+  if(!bs)bs=[];
+  bs.forEach(function(b){h+='<option value="'+b.id+'"'+(String(c)===String(b.id)?' selected':'')+'>'+b.name+'</option>';});
   s.innerHTML=h;
 }
 
@@ -407,6 +524,30 @@ function dispMarkers(d){
   if(showT)showLines();
 }
 
+function autoDrillBrgy(bid){
+  var m=null,b=null;
+  D.m.forEach(function(x){
+    x.b.forEach(function(y){
+      if(String(y.id)===String(bid)){b=y;m=x;}
+    });
+  });
+  if(!m||!b)return;
+  setTimeout(function(){
+    ZM(m.id);
+    setTimeout(function(){
+      var mb=null;D.m.forEach(function(x){if(x.id===m.id)mb=x;});
+      if(!mb)return;
+      var bb=null;mb.b.forEach(function(y){if(String(y.id)===String(bid))bb=y;});
+      if(!bb)return;
+      selBrgy=bb;
+      showBDetails(bb,m);
+      buildTimeline(bb);
+      if(bb.lat&&bb.lng)map.setView([bb.lat,bb.lng],15);
+      if(showT)showBLines(bb);
+    },250);
+  },30);
+}
+
 window.ZM=function(mid){
   var m=null;D.m.forEach(function(x){if(x.id===mid)m=x;});
   if(!m)return;
@@ -422,7 +563,7 @@ window.ZM=function(mid){
     var mk=L.marker([b.lat,b.lng],{icon:ic});
     var ct=b.lc!==null?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A';
     mk.bindPopup('<div class="rt-dash-pop"><b>'+b.name+'</b><br><small>'+m.name+', '+m.province+'</small><br><span style="color:'+c+';font-weight:700">'+(b.lcv!==null?b.lcv+'%':'No data')+'</span> '+ct+'<br><small>'+b.ac+' assessment(s)</small></div>');
-    mk.on('click',function(){selBrgy=b;showBDetails(b,m);buildTimeline(b);if(window.innerWidth<=1024&&window.openSheet)window.openSheet();});
+    mk.on('click',function(){selBrgy=b;showBDetails(b,m);buildTimeline(b);if(b.lat&&b.lng)map.setView([b.lat,b.lng],15);if(window.innerWidth<=1024&&window.openSheet)window.openSheet();});
     bLayer.addLayer(mk);
   });
   updChartM(m);
@@ -471,7 +612,7 @@ function showBDetails(b,m){
     '<div class="rt-dash-dr"><span>🏝️ Latest coral cover</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(b.lcv!==null?b.lcv+'% ('+condText+')':'No data')+'</span></div>'+
     '<div class="rt-dash-dr"><span>📊 Mean cover (all years)</span><span><strong>'+avgCover+'%</strong></span></div>'+
     '<div class="rt-dash-dr"><span>🧪 Total assessments</span><span><strong>'+b.ac+'</strong> surveys</span></div>'+
-    '<div class="rt-dash-dr"><span>🐠 Coral species found</span><span><strong>'+spCount+'</strong> unique</span></div>'+
+    '<div class="rt-dash-dr"><span>🐠 Coral life forms found</span><span><strong>'+spCount+'</strong> unique</span></div>'+
     '<div class="rt-dash-dr"><span>📅 First assessment</span><span>'+dates[0]+'</span></div>'+
     '<div class="rt-dash-dr"><span>🔄 Last assessment</span><span>'+dates[dates.length-1]+'</span></div>'+
     '<div class="rt-dash-ddh" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span><i class="fas fa-list"></i> All Assessments ('+b.ac+')</span><i class="fas fa-chevron-down"></i></div>'+
@@ -479,7 +620,7 @@ function showBDetails(b,m){
     '<div class="rt-dash-yf"><label><i class="fas fa-filter"></i> Year:</label><select id="brgyYearFilter" onchange="filterBrgyAssessments(this.value)"><option value="all">All Years</option>'+yearOpts+'</select><button class="rt-dash-yf-btn" onclick="document.getElementById(\'brgyYearFilter\').value=\'all\';filterBrgyAssessments(\'all\');">Clear</button></div>'+
     '<div id="brgyAssessList"></div>'+
     '</div>'+
-    '<button class="rt-dash-back-btn" onclick="backToMuni()"><i class="fas fa-globe"></i> Back to All Barangays</button>';
+    '<button class="rt-dash-back-btn" onclick="backToMuni()"><i class="fas fa-globe"></i> Back to Municipality</button>';
   renderAList();
   updChartBrgy(b);
 }
@@ -496,11 +637,11 @@ window.SA=function(aid){
     var th='';d.tr.forEach(function(t){
       var sh=t.sp.filter(function(s){return s.dp==='shallow';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
       var dp=t.sp.filter(function(s){return s.dp==='deep';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
-      th+='<div class="rt-dash-tc"><div class="rt-dash-tch" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span>Transect '+t.n+' <small>('+t.sp.length+' species)</small></span><i class="fas fa-chevron-down"></i></div><div class="rt-dash-ddc"><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0891b2">Shallow</div>'+(sh||'<div class="rt-dash-es">No shallow species data</div>')+'</div><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0e7490">Deep</div>'+(dp||'<div class="rt-dash-es">No deep species data</div>')+'</div></div></div>';
+      th+='<div class="rt-dash-tc"><div class="rt-dash-tch" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span>Transect '+t.n+' <small>('+t.sp.length+' coral life forms)</small></span><i class="fas fa-chevron-down"></i></div><div class="rt-dash-ddc"><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0891b2">Shallow</div>'+(sh||'<div class="rt-dash-es">No shallow coral life forms data</div>')+'</div><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0e7490">Deep</div>'+(dp||'<div class="rt-dash-es">No deep coral life forms data</div>')+'</div></div></div>';
     });
     document.getElementById('modalBody').innerHTML='<div class="rt-dash-minfo"><div class="rt-dash-dr"><span>Date</span><span>'+d.d+'</span></div><div class="rt-dash-dr"><span>Condition</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(d.c?d.c.charAt(0).toUpperCase()+d.c.slice(1):'N/A')+'</span></div><div class="rt-dash-dr"><span>Coral Cover</span><span style="font-weight:700">'+(d.cc!==null?d.cc+'%':'N/A')+'</span></div><div class="rt-dash-dr"><span>Methodology</span><span>'+d.mt+'</span></div><div class="rt-dash-dr"><span>Uploaded By</span><span>'+d.up+'</span></div></div><h4 style="margin:1rem 0 .5rem;color:#062E3f;font-size:.95rem"><i class="fas fa-draw-polygon"></i> Transects ('+d.tr.length+')</h4>'+th;
   }).catch(function(){
-    document.getElementById('modalBody').innerHTML='<div style="text-align:center;padding:2rem;color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed to load species data. Please try again.</div>';
+    document.getElementById('modalBody').innerHTML='<div style="text-align:center;padding:2rem;color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed to load coral life forms data. Please try again.</div>';
   });
 };
 
@@ -584,7 +725,6 @@ function tlRangeFilter(){
   });
   showBLinesYear(selBrgy,null,from,to);
   document.getElementById('tlInfo').textContent='Showing transects from '+from+' to '+to;
-  if(showT)showLines();
   _tlFiltered=selBrgy.a.filter(function(a){var y=parseInt(a.d.split('-')[0]);return y>=from&&y<=to;}).sort(function(x,y){return new Date(y.d)-new Date(x.d);});
   _tlPage=0;
   renderTlAList();
@@ -629,16 +769,8 @@ function showBLinesYear(b,year,from,to){
 function showLines(){
   tLayer.clearLayers();if(!showT)return;map.addLayer(tLayer);
   if(selBrgy){
-    var fromV=document.getElementById('tlFrom').value;
-    var toV=document.getElementById('tlTo').value;
-    var from=fromV?parseInt(fromV):null;
-    var to=toV?parseInt(toV):null;
-    var matched=selBrgy.a.filter(function(a){
-      var y=parseInt(a.d.split('-')[0]);
-      if(from!==null&&to!==null){return y>=from&&y<=to;}
-      return true;
-    });
-    matched.forEach(function(a){a.tr.forEach(function(t){drawLine(t,a,selBrgy.name);});});
+    var sorted=selBrgy.a.slice().sort(function(x,y){return new Date(y.d)-new Date(x.d);});
+    if(sorted.length>0){sorted[0].tr.forEach(function(t){drawLine(t,sorted[0],selBrgy.name);});}
     return;
   }
   D.m.forEach(function(m){m.b.forEach(function(b){
@@ -662,7 +794,7 @@ function drawLine(t,a,bn){
     tLayer.addLayer(glow);
     var sl=L.polyline([t.s.s,t.s.e],{color:scc,weight:4,opacity:.92,smoothFactor:1,lineCap:'round'});
     sl.bindTooltip('<b>T'+t.n+'</b> Shallow'+sLen+'<br><span style="color:'+scc+'">'+depthLabel(sHC)+'</span> · '+sCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-s',sticky:true});
-    sl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Shallow</b>'+sLen+'<br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+scc+';font-weight:700">'+depthLabel(sHC)+'</span><br>Avg cover: <b>'+sCnt+'%</b><br>'+t.sc+' species<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
+    sl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Shallow</b>'+sLen+'<br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+scc+';font-weight:700">'+depthLabel(sHC)+'</span><br>Avg cover: <b>'+sCnt+'%</b><br>'+t.sc+' coral life forms<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
     tLayer.addLayer(sl);
     var ep1=L.circleMarker(t.s.s,{radius:4,fillColor:'#8b5cf6',color:'#fff',weight:1.5,fillOpacity:1});
     ep1.bindTooltip('Start · '+t.s.s[0].toFixed(5)+', '+t.s.s[1].toFixed(5),{direction:'top',offset:[0,-6]});
@@ -676,7 +808,7 @@ function drawLine(t,a,bn){
     tLayer.addLayer(dglow);
     var dl=L.polyline([t.d.s,t.d.e],{color:dcc,weight:4,opacity:.55,smoothFactor:1,lineCap:'round',dashArray:'10,7'});
     dl.bindTooltip('<b>T'+t.n+'</b> Deep'+dLen+'<br><span style="color:'+dcc+'">'+depthLabel(dHC)+'</span> · '+dCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-d',sticky:true});
-    dl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Deep</b>'+dLen+'<br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+dcc+';font-weight:700">'+depthLabel(dHC)+'</span><br>Avg cover: <b>'+dCnt+'%</b><br>'+t.sc+' species<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
+    dl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Deep</b>'+dLen+'<br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+dcc+';font-weight:700">'+depthLabel(dHC)+'</span><br>Avg cover: <b>'+dCnt+'%</b><br>'+t.sc+' coral life forms<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
     tLayer.addLayer(dl);
     var ep3=L.circleMarker(t.d.s,{radius:4,fillColor:'#8b5cf6',color:'#fff',weight:1.5,fillOpacity:1});
     ep3.bindTooltip('Start · '+t.d.s[0].toFixed(5)+', '+t.d.s[1].toFixed(5),{direction:'top',offset:[0,-6]});
@@ -694,18 +826,35 @@ function backToMuni(){
   bLayer.clearLayers();
   if(map.hasLayer(bLayer))map.removeLayer(bLayer);
   if(map.hasLayer(tLayer))map.removeLayer(tLayer);
-  document.getElementById('backToMuniBtn').style.display='none';
   mCluster.clearLayers();
-  D.m.forEach(function(m){
-    if(!m.lat||!m.lng)return;
-    var ta=0;m.b.forEach(function(b){ta+=b.ac;});
-    var ic=L.divIcon({className:'',html:'<div class="rt-dash-mm"><span>'+ta+'</span></div>',iconSize:[36,36],iconAnchor:[18,18]});
-    var mk=L.marker([m.lat,m.lng],{icon:ic});
-    mk.bindTooltip('<b>'+m.name+'</b><br>'+m.province+'<br>'+m.b.length+' barangays · '+ta+' assessments',{direction:'top',offset:[0,-10],className:'rt-dash-ttl'});
-    mk.on('click',function(){window.ZM(m.id);});
-    mCluster.addLayer(mk);
-  });
-  map.setView([6.05,125.25],10);
+  if(selMuni){
+    var vb=selMuni.b.filter(function(b){return b.lat&&b.lng;});
+    map.addLayer(bLayer);
+    vb.forEach(function(b){
+      var c=HC[b.lc]||'#6b7280';
+      var ic=L.divIcon({className:'',html:'<div class="rt-dash-bm" style="border-color:'+c+'"><i class="fas fa-water"></i></div>',iconSize:[26,26],iconAnchor:[13,13]});
+      var mk=L.marker([b.lat,b.lng],{icon:ic});
+      var ct=b.lc!==null?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A';
+      mk.bindPopup('<div class="rt-dash-pop"><b>'+b.name+'</b><br><small>'+selMuni.name+', '+selMuni.province+'</small><br><span style="color:'+c+';font-weight:700">'+(b.lcv!==null?b.lcv+'%':'No data')+'</span> '+ct+'<br><small>'+b.ac+' assessment(s)</small></div>');
+      mk.on('click',function(){selBrgy=b;showBDetails(b,selMuni);buildTimeline(b);if(window.innerWidth<=1024&&window.openSheet)window.openSheet();});
+      bLayer.addLayer(mk);
+    });
+    document.getElementById('backToMuniBtn').style.display='';
+    if(vb.length)map.fitBounds(L.latLngBounds(vb.map(function(b){return[b.lat,b.lng];})),{padding:[40,40],maxZoom:14});
+    else if(selMuni.lat&&selMuni.lng)map.setView([selMuni.lat,selMuni.lng],12);
+  }else{
+    D.m.forEach(function(m){
+      if(!m.lat||!m.lng)return;
+      var ta=0;m.b.forEach(function(b){ta+=b.ac;});
+      var ic=L.divIcon({className:'',html:'<div class="rt-dash-mm"><span>'+ta+'</span></div>',iconSize:[36,36],iconAnchor:[18,18]});
+      var mk=L.marker([m.lat,m.lng],{icon:ic});
+      mk.bindTooltip('<b>'+m.name+'</b><br>'+m.province+'<br>'+m.b.length+' barangays · '+ta+' assessments',{direction:'top',offset:[0,-10],className:'rt-dash-ttl'});
+      mk.on('click',function(){window.ZM(m.id);});
+      mCluster.addLayer(mk);
+    });
+    document.getElementById('backToMuniBtn').style.display='none';
+    map.setView([12.8797,121.7740],6);
+  }
   document.getElementById('pDetails').innerHTML='<div class="rt-dash-empty"><i class="fas fa-map-marker-alt"></i><p>Click a marker on the map to view barangay details</p></div>';
   updChart(D.t);
   updStats(D.s);
@@ -720,21 +869,15 @@ function filterBrgyAssessments(year){
   renderAList();
 }
 
-function fB(){
-  var q=document.getElementById('fBrgy').value.trim().toLowerCase();
-  if(!q){bLayer.eachLayer(function(l){l.setOpacity(1);});return;}
-  bLayer.eachLayer(function(l){var p=l.getPopup();if(p){l.setOpacity(p.getContent().toLowerCase().indexOf(q)>-1?1:.12);}});
-}
-
 function resetFilters(){
+  if(_latestProv)document.getElementById('fProv').value=_latestProv;
   document.getElementById('fMuni').value='all';
-  document.getElementById('fBrgy').value='';
+  document.getElementById('fBrgy').value='all';
   document.getElementById('fYearFrom').value='';
   document.getElementById('fYearTo').value='';
   document.getElementById('fHealth').value='all';
-  if(mapF){mapF=false;document.getElementById('btnMapFilter').classList.remove('rt-dash-active');}
-  if(selBrgy||selMuni)backToMuni();
-  load({});
+  loadLocOpts();
+  load(gf());
 }
 
 function updStats(s){
@@ -850,9 +993,9 @@ var tourSteps=[
    mEl:'#mobileFilterToggle',mPos:'left',mText:'Tap the <b>filters button</b> to open search controls. Filter by <b>municipality</b>, <b>barangay</b>, <b>year</b>, or <b>health condition</b>.'},
   {el:'#dashMap',title:'Interactive Map',text:'The map shows <b>municipality markers</b> (teal circles with assessment counts). Click a marker, then hit <b>Zoom In</b> to see individual <b>barangay markers</b> colored by health.',pos:'right',
    mEl:'#dashMap',mPos:'top',mText:'The map shows <b>municipality markers</b> (teal circles). Tap one to zoom in and see <b>barangay markers</b> colored by health.'},
-  {el:'#btnTransects',title:'Transect Lines',text:'Toggle this button to show transect lines on the map. Lines are <b>colored by coral health</b> (green=excellent, blue=good, orange=fair, red=poor). <b>Solid</b> = shallow, <b>dashed</b> = deep. <b>Click a line</b> to see its avg cover percentage and species info.',pos:'bottom',
+   {el:'#btnTransects',title:'Transect Lines',text:'Toggle this button to show transect lines on the map. Lines are <b>colored by coral health</b> (green=excellent, blue=good, orange=fair, red=poor). <b>Solid</b> = shallow, <b>dashed</b> = deep. <b>Click a line</b> to see its avg cover percentage and coral life forms info.',pos:'bottom',
    mEl:'#mobileFilterToggle',mPos:'left',mText:'Open the <b>filters panel</b> and tap <b>Transect Lines</b> to show colored lines on the map. <b>Solid</b> = shallow, <b>dashed</b> = deep.'},
-  {el:'.rt-dash-sidecol',title:'Sidebar Panel',text:'The sidebar shows <b>barangay details</b> with stats, species count, year filter, and assessment history. Click a barangay marker to populate it. Click <b>View Assessment</b> for the full modal.',pos:'left',
+   {el:'.rt-dash-sidecol',title:'Sidebar Panel',text:'The sidebar shows <b>barangay details</b> with stats, coral life forms count, year filter, and assessment history. Click a barangay marker to populate it. Click <b>View Assessment</b> for the full modal.',pos:'left',
    mEl:'#mobileSheetToggle',mPos:'left',mText:'Tap the <b>layers button</b> or a <b>barangay marker</b> to open the details panel. Swipe up for full details.'},
   {el:'#tourReplay',title:'Need Help?',text:'Click the <b>?</b> button anytime to restart this tour.',pos:'left',
    mEl:'#tourReplay',mPos:'left',mText:'Tap the <b>?</b> button anytime to restart this guide.'},

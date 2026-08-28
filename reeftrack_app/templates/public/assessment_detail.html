@@ -355,7 +355,7 @@
             {% for depth_group in depth_groups %}
             <div class="pd-depth-title" style="margin-top:1rem;margin-bottom:.75rem;">
                 <h6 style="{% if depth_group.grouper == 'shallow' %}color:#0ea5e9;{% else %}color:#0d6efd;{% endif %}">
-                    <i class="fas fa-table"></i> {{ depth_group.grouper|title }} Species ({{ depth_group.list|length }})
+                    <i class="fas fa-table"></i> {{ depth_group.grouper|title }} Coral Life Forms ({{ depth_group.list|length }})
                 </h6>
                 {% if depth_group.grouper == 'shallow' %}
                 {% with h=t.shallow_health %}
@@ -378,8 +378,8 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Species</th>
-                            <th>Family</th>
+                            <th>Sub Category</th>
+                            <th>Major Category</th>
                             <th class="text-end">Cover %</th>
                         </tr>
                     </thead>
@@ -405,14 +405,14 @@
     <div class="pd-card">
         <div class="pd-card-header">
             <i class="fas fa-file-excel"></i>
-            <h6>Parsed Species from Excel Files</h6>
+            <h6>Parsed Coral Life Forms from Excel Files</h6>
         </div>
         <div class="pd-card-body">
             {% regroup parsed_species by depth as parsed_depth_groups %}
             {% for depth_group in parsed_depth_groups %}
             <div class="pd-depth-title" style="{% if not forloop.first %}margin-top:1rem;{% endif %}margin-bottom:.75rem;">
                 <h6 style="{% if depth_group.grouper == 'Shallow' %}color:#0ea5e9;{% else %}color:#0d6efd;{% endif %}">
-                    <i class="fas fa-table"></i> {{ depth_group.grouper }} Species ({{ depth_group.list|length }})
+                    <i class="fas fa-table"></i> {{ depth_group.grouper }} Coral Life Forms ({{ depth_group.list|length }})
                 </h6>
             </div>
             <div style="overflow-x:auto;">
@@ -421,8 +421,8 @@
                         <tr>
                             <th>#</th>
                             <th>Transect</th>
-                            <th>Species</th>
-                            <th>Family</th>
+                            <th>Sub Category</th>
+                            <th>Major Category</th>
                             <th class="text-end">Cover %</th>
                         </tr>
                     </thead>

@@ -92,21 +92,21 @@
                     <div class="card mb-4 {% if has_new_species %}border-warning{% else %}border-success{% endif %}">
                         <div class="card-header {% if has_new_species %}bg-warning text-dark{% else %}bg-success text-white{% endif %} d-flex justify-content-between">
                             <h6 class="mb-0">
-                                <i class="fas fa-microscope"></i> Species Validation
+                                <i class="fas fa-microscope"></i> Sub Category Validation
                             </h6>
-                            <span class="badge bg-light text-dark">{{ species_validation|length }} unique species</span>
+                            <span class="badge bg-light text-dark">{{ species_validation|length }} unique sub categories</span>
                         </div>
                         <div class="card-body">
                             {% if has_new_species %}
                             <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle me-1"></i>
-                                <strong>New or unrecognized species detected.</strong>
+                                <strong>New or unrecognized sub categories detected.</strong>
                                 Review and confirm each one below before saving.
                             </div>
                             {% else %}
                             <div class="alert alert-success mb-3">
                                 <i class="fas fa-check-circle me-1"></i>
-                                All species matched existing records.
+                                All sub categories matched existing records.
                             </div>
                             {% endif %}
 
@@ -115,7 +115,7 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width:30px;">#</th>
-                                            <th>Species from Excel</th>
+                                            <th>Sub Category from Excel</th>
                                             <th>Family</th>
                                             <th>Status</th>
                                             <th>Action / Correction</th>
@@ -150,7 +150,7 @@
                                                         <select class="form-select form-select-sm" style="max-width:250px;"
                                                                 name="species_map_{{ sv.sub_category }}|||{{ sv.major_category }}">
                                                             <option value="{{ sv.suggested_match }}">Use: {{ sv.suggested_name }}</option>
-                                                            <option value="new">Create as new species</option>
+                                                            <option value="new">Create as new sub category</option>
                                                         </select>
                                                     </div>
                                                     <div class="mt-1">
@@ -211,7 +211,7 @@
                                 {% if t.shallow_species %}{{ t.shallow_species|length }} shallow{% endif %}
                                 {% if t.shallow_species and t.deep_species %} | {% endif %}
                                 {% if t.deep_species %}{{ t.deep_species|length }} deep{% endif %}
-                                species
+                                sub categories
                             </small>
                         </div>
                         <div class="card-body">
@@ -243,13 +243,13 @@
 
                             <!-- Shallow Species Table -->
                             {% if t.shallow_species %}
-                            <h6 class="text-info mt-3"><i class="fas fa-table"></i> Shallow Species</h6>
+                            <h6 class="text-info mt-3"><i class="fas fa-table"></i> Shallow Sub Categories</h6>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover">
                                     <thead class="table-light">
                                         <tr>
                                             <th>#</th>
-                                            <th>Species (Sub Category)</th>
+                                            <th>Sub Category</th>
                                             <th>Family (Major Category)</th>
                                             <th class="text-end">Cover %</th>
                                         </tr>
@@ -270,13 +270,13 @@
 
                             <!-- Deep Species Table -->
                             {% if t.deep_species %}
-                            <h6 class="text-primary mt-3"><i class="fas fa-table"></i> Deep Species</h6>
+                            <h6 class="text-primary mt-3"><i class="fas fa-table"></i> Deep Sub Categories</h6>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover">
                                     <thead class="table-light">
                                         <tr>
                                             <th>#</th>
-                                            <th>Species (Sub Category)</th>
+                                            <th>Sub Category</th>
                                             <th>Family (Major Category)</th>
                                             <th class="text-end">Cover %</th>
                                         </tr>
@@ -296,7 +296,7 @@
                             {% endif %}
 
                             {% if not t.shallow_species and not t.deep_species %}
-                            <p class="text-muted text-center py-2 mb-0">No species data parsed from Excel files.</p>
+                            <p class="text-muted text-center py-2 mb-0">No sub category data parsed from Excel files.</p>
                             {% endif %}
                         </div>
                     </div>

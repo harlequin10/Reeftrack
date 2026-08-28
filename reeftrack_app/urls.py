@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import path, re_path
+from django.views.generic.base import RedirectView
 from . import views
 
 urlpatterns = [
@@ -8,6 +9,7 @@ urlpatterns = [
     path('assessment/<int:assessment_id>/', views.public_assessment_detail, name='public_assessment_detail'),
     path('explore/', views.public_dashboard, name='public_dashboard'),
     path('api/public/dashboard-data/', views.public_dashboard_data, name='public_dashboard_data'),
+    path('api/public/location-options/', views.public_location_options, name='public_location_options'),
     path('api/public/assessment/<int:assessment_id>/', views.assessment_detail_api, name='assessment_detail_api'),
     path('register/', views.register, name='register'),
     path('login/', views.login_view, name='login'),
@@ -21,6 +23,7 @@ urlpatterns = [
     
     # Admin Management URLs
     path('manage/users/', views.admin_manage_users, name='admin_manage_users'),
+    path('manage/users/ajax/', views.admin_manage_users_ajax, name='admin_manage_users_ajax'),
     path('manage/users/create/', views.admin_create_user, name='admin_create_user'),
     path('manage/users/edit/<int:user_id>/', views.admin_edit_user, name='admin_edit_user'),
     path('manage/users/action/<int:user_id>/', views.admin_user_action, name='admin_user_action'),
@@ -60,6 +63,7 @@ urlpatterns = [
 
     # ==================== ADMIN ASSESSMENT REVIEW ====================
     path('manage/assessments/', views.admin_assessments, name='admin_assessments'),
+    path('manage/assessments/ajax/', views.admin_assessments_ajax, name='admin_assessments_ajax'),
     path('manage/assessments/bulk-delete/', views.admin_bulk_delete_assessments, name='admin_bulk_delete_assessments'),
     path('manage/assessments/<int:assessment_id>/', views.admin_assessment_detail, name='admin_assessment_detail'),
     path('manage/assessments/<int:assessment_id>/confirm-approval/', views.admin_confirm_approval, name='admin_confirm_approval'),
@@ -88,13 +92,17 @@ urlpatterns = [
     path('manage/locations/barangays/<int:barangay_id>/delete/',                          views.admin_delete_barangay,      name='admin_delete_barangay'),
 
     # ==================== ADMIN SPECIES MANAGEMENT ====================
-    path('manage/species/', views.admin_manage_species, name='admin_manage_species'),
-    path('manage/species/add-family/', views.admin_add_family, name='admin_add_family'),
-    path('manage/species/family/', views.admin_manage_family_species, name='admin_manage_family_species'),
-    path('manage/species/family/<str:family_name>/add/', views.admin_add_species, name='admin_add_species_in_family'),
-    path('manage/species/<int:species_id>/edit/', views.admin_edit_species, name='admin_edit_species'),
-    path('manage/species/<int:species_id>/delete/', views.admin_delete_species, name='admin_delete_species'),
-    path('manage/species/family/<str:family_name>/delete/', views.admin_delete_family, name='admin_delete_family'),
+    path('manage/coral-life-forms/', views.admin_manage_species, name='admin_manage_species'),
+    path('manage/coral-life-forms/add-family/', views.admin_add_family, name='admin_add_family'),
+    path('manage/coral-life-forms/family/', views.admin_manage_family_species, name='admin_manage_family_species'),
+    path('manage/coral-life-forms/family/<str:family_name>/add/', views.admin_add_species, name='admin_add_species_in_family'),
+    path('manage/coral-life-forms/<int:species_id>/edit/', views.admin_edit_species, name='admin_edit_species'),
+    path('manage/coral-life-forms/<int:species_id>/delete/', views.admin_delete_species, name='admin_delete_species'),
+    path('manage/coral-life-forms/family/<str:family_name>/delete/', views.admin_delete_family, name='admin_delete_family'),
+    # Redirect old /manage/species/ URLs to the renamed paths
+    re_path(r'^manage/species/(?P<rest>.*)$', RedirectView.as_view(
+        url='/manage/coral-life-forms/%(rest)s', permanent=True
+    )),
 
     # ==================== ADMIN TRANSECT COORDINATE MANAGEMENT ====================
     path('manage/transect-coords/', views.admin_manage_transect_coords, name='admin_manage_transect_coords'),

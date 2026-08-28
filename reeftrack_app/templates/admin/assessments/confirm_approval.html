@@ -457,7 +457,7 @@
                     <span>Exact Copy Detected</span>
                     <span class="dam-warn-badge critical" style="margin-left:0.5rem;">100% Match</span>
                     {% else %}
-                    <span>{{ warn.overlap_count }}/{{ warn.total }} Identical Species</span>
+                    <span>{{ warn.overlap_count }}/{{ warn.total }} Identical Sub Categories</span>
                     {% endif %}
                 </div>
                 <div class="dam-warn-detail-row" style="margin-top:0.5rem;">
@@ -514,7 +514,7 @@
                 </div>
                 <div class="dam-warn-detail-row">
                     <i class="fas fa-paw"></i>
-                    <span>{{ warn.match_count }} of {{ warn.total }} species match exactly</span>
+                    <span>{{ warn.match_count }} of {{ warn.total }} sub categories match exactly</span>
                 </div>
                 {% if warn.overlap_species %}
                 <div class="mt-2 d-flex flex-wrap gap-1">
@@ -536,11 +536,11 @@
 <div class="dam-section" style="border-color:#93c5fd;">
     <div class="dam-section-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-bottom-color:#93c5fd;">
         <i class="fas fa-plus-circle" style="color:#2563eb;"></i>
-        <span style="color:#1e40af;">New Species ({{ new_species|length }})</span>
+        <span style="color:#1e40af;">New Sub Categories ({{ new_species|length }})</span>
     </div>
     <div class="dam-section-body">
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.7rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:#1e40af;">
-            <i class="fas fa-info-circle"></i> These species will be created in the Species reference table upon approval.
+            <i class="fas fa-info-circle"></i> These sub categories will be created in the Sub Category reference table upon approval.
         </div>
         <div style="overflow-x:auto;">
             <table class="dam-species-table">
@@ -573,7 +573,7 @@
 <!-- Species Data -->
 <div class="dam-section">
     <div class="dam-section-header">
-        <i class="fas fa-table"></i> Species Data ({{ all_species|length }} records)
+        <i class="fas fa-table"></i> Sub Category Data ({{ all_species|length }} records)
     </div>
     <div class="dam-section-body">
         {% regroup all_species by transect as transect_groups %}
@@ -584,7 +584,7 @@
         {% regroup tg.list by depth as depth_groups %}
         {% for dg in depth_groups %}
         <div class="dam-depth-header {% if dg.grouper == 'Shallow' %}shallow{% else %}deep{% endif %}">
-            <i class="fas fa-layer-group"></i> {{ dg.grouper }} ({{ dg.list|length }} species)
+            <i class="fas fa-layer-group"></i> {{ dg.grouper }} ({{ dg.list|length }} sub categories)
         </div>
         <div style="overflow-x:auto;">
             <table class="dam-species-table">

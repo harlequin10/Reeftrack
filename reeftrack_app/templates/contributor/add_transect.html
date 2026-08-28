@@ -139,7 +139,7 @@
                                             <input type="file" class="form-control form-control-sm"
                                                    name="shallow_excel" accept=".xlsx,.xls">
                                             <div class="form-text">
-                                                Species cover data for shallow depth.
+                                                Sub category cover data for shallow depth.
                                                 <a href="{% static 'files/sample_cpc_format.xlsx' %}" download class="text-success fw-bold">
                                                     <i class="fas fa-download"></i> Download sample format
                                                 </a>
@@ -190,7 +190,7 @@
                                             <input type="file" class="form-control form-control-sm"
                                                    name="deep_excel" accept=".xlsx,.xls">
                                             <div class="form-text">
-                                                Species cover data for deep depth.
+                                                Sub category cover data for deep depth.
                                                 <a href="{% static 'files/sample_cpc_format.xlsx' %}" download class="text-success fw-bold">
                                                     <i class="fas fa-download"></i> Download sample format
                                                 </a>
@@ -254,7 +254,7 @@
                                 {% endif %}
                                 {% if t.shallow_filename %}
                                     <br><small class="text-success"><i class="fas fa-file-excel"></i> {{ t.shallow_filename }}
-                                    ({{ t.shallow_species|length }} species)</small>
+                                    ({{ t.shallow_species|length }} sub categories)</small>
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
@@ -270,7 +270,7 @@
                                 {% endif %}
                                 {% if t.deep_filename %}
                                     <br><small class="text-success"><i class="fas fa-file-excel"></i> {{ t.deep_filename }}
-                                    ({{ t.deep_species|length }} species)</small>
+                                    ({{ t.deep_species|length }} sub categories)</small>
                                 {% endif %}
                             </div>
                         </div>

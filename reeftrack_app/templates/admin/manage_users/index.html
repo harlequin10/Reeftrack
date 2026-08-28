@@ -182,7 +182,7 @@
     <!-- Stat Cards -->
     {% with total=filtered_count %}
     <div class="um-stats">
-        <a class="um-stat {% if not role_filter and not status_filter %}active{% endif %}"
+        <a class="um-stat-link um-stat {% if not role_filter and not status_filter %}active{% endif %}" data-clear-all="1"
            href="{% url 'admin_manage_users' %}" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">
             <div class="um-stat-top">
                 <div class="um-stat-val">{{ filtered_count }}</div>
@@ -190,28 +190,28 @@
             </div>
             <div class="um-stat-lbl">Total Users</div>
         </a>
-        <a class="um-stat" href="{% url 'admin_manage_users' %}?role=admin" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
+        <a class="um-stat-link um-stat" data-role="admin" href="{% url 'admin_manage_users' %}?role=admin" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
             <div class="um-stat-top">
                 <div class="um-stat-val">{{ role_admin_count }}</div>
                 <div class="um-stat-icon"><i class="fas fa-user-shield"></i></div>
             </div>
             <div class="um-stat-lbl">Admins</div>
         </a>
-        <a class="um-stat" href="{% url 'admin_manage_users' %}?role=curator" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+        <a class="um-stat-link um-stat" data-role="curator" href="{% url 'admin_manage_users' %}?role=curator" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
             <div class="um-stat-top">
                 <div class="um-stat-val">{{ role_curator_count }}</div>
                 <div class="um-stat-icon"><i class="fas fa-user-edit"></i></div>
             </div>
             <div class="um-stat-lbl">Curators</div>
         </a>
-        <a class="um-stat" href="{% url 'admin_manage_users' %}?role=contributor" style="background:linear-gradient(135deg,#16a34a,#15803d);">
+        <a class="um-stat-link um-stat" data-role="contributor" href="{% url 'admin_manage_users' %}?role=contributor" style="background:linear-gradient(135deg,#16a34a,#15803d);">
             <div class="um-stat-top">
                 <div class="um-stat-val">{{ role_contributor_count }}</div>
                 <div class="um-stat-icon"><i class="fas fa-user"></i></div>
             </div>
             <div class="um-stat-lbl">Contributors</div>
         </a>
-        <a class="um-stat" href="{% url 'admin_manage_users' %}?status=pending" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">
+        <a class="um-stat-link um-stat" data-status="pending" href="{% url 'admin_manage_users' %}?status=pending" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">
             <div class="um-stat-top">
                 <div class="um-stat-val">{{ pending_count }}</div>
                 <div class="um-stat-icon"><i class="fas fa-clock"></i></div>
@@ -238,19 +238,19 @@
 
             <!-- Role filter -->
             <div class="um-drop" id="roleDrop">
-                <button class="um-filter-btn {% if role_filter %}active{% endif %}" onclick="toggleDrop('roleDrop')">
+                <button id="roleDropBtn" class="um-filter-btn {% if role_filter %}active{% endif %}" onclick="toggleDrop('roleDrop')">
                     <i class="fas fa-user-tag icon"></i>
                     <span>Role</span>
-                    {% if role_filter %}<span class="val">{{ role_filter }}</span>{% endif %}
+                    <span class="val" id="roleVal">{% if role_filter %} {{ role_filter }}{% endif %}</span>
                     <i class="fas fa-chevron-down chevron"></i>
                 </button>
                 <div class="um-drop-panel">
-                    <div class="um-drop-opt {% if not role_filter %}selected{% endif %}" onclick="setFilter('role','')">
+                    <div class="um-drop-opt {% if not role_filter %}selected{% endif %}" data-val="" onclick="setFilter('role','')">
                         <div class="check">{% if not role_filter %}<i class="fas fa-check"></i>{% endif %}</div>
                         All Roles
                     </div>
                     {% for rv, rl in role_choices %}
-                    <div class="um-drop-opt {% if role_filter == rv %}selected{% endif %}" onclick="setFilter('role','{{ rv }}')">
+                    <div class="um-drop-opt {% if role_filter == rv %}selected{% endif %}" data-val="{{ rv }}" onclick="setFilter('role','{{ rv }}')">
                         <div class="check">{% if role_filter == rv %}<i class="fas fa-check"></i>{% endif %}</div>
                         {{ rl }}
                     </div>
@@ -260,19 +260,19 @@
 
             <!-- Status filter -->
             <div class="um-drop" id="statusDrop">
-                <button class="um-filter-btn {% if status_filter %}active{% endif %}" onclick="toggleDrop('statusDrop')">
+                <button id="statusDropBtn" class="um-filter-btn {% if status_filter %}active{% endif %}" onclick="toggleDrop('statusDrop')">
                     <i class="fas fa-signal icon"></i>
                     <span>Status</span>
-                    {% if status_filter %}<span class="val">{{ status_filter }}</span>{% endif %}
+                    <span class="val" id="statusVal">{% if status_filter %} {{ status_filter }}{% endif %}</span>
                     <i class="fas fa-chevron-down chevron"></i>
                 </button>
                 <div class="um-drop-panel">
-                    <div class="um-drop-opt {% if not status_filter %}selected{% endif %}" onclick="setFilter('status','')">
+                    <div class="um-drop-opt {% if not status_filter %}selected{% endif %}" data-val="" onclick="setFilter('status','')">
                         <div class="check">{% if not status_filter %}<i class="fas fa-check"></i>{% endif %}</div>
                         All Status
                     </div>
                     {% for sv, sl in status_choices %}
-                    <div class="um-drop-opt {% if status_filter == sv %}selected{% endif %}" onclick="setFilter('status','{{ sv }}')">
+                    <div class="um-drop-opt {% if status_filter == sv %}selected{% endif %}" data-val="{{ sv }}" onclick="setFilter('status','{{ sv }}')">
                         <div class="check">{% if status_filter == sv %}<i class="fas fa-check"></i>{% endif %}</div>
                         {{ sl }}
                     </div>
@@ -281,208 +281,16 @@
             </div>
 
             <div class="um-right">
-                {% if role_filter or status_filter or search_query %}
-                <a href="{% url 'admin_manage_users' %}" class="um-icon-btn" title="Clear all filters">
+                <a href="#" class="um-icon-btn um-clear-toolbar {% if not role_filter and not status_filter and not search_query %}d-none{% endif %}" title="Clear all filters">
                     <i class="fas fa-times"></i>
                 </a>
-                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Active filter chips -->
-    {% if role_filter or status_filter or search_query %}
-    <div class="um-chips">
-        {% if search_query %}
-        <span class="um-chip">
-            <i class="fas fa-search"></i> "{{ search_query }}"
-            <a href="{% url 'admin_manage_users' %}?role={{ role_filter }}&status={{ status_filter }}" class="rm"><i class="fas fa-times rm"></i></a>
-        </span>
-        {% endif %}
-        {% if role_filter %}
-        <span class="um-chip">
-            Role: {{ role_filter }}
-            <a href="{% url 'admin_manage_users' %}?status={{ status_filter }}&search={{ search_query }}" class="rm"><i class="fas fa-times rm"></i></a>
-        </span>
-        {% endif %}
-        {% if status_filter %}
-        <span class="um-chip">
-            Status: {{ status_filter }}
-            <a href="{% url 'admin_manage_users' %}?role={{ role_filter }}&search={{ search_query }}" class="rm"><i class="fas fa-times rm"></i></a>
-        </span>
-        {% endif %}
-        <a href="{% url 'admin_manage_users' %}" class="um-chip um-chip-clear">
-            <i class="fas fa-times"></i> Clear all
-        </a>
-    </div>
-    {% endif %}
-
-    <!-- Info bar -->
-    <div class="um-info-bar">
-        <span>Showing <strong>{{ users|length }}</strong> user{{ users|length|pluralize }}</span>
-        {% if page_obj.paginator.num_pages > 1 %}
-        <span style="font-size:.8rem;color:#94a3b8;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        {% endif %}
-    </div>
-
-    <!-- Table -->
-    <div class="um-table-card">
-        <div style="overflow-x:auto;">
-        <table class="um-tbl">
-            <thead>
-                <tr>
-                    <th>User</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Approved By</th>
-                    <th>Active</th>
-                    <th>Joined</th>
-                    <th style="width:140px;text-align:center;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for u in users %}
-                <tr>
-                    <td>
-                        <div class="um-user-cell">
-                            <div class="um-user-info">
-                                <div class="um-user-name">
-                                    {{ u.profile.get_full_name|default:u.email }}
-                                </div>
-                                <div class="um-user-email">{{ u.email }}</div>
-                                <div class="um-user-badges">
-                                    {% if u == request.user %}<span class="badge bg-info">You</span>{% endif %}
-                                    {% if u.is_superuser %}<span class="badge bg-danger">Superuser</span>{% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="um-role {{ u.profile.role }}">
-                            {% if u.profile.role == 'admin' %}<i class="fas fa-shield-alt"></i>
-                            {% elif u.profile.role == 'curator' %}<i class="fas fa-user-edit"></i>
-                            {% else %}<i class="fas fa-user"></i>{% endif %}
-                            {{ u.profile.get_role_display }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if u.profile.role == 'contributor' %}
-                            <span class="um-status {{ u.profile.status }}">
-                                {% if u.profile.status == 'approved' %}<i class="fas fa-check-circle"></i>
-                                {% elif u.profile.status == 'pending' %}<i class="fas fa-clock"></i>
-                                {% else %}<i class="fas fa-times-circle"></i>{% endif %}
-                                {{ u.profile.get_status_display }}
-                            </span>
-                        {% else %}
-                            <span class="um-status auto">
-                                <i class="fas fa-bolt"></i> Auto-approved
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if u.profile.approved_by %}
-                            <span style="font-size:.82rem;color:#475569;">{{ u.profile.approved_by.profile.get_full_name|default:u.profile.approved_by.email }}</span>
-                            {% if u.profile.approved_at %}
-                                <br><span style="font-size:.72rem;color:#94a3b8;">{{ u.profile.approved_at|date:"M d, Y" }}</span>
-                            {% endif %}
-                        {% else %}
-                            <span style="font-size:.82rem;color:#d1d5db;">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if u.is_active %}
-                            <span class="um-active yes"><i class="fas fa-circle" style="font-size:.45rem;"></i> Active</span>
-                        {% else %}
-                            <span class="um-active no"><i class="fas fa-circle" style="font-size:.45rem;"></i> Inactive</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="um-date">{{ u.date_joined|date:"M d, Y" }}</span>
-                    </td>
-                    <td>
-                        <div class="um-actions" style="justify-content:center;">
-                            {% if u != request.user %}
-                                {% if u.profile.role != 'admin' or is_superuser %}
-                                    <a href="{% url 'admin_edit_user' u.id %}" class="um-act-btn edit" title="Edit">
-                                        <i class="fas fa-pen"></i>
-                                    </a>
-
-                                    {% if u.profile.role == 'contributor' and u.profile.status == 'pending' %}
-                                        <form method="POST" action="{% url 'admin_user_action' u.id %}" style="display:inline;">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="action" value="approve">
-                                            <button type="submit" class="um-act-btn approve" title="Approve">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                        </form>
-                                        <button type="button" class="um-act-btn reject" title="Reject"
-                                                data-bs-toggle="modal" data-bs-target="#rejectModal{{ u.id }}">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    {% endif %}
-
-                                    <form method="POST" action="{% url 'admin_user_action' u.id %}" style="display:inline;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="{% if u.is_active %}deactivate{% else %}activate{% endif %}">
-                                        <button type="submit" class="um-act-btn {% if u.is_active %}deactivate{% else %}activate{% endif %}"
-                                                title="{% if u.is_active %}Deactivate{% else %}Activate{% endif %}">
-                                            <i class="fas {% if u.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
-                                        </button>
-                                    </form>
-
-                                    <button type="button" class="um-act-btn delete" title="Delete"
-                                            data-bs-toggle="modal" data-bs-target="#deleteModal{{ u.id }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                {% else %}
-                                    <span style="font-size:.75rem;color:#94a3b8;">Protected</span>
-                                {% endif %}
-                            {% else %}
-                                <span style="font-size:.75rem;color:#94a3b8;">You</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">
-                        <div class="um-empty">
-                            <i class="fas fa-users-slash"></i>
-                            <h5>No users found</h5>
-                            <p>Try adjusting your filters or create a new user.</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-    </div>
-
-    <!-- Pagination -->
-    {% if page_obj.paginator.num_pages > 1 %}
-    <div class="um-pagination">
-        {% if page_obj.has_previous %}
-        <a class="um-page-btn" href="?{% if role_filter %}role={{ role_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ page_obj.previous_page_number }}"><i class="fas fa-chevron-left"></i></a>
-        {% else %}
-        <span class="um-page-btn disabled"><i class="fas fa-chevron-left"></i></span>
-        {% endif %}
-
-        {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-            <span class="um-page-btn active">{{ num }}</span>
-            {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
-            <a class="um-page-btn" href="?{% if role_filter %}role={{ role_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ num }}">{{ num }}</a>
-            {% endif %}
-        {% endfor %}
-
-        {% if page_obj.has_next %}
-        <a class="um-page-btn" href="?{% if role_filter %}role={{ role_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ page_obj.next_page_number }}"><i class="fas fa-chevron-right"></i></a>
-        {% else %}
-        <span class="um-page-btn disabled"><i class="fas fa-chevron-right"></i></span>
-        {% endif %}
-    </div>
-    {% endif %}
+<div id="umResults">
+    {% include "admin/manage_users/_results.html" %}
+</div>
 </div>
 
 <!-- Modals -->
@@ -552,34 +360,98 @@
 {% endfor %}
 
 <script>
-function toggleDrop(id) {
-    var el = document.getElementById(id);
-    var wasOpen = el.classList.contains('open');
-    document.querySelectorAll('.um-drop').forEach(function(d) { d.classList.remove('open'); });
-    if (!wasOpen) el.classList.add('open');
+var UM_AJAX_URL = "{% url 'admin_manage_users_ajax' %}";
+
+function curParams(){ return new URLSearchParams(window.location.search); }
+
+function applyUM(pStr){
+    if(typeof history.replaceState==='function'){ history.replaceState(null,'', pStr?('?'+pStr):window.location.pathname); }
+    updateUMUI();
+    var u = UM_AJAX_URL + (pStr?('?'+pStr):'');
+    fetch(u,{headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(function(r){return r.text();})
+        .then(function(html){var c=document.getElementById('umResults'); if(c){ c.innerHTML=html; var pg=c.querySelector('.um-pagination,.am-pagination'); if(pg){ pg.scrollIntoView({behavior:'smooth',block:'nearest'}); } }})
+        .catch(function(){});
 }
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.um-drop')) {
-        document.querySelectorAll('.um-drop').forEach(function(d) { d.classList.remove('open'); });
+
+function updateUMUI(){
+    var p=curParams();
+    var role=p.get('role')||'', status=p.get('status')||'', q=p.get('search')||'';
+    var si=document.getElementById('umSearchInput'); if(si) si.value=q;
+    var rv=document.getElementById('roleVal'); if(rv) rv.textContent = role?(' '+role):'';
+    var rb=document.getElementById('roleDropBtn'); if(rb) rb.classList.toggle('active', !!role);
+    var sv=document.getElementById('statusVal'); if(sv) sv.textContent = status?(' '+status):'';
+    var sb=document.getElementById('statusDropBtn'); if(sb) sb.classList.toggle('active', !!status);
+    document.querySelectorAll('#roleDrop .um-drop-opt').forEach(function(o){
+        var v=o.getAttribute('data-val')||''; var sel = v===role;
+        o.classList.toggle('selected', sel);
+        var ck=o.querySelector('.check'); if(ck) ck.innerHTML = sel?'<i class="fas fa-check"></i>':'';
+    });
+    document.querySelectorAll('#statusDrop .um-drop-opt').forEach(function(o){
+        var v=o.getAttribute('data-val')||''; var sel = v===status;
+        o.classList.toggle('selected', sel);
+        var ck=o.querySelector('.check'); if(ck) ck.innerHTML = sel?'<i class="fas fa-check"></i>':'';
+    });
+    var clrBtn=document.querySelector('.um-right .um-clear-toolbar');
+    if(clrBtn) clrBtn.classList.toggle('d-none', !(role||status||q));
+}
+
+function closeAllDrops(){ document.querySelectorAll('.um-drop').forEach(function(d){ d.classList.remove('open'); }); }
+
+window.setFilter=function(param,val){
+    var p=curParams();
+    if(val){ p.set(param,val); } else { p.delete(param); }
+    p.delete('page');
+    closeAllDrops();
+    applyUM(p.toString());
+};
+
+window.toggleDrop=function(id){
+    var el=document.getElementById(id);
+    var wasOpen=el.classList.contains('open');
+    closeAllDrops();
+    if(!wasOpen) el.classList.add('open');
+};
+document.addEventListener('click', function(e){
+    if(!e.target.closest('.um-drop')) closeAllDrops();
+});
+
+document.addEventListener('click', function(e){
+    var rm=e.target.closest('.um-chip-rm');
+    if(rm){ e.preventDefault(); var p=curParams(); p.delete(rm.getAttribute('data-clear')); p.delete('page'); applyUM(p.toString()); return; }
+    var cl=e.target.closest('.um-clear, .um-clear-toolbar');
+    if(cl){ e.preventDefault(); closeAllDrops(); applyUM(''); return; }
+    var pg=e.target.closest('a.um-page');
+    if(pg){ e.preventDefault(); var href=pg.getAttribute('href')||'?'; var qs=href.indexOf('?')>=0?href.slice(href.indexOf('?')+1):''; closeAllDrops(); applyUM(qs); return; }
+    var stl=e.target.closest('a.um-stat-link');
+    if(stl){ e.preventDefault(); closeAllDrops();
+        if(stl.hasAttribute('data-clear-all')){ applyUM(''); return; }
+        var p=curParams();
+        ['role','status','search'].forEach(function(k){p.delete(k);});
+        if(stl.getAttribute('data-role')) p.set('role', stl.getAttribute('data-role'));
+        if(stl.getAttribute('data-status')) p.set('status', stl.getAttribute('data-status'));
+        p.delete('page');
+        applyUM(p.toString()); return;
     }
 });
 
-function setFilter(param, val) {
-    var url = new URL(window.location);
-    if (val) {
-        url.searchParams.set(param, val);
-    } else {
-        url.searchParams.delete(param);
-    }
-    url.searchParams.delete('page');
-    window.location = url;
-}
+var umForm=document.getElementById('umSearchForm');
+if(umForm) umForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var q=document.getElementById('umSearchInput').value;
+    var p=curParams();
+    if(q) p.set('search',q); else p.delete('search');
+    p.delete('page');
+    applyUM(p.toString());
+});
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === '/' && !e.target.matches('input,textarea,select')) {
+document.addEventListener('keydown', function(e){
+    if(e.key==='/' && !e.target.matches('input,textarea,select')){
         e.preventDefault();
-        document.getElementById('umSearchInput').focus();
+        var s=document.getElementById('umSearchInput'); if(s) s.focus();
     }
 });
+
+updateUMUI();
 </script>
 {% endblock %}

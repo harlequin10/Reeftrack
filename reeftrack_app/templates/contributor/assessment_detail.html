@@ -198,7 +198,7 @@
                 {% regroup t.species_data.all by depth as depth_groups %}
                 {% for depth_group in depth_groups %}
                 <h6 class="{% if depth_group.grouper == 'shallow' %}text-info{% else %}text-primary{% endif %} mt-3" style="display:flex;align-items:center;justify-content:space-between;">
-                    <span><i class="fas fa-table"></i> {{ depth_group.grouper|title }} Species ({{ depth_group.list|length }})</span>
+                    <span><i class="fas fa-table"></i> {{ depth_group.grouper|title }} Sub Categories ({{ depth_group.list|length }})</span>
                     {% if depth_group.grouper == 'shallow' %}
                     {% with h=t.shallow_health %}
                     <span style="display:inline-flex;align-items:center;gap:0.3rem;border-radius:5px;padding:0.15rem 0.55rem;font-size:0.75rem;font-weight:600;background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
@@ -220,7 +220,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>#</th>
-                                <th>Species</th>
+                                <th>Sub Category</th>
                                 <th>Family</th>
                                 <th class="text-end">Cover %</th>
                             </tr>
@@ -246,13 +246,13 @@
         {% if not has_species_records and parsed_species %}
         <div class="card mb-4 rt-card">
             <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-file-excel"></i> Parsed Species from Excel Files</h6>
+                <h6 class="mb-0"><i class="fas fa-file-excel"></i> Parsed Sub Categories from Excel Files</h6>
             </div>
             <div class="card-body">
                 {% regroup parsed_species by depth as parsed_depth_groups %}
                 {% for depth_group in parsed_depth_groups %}
                 <h6 class="{% if depth_group.grouper == 'Shallow' %}text-info{% else %}text-primary{% endif %} mt-3">
-                    <i class="fas fa-table"></i> {{ depth_group.grouper }} Species ({{ depth_group.list|length }})
+                    <i class="fas fa-table"></i> {{ depth_group.grouper }} Sub Categories ({{ depth_group.list|length }})
                 </h6>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
@@ -260,7 +260,7 @@
                             <tr>
                                 <th>#</th>
                                 <th>Transect</th>
-                                <th>Species</th>
+                                <th>Sub Category</th>
                                 <th>Family</th>
                                 <th class="text-end">Cover %</th>
                             </tr>
@@ -285,7 +285,7 @@
 
         {% if not has_species_records and not parsed_species %}
         <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i> No species data available for this assessment.
+            <i class="fas fa-info-circle"></i> No sub category data available for this assessment.
         </div>
         {% endif %}
 

@@ -1,6 +1,6 @@
 {% extends 'admin/base_admin.html' %}
 {% load static %}
-{% block title %}{{ family_name }} Species - Admin - ReefTrack{% endblock %}
+{% block title %}{{ family_name }} - Coral Life Forms - Admin - ReefTrack{% endblock %}
 
 {% block content %}
 <style>
@@ -63,7 +63,7 @@
     <div class="sp-breadcrumb">
         <a href="{% url 'admin_dashboard' %}"><i class="fas fa-home"></i></a>
         <span class="sep">/</span>
-        <a href="{% url 'admin_manage_species' %}">Species</a>
+        <a href="{% url 'admin_manage_species' %}">Coral Life Forms</a>
         <span class="sep">/</span>
         <span>{{ family_name }}</span>
     </div>
@@ -75,12 +75,12 @@
             </a>
             <div>
                 <h3><i class="fas fa-fish"></i> {{ family_name }}</h3>
-                <p>{{ species_count }} species record{{ species_count|pluralize }} in this family</p>
+                <p>{{ species_count }} sub categor{{ species_count|pluralize:"y,ies" }} in this family</p>
             </div>
         </div>
         <div class="sp-header-right">
             <button class="sp-btn sp-btn-success" data-bs-toggle="modal" data-bs-target="#addSpeciesModal">
-                <i class="fas fa-plus"></i> Add Species
+                <i class="fas fa-plus"></i> Add Coral Life Form
             </button>
         </div>
     </div>
@@ -90,7 +90,7 @@
         <table class="sp-tbl">
             <thead>
                 <tr>
-                    <th>Species</th>
+                    <th>Sub Category</th>
                     <th>Code</th>
                     <th style="width:100px;text-align:center;">Actions</th>
                 </tr>
@@ -110,11 +110,11 @@
                     </td>
                     <td>
                         <div style="display:flex;gap:.35rem;justify-content:center;">
-                            <button class="sp-act edit" title="Edit species"
+                            <button class="sp-act edit" title="Edit coral life form"
                                     data-bs-toggle="modal" data-bs-target="#editSpecies{{ s.id }}">
                                 <i class="fas fa-pen"></i>
                             </button>
-                            <button class="sp-act delete" title="Delete species"
+                            <button class="sp-act delete" title="Delete coral life form"
                                     data-bs-toggle="modal" data-bs-target="#deleteSpecies{{ s.id }}">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -125,14 +125,14 @@
                             <div class="modal-dialog">
                                 <div class="modal-content">
                                     <div class="modal-header" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;">
-                                        <h5 class="modal-title"><i class="fas fa-pen"></i> Edit Species</h5>
+                                        <h5 class="modal-title"><i class="fas fa-pen"></i> Edit Coral Life Form</h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
                                     <form method="post" action="{% url 'admin_edit_species' s.id %}">
                                         {% csrf_token %}
                                         <div class="modal-body" style="padding-top:1.25rem;">
                                             <div class="mb-3">
-                                                <label class="form-label fw-bold" style="font-size:.85rem;">Species Name <span class="text-danger">*</span></label>
+                                                <label class="form-label fw-bold" style="font-size:.85rem;">Coral Life Form Name <span class="text-danger">*</span></label>
                                                 <input type="text" name="sub_category" class="form-control"
                                                        value="{{ s.sub_category }}" required style="border-radius:8px;">
                                             </div>
@@ -156,18 +156,33 @@
                             <div class="modal-dialog">
                                 <div class="modal-content">
                                     <div class="modal-header bg-danger text-white">
-                                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Delete Species</h5>
+                                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Delete Coral Life Form</h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body" style="padding-top:1rem;">
                                         <p style="color:#475569;">Delete <strong>{{ s.sub_category }}</strong> from <strong>{{ family_name }}</strong>?</p>
+                                        {% if s.id in used_species_ids %}
+                                        <div class="alert alert-danger d-flex align-items-start gap-2 mb-0" style="border-radius:10px;font-size:.85rem;">
+                                            <i class="fas fa-ban mt-1"></i>
+                                            <span>This coral life form <strong>cannot</strong> be deleted because it is used in an approved assessment.</span>
+                                        </div>
+                                        {% else %}
+                                        <div class="alert alert-warning d-flex align-items-start gap-2 mb-0" style="border-radius:10px;font-size:.85rem;">
+                                            <i class="fas fa-exclamation-circle mt-1"></i>
+                                            <span>This coral life form is <strong>not</strong> used in any approved assessment and can be safely deleted. This cannot be undone.</span>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                     <div class="modal-footer">
                                         <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                        {% if s.id in used_species_ids %}
+                                        <button type="button" class="btn btn-danger" disabled title="This coral life form is used in approved assessments"><i class="fas fa-ban"></i> Cannot Delete</button>
+                                        {% else %}
                                         <form action="{% url 'admin_delete_species' s.id %}" method="post" style="display:inline;">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
                                         </form>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -179,8 +194,8 @@
                     <td colspan="3">
                         <div class="sp-empty">
                             <i class="fas fa-fish"></i>
-                            <h5>No species found</h5>
-                            <p>Click <strong>Add Species</strong> to add the first species to this family.</p>
+                            <h5>No coral life forms found</h5>
+                            <p>Click <strong>Add Coral Life Form</strong> to add the first coral life form to this family.</p>
                         </div>
                     </td>
                 </tr>
@@ -196,17 +211,17 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;">
-                <h5 class="modal-title"><i class="fas fa-plus-circle"></i> Add Species to {{ family_name }}</h5>
+                <h5 class="modal-title"><i class="fas fa-plus-circle"></i> Add Coral Life Form to {{ family_name }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="{% url 'admin_add_species_in_family' family_name|urlencode %}">
                 {% csrf_token %}
                 <div class="modal-body" style="padding-top:1.25rem;">
                     <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.85rem;">Species Name <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold" style="font-size:.85rem;">Coral Life Form Name <span class="text-danger">*</span></label>
                         <input type="text" name="sub_category" class="form-control" required
                                placeholder="e.g. ACROPORA BRIDGESI" style="border-radius:8px;">
-                        <div class="form-text">Full species sub-category name</div>
+                        <div class="form-text">Full coral life form name</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold" style="font-size:.85rem;">Code</label>
@@ -216,7 +231,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add Species</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add Coral Life Form</button>
                 </div>
             </form>
         </div>

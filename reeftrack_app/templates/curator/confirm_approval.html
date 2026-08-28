@@ -282,13 +282,13 @@
                         <span class="badge bg-primary">Different Barangay</span>
                         {% endif %}
                     </p>
-                    <small>{{ warn.match_count }} of {{ warn.total }} species match exactly</small>
+                    <small>{{ warn.match_count }} of {{ warn.total }} sub categories match exactly</small>
                 </div>
                 <small class="text-nowrap ms-3"><i class="fas fa-external-link-alt"></i> View</small>
             </div>
             {% if warn.overlap_species %}
             <div class="mt-2">
-                <small class="fw-bold">Matching species:</small>
+                <small class="fw-bold">Matching sub categories:</small>
                 <div class="d-flex flex-wrap gap-1 mt-1">
                     {% for sp in warn.overlap_species %}
                     <span class="badge bg-secondary">{{ sp.0 }} ({{ sp.1 }}) — {{ sp.2 }}%</span>
@@ -307,11 +307,11 @@
 {% if new_species %}
 <div class="card mb-4 rt-card border-info">
     <div class="card-header bg-info text-white">
-        <h6 class="mb-0"><i class="fas fa-plus-circle"></i> New Species ({{ new_species|length }})</h6>
+        <h6 class="mb-0"><i class="fas fa-plus-circle"></i> New Sub Categories ({{ new_species|length }})</h6>
     </div>
     <div class="card-body">
         <div class="alert alert-info mb-3">
-            <i class="fas fa-info-circle"></i> These species do not exist in the Species reference table yet and will be created upon approval.
+            <i class="fas fa-info-circle"></i> These sub categories do not exist in the Sub Category reference table yet and will be created upon approval.
         </div>
         <div class="table-responsive">
             <table class="table table-sm">
@@ -344,7 +344,7 @@
 <!-- Species Data -->
 <div class="card mb-4 rt-card">
     <div class="card-header">
-        <h6 class="mb-0"><i class="fas fa-table"></i> Species Data ({{ all_species|length }} records)</h6>
+        <h6 class="mb-0"><i class="fas fa-table"></i> Sub Category Data ({{ all_species|length }} records)</h6>
     </div>
     <div class="card-body">
         {% regroup all_species by transect as transect_groups %}
@@ -354,7 +354,7 @@
         {% for dg in depth_groups %}
         <div class="ms-3 mb-3">
             <h6 class="{% if dg.grouper == 'Shallow' %}text-info{% else %}text-primary{% endif %}">
-                <i class="fas fa-layer-group"></i> {{ dg.grouper }} ({{ dg.list|length }} species)
+                <i class="fas fa-layer-group"></i> {{ dg.grouper }} ({{ dg.list|length }} sub categories)
             </h6>
             <div class="table-responsive">
                 <table class="table table-sm table-hover">

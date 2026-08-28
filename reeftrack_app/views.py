@@ -367,21 +367,19 @@ def admin_dashboard(request):
 
 @login_required
 @admin_required
-def admin_manage_users(request):
+def _admin_manage_users_filter_context(request):
     """
-    Admin view to manage all users with dropdown actions
-    Admins cannot see edit/delete options for other admins
+    Return the paginated/filtered users context shared by the full page and the
+    AJAX results partial. Keeps server-side filtering in one place.
     """
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
     users = User.objects.all().select_related('profile').order_by('-date_joined')
 
-    # Get filter parameters
     role_filter = request.GET.get('role', '')
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
 
-    # Apply filters
     if role_filter:
         users = users.filter(profile__role=role_filter)
     if status_filter:
@@ -395,7 +393,6 @@ def admin_manage_users(request):
 
     filtered_count = users.count()
 
-    # Paginate (10 users per page)
     paginator = Paginator(users, 10)
     page = request.GET.get('page', 1)
     try:
@@ -405,15 +402,28 @@ def admin_manage_users(request):
     except EmptyPage:
         users_page = paginator.page(paginator.num_pages)
 
-    # Stat counts (unfiltered)
-    all_users = User.objects.all().select_related('profile')
-    context = {
+    return {
         'users': users_page,
         'page_obj': users_page,
         'filtered_count': filtered_count,
         'role_filter': role_filter,
         'status_filter': status_filter,
         'search_query': search_query,
+    }
+
+
+@login_required
+@admin_required
+def admin_manage_users(request):
+    """
+    Admin view to manage all users with dropdown actions
+    Admins cannot see edit/delete options for other admins
+    """
+    context = _admin_manage_users_filter_context(request)
+
+    # Stat counts (unfiltered)
+    all_users = User.objects.all().select_related('profile')
+    context.update({
         'role_choices': UserProfile.ROLE_CHOICES,
         'status_choices': UserProfile.STATUS_CHOICES,
         'is_superuser': request.user.is_superuser,
@@ -421,9 +431,17 @@ def admin_manage_users(request):
         'role_curator_count': all_users.filter(profile__role='curator').count(),
         'role_contributor_count': all_users.filter(profile__role='contributor').count(),
         'pending_count': all_users.filter(profile__status='pending').count(),
-    }
+    })
 
     return render(request, 'admin/manage_users/index.html', context)
+
+
+@login_required
+@admin_required
+def admin_manage_users_ajax(request):
+    """AJAX: Render only the filtered users results (chips, info bar, table, pagination)."""
+    context = _admin_manage_users_filter_context(request)
+    return render(request, 'admin/manage_users/_results.html', context)
 
 @login_required
 @admin_required
@@ -957,7 +975,7 @@ def parse_cpc_excel(filepath):
 
     if not species_list:
         if not errors:
-            errors.append('No valid species data found. File must have rows with Sub Category, Major Category, and a positive numeric Mean value.')
+            errors.append('No valid sub category data found. File must have rows with Sub Category, Major Category, and a positive numeric Mean value.')
         return [], errors
 
     return species_list, errors
@@ -1126,11 +1144,11 @@ def check_duplicate_species(species_list, depth, pending_transects, barangay_id=
         overlap = species_set & other_set
         if len(overlap) == len(species_set) and len(species_set) == len(other_set) and len(species_set) > 0:
             warnings.append(
-                f'Duplicate detected: This {depth} file has the exact same {len(species_set)} species with identical cover values as Transect {t["transect_number"]} ({existing_key}).'
+                f'Duplicate detected: This {depth} file has the exact same {len(species_set)} sub categories with identical cover values as Transect {t["transect_number"]} ({existing_key}).'
             )
         elif len(overlap) > 0:
             warnings.append(
-                f'{len(overlap)} of {len(species_set)} species match exactly with Transect {t["transect_number"]} ({existing_key}) (same species + cover).'
+                f'{len(overlap)} of {len(species_set)} sub categories match exactly with Transect {t["transect_number"]} ({existing_key}) (same sub categories + cover).'
             )
 
     # 2. Check against previous assessments in DB
@@ -1174,23 +1192,23 @@ def check_duplicate_species(species_list, depth, pending_transects, barangay_id=
         if match_pct == 100 and len(species_set) == len(db_set):
             if assessment.barangay_id == int(barangay_id) if barangay_id else False:
                 warnings.append(
-                    f'EXACT DUPLICATE: This {depth} file matches 100% ({len(species_set)} species) with assessment #{assessment.id} '
+                    f'EXACT DUPLICATE: This {depth} file matches 100% ({len(species_set)} sub categories) with assessment #{assessment.id} '
                     f'({location}, {assessment.assessment_date}).'
                 )
             else:
                 warnings.append(
-                    f'EXACT DUPLICATE: This {depth} file matches 100% ({len(species_set)} species) with assessment #{assessment.id} '
+                    f'EXACT DUPLICATE: This {depth} file matches 100% ({len(species_set)} sub categories) with assessment #{assessment.id} '
                     f'at different location ({location}, {assessment.assessment_date}).'
                 )
         elif match_pct > 75:
             warnings.append(
                 f'High similarity ({match_pct:.0f}%) with assessment #{assessment.id} '
-                f'({location}, {assessment.assessment_date}): {len(overlap)}/{total} species match exactly.'
+                f'({location}, {assessment.assessment_date}): {len(overlap)}/{total} sub categories match exactly.'
             )
         elif match_pct > 50:
             warnings.append(
                 f'{match_pct:.0f}% similarity with assessment #{assessment.id} '
-                f'({location}, {assessment.assessment_date}): {len(overlap)}/{total} species match.'
+                f'({location}, {assessment.assessment_date}): {len(overlap)}/{total} sub categories match.'
             )
 
     return warnings
@@ -1227,7 +1245,7 @@ def get_review_warnings(all_species, assessment):
             overlap = shallow & deep
             if len(overlap) == len(shallow) and len(overlap) == len(deep) and len(overlap) > 0:
                 within_warnings.append({
-                    'message': f'Transect {tnum}: Shallow and Deep files have the exact same {len(overlap)} species with identical cover values.',
+                    'message': f'Transect {tnum}: Shallow and Deep files have the exact same {len(overlap)} sub categories with identical cover values.',
                     'severity': 'exact',
                     'overlap_count': len(overlap),
                     'total': len(overlap),
@@ -1237,7 +1255,7 @@ def get_review_warnings(all_species, assessment):
                 })
             elif len(overlap) > 0:
                 within_warnings.append({
-                    'message': f'Transect {tnum}: {len(overlap)} of {max(len(shallow), len(deep))} species are identical between Shallow and Deep.',
+                    'message': f'Transect {tnum}: {len(overlap)} of {max(len(shallow), len(deep))} sub categories are identical between Shallow and Deep.',
                     'severity': 'high',
                     'overlap_count': len(overlap),
                     'total': max(len(shallow), len(deep)),
@@ -1625,12 +1643,12 @@ def add_transect(request):
                 if shallow_errors:
                     file_errors.append(f"Shallow file: {'; '.join(shallow_errors)}")
                 else:
-                    file_errors.append("Shallow Excel has no valid species data")
+                    file_errors.append("Shallow Excel has no valid sub category data")
             if not transect_info['deep_species']:
                 if deep_errors:
                     file_errors.append(f"Deep file: {'; '.join(deep_errors)}")
                 else:
-                    file_errors.append("Deep Excel has no valid species data")
+                    file_errors.append("Deep Excel has no valid sub category data")
 
             if file_errors:
                 messages.error(request, 'Invalid Excel file(s). ' + ' | '.join(file_errors) + '. Please check the format (Sub Category, Major Category, Mean).')
@@ -1904,9 +1922,9 @@ def confirm_assessment(request):
         save_barangay_transect_coords(assessment)
         if pending.get('is_custom_methodology'):
             CustomMethodology.objects.get_or_create(name=pending['methodology'])
-        messages.success(request, f'Assessment auto-approved with {len(pending["transects"])} transect(s). {species_count} species record(s) created.')
+        messages.success(request, f'Assessment auto-approved with {len(pending["transects"])} transect(s). {species_count} sub category record(s) created.')
     else:
-        messages.success(request, f'Assessment submitted for review with {len(pending["transects"])} transect(s). Species will be recorded upon approval.')
+        messages.success(request, f'Assessment submitted for review with {len(pending["transects"])} transect(s). Sub categories will be recorded upon approval.')
 
     notify_assessment_refresh('submit')
 
@@ -2252,10 +2270,11 @@ def delete_assessment(request, assessment_id):
 
 # ==================== ADMIN ASSESSMENT REVIEW VIEWS ====================
 
-@login_required
-@admin_required
-def admin_assessments(request):
-    """Admin: List all assessments with filters, sorting, and search."""
+def _admin_assessments_filter_context(request):
+    """Return the paginated/filtered assessments context shared by the full page
+    and the AJAX results partial. Keeps server-side filtering in one place."""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
     assessments = Assessment.objects.select_related(
         'municipality', 'barangay', 'uploaded_by', 'reviewed_by'
     ).prefetch_related('transects').all()
@@ -2263,9 +2282,15 @@ def admin_assessments(request):
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
     municipality_filter = request.GET.get('municipality', '')
+    province_filter = request.GET.get('province', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     sort_by = request.GET.get('sort', '-assessment_date')
+
+    if not province_filter:
+        municipality_filter = ''
+    elif municipality_filter and not Municipality.objects.filter(id=municipality_filter, province__id=province_filter).exists():
+        municipality_filter = ''
 
     ALLOWED_SORTS = {
         'assessment_date': 'assessment_date',
@@ -2294,8 +2319,10 @@ def admin_assessments(request):
 
     if status_filter:
         assessments = assessments.filter(status=status_filter)
-    if municipality_filter:
+    if municipality_filter and province_filter:
         assessments = assessments.filter(municipality__id=municipality_filter)
+    if province_filter:
+        assessments = assessments.filter(municipality__province__id=province_filter)
     if date_from:
         try:
             assessments = assessments.filter(assessment_date__gte=date_from)
@@ -2308,9 +2335,9 @@ def admin_assessments(request):
             pass
     if search_query:
         assessments = assessments.filter(
-            Q(id__icontains=search_query) |
             Q(barangay__name__icontains=search_query) |
             Q(municipality__name__icontains=search_query) |
+            Q(municipality__province__name__icontains=search_query) |
             Q(uploaded_by__email__icontains=search_query) |
             Q(uploaded_by__first_name__icontains=search_query) |
             Q(uploaded_by__last_name__icontains=search_query) |
@@ -2323,7 +2350,6 @@ def admin_assessments(request):
     total_count = assessments.count()
 
     # Paginate (10 assessments per page)
-    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
     paginator = Paginator(assessments, 10)
     page = request.GET.get('page', 1)
     try:
@@ -2340,22 +2366,47 @@ def admin_assessments(request):
         'rejected': Assessment.objects.filter(status='rejected').count(),
     }
 
-    municipalities = Municipality.objects.order_by('name')
-
-    context = {
+    return {
         'assessments': assessments_page,
         'page_obj': assessments_page,
         'status_filter': status_filter,
         'search_query': search_query,
         'municipality_filter': municipality_filter,
+        'province_filter': province_filter,
         'date_from': date_from,
         'date_to': date_to,
         'sort_by': sort_by,
         'total_count': total_count,
         'stats': stats,
-        'municipalities': municipalities,
     }
+
+
+@login_required
+@admin_required
+def admin_assessments(request):
+    """Admin: List all assessments with filters, sorting, and search."""
+    context = _admin_assessments_filter_context(request)
+
+    municipalities = Municipality.objects.order_by('name')
+    provinces = Province.objects.order_by('name')
+    if context['province_filter']:
+        municipalities = municipalities.filter(province__id=context['province_filter'])
+
+    context.update({
+        'municipalities': municipalities,
+        'provinces': provinces,
+        'selected_province': Province.objects.filter(id=context['province_filter']).first() if context['province_filter'] else None,
+        'selected_municipality': Municipality.objects.filter(id=context['municipality_filter']).first() if context['municipality_filter'] else None,
+    })
     return render(request, 'admin/assessments/index.html', context)
+
+
+@login_required
+@admin_required
+def admin_assessments_ajax(request):
+    """AJAX: Render only the filtered results (chips, info bar, table, pagination)."""
+    context = _admin_assessments_filter_context(request)
+    return render(request, 'admin/assessments/_results.html', context)
 
 
 @login_required
@@ -2562,7 +2613,7 @@ def admin_assessment_action(request, assessment_id):
             save_barangay_transect_coords(assessment)
             if assessment.methodology not in built_in:
                 CustomMethodology.objects.get_or_create(name=assessment.methodology)
-            messages.success(request, f'Assessment #{assessment.id} approved. {species_count} species record(s) created.')
+            messages.success(request, f'Assessment #{assessment.id} approved. {species_count} sub category record(s) created.')
             log_security_event('assessment_approved', request=request, details={'assessment_id': assessment.id})
             if assessment.uploaded_by != request.user:
                 create_assessment_notification(
@@ -2617,7 +2668,7 @@ def admin_assessment_action(request, assessment_id):
                 orphan_ids = set(species_ids) - other_approved_species
                 if orphan_ids:
                     Species.objects.filter(id__in=orphan_ids, source=Species.SOURCE_ASSESSMENT).delete()
-            messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} species record(s) removed.')
+            messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} sub category record(s) removed.')
         else:
             messages.error(request, 'Invalid action.')
 
@@ -3247,8 +3298,14 @@ def admin_manage_species(request):
         .annotate(species_count=Count('id'))
         .order_by('major_category')
     )
+    in_use_families = set(
+        TransectSpecies.objects.filter(
+            transect__assessment__status='approved'
+        ).values_list('species__major_category', flat=True).distinct()
+    )
     return render(request, 'admin/species/index.html', {
         'families': families,
+        'in_use_families': in_use_families,
         'total_species': Species.objects.count(),
     })
 
@@ -3271,7 +3328,7 @@ def admin_add_family(request):
             Species.objects.create(sub_category=sub.strip().upper(), major_category=name.upper(), code=code)
         else:
             Species.objects.create(sub_category=f'OTHER {name.upper()}', major_category=name.upper(), code=code or name[:3].upper())
-        messages.success(request, f'Family "{name.upper()}" created with initial species.')
+        messages.success(request, f'Family "{name.upper()}" created with initial coral life form.')
     return redirect('admin_manage_species')
 
 
@@ -3285,10 +3342,16 @@ def admin_manage_family_species(request):
         return redirect('admin_manage_species')
 
     species_list = Species.objects.filter(major_category__iexact=family_name).order_by('sub_category')
+    used_species_ids = set(
+        TransectSpecies.objects.filter(
+            transect__assessment__status='approved'
+        ).values_list('species_id', flat=True).distinct()
+    )
     return render(request, 'admin/species/family_species.html', {
         'family_name': family_name,
         'species_list': species_list,
         'species_count': species_list.count(),
+        'used_species_ids': used_species_ids,
     })
 
 
@@ -3300,14 +3363,14 @@ def admin_add_species(request, family_name):
         sub_category = request.POST.get('sub_category', '').strip()
         code = request.POST.get('code', '').strip()
         if not sub_category:
-            messages.error(request, 'Species name is required.')
+            messages.error(request, 'Coral life form name is required.')
             return redirect('admin_manage_family_species_by_name', family_name=family_name)
         sub_category = sub_category.strip().upper()
         if Species.objects.filter(sub_category__iexact=sub_category, major_category__iexact=family_name).exists():
-            messages.error(request, f'Species "{sub_category}" already exists in {family_name}.')
+            messages.error(request, f'Coral life form "{sub_category}" already exists in {family_name}.')
             return redirect('admin_manage_family_species_by_name', family_name=family_name)
         Species.objects.create(sub_category=sub_category, major_category=family_name.strip().upper(), code=code)
-        messages.success(request, f'Species "{sub_category}" added to {family_name.upper()}.')
+        messages.success(request, f'Coral life form "{sub_category}" added to {family_name.upper()}.')
     return redirect('admin_manage_family_species_by_name', family_name=family_name)
 
 
@@ -3321,17 +3384,17 @@ def admin_edit_species(request, species_id):
         sub_category = request.POST.get('sub_category', '').strip()
         code = request.POST.get('code', '').strip()
         if not sub_category:
-            messages.error(request, 'Species name is required.')
+            messages.error(request, 'Coral life form name is required.')
             return redirect('admin_manage_family_species_by_name', family_name=family_name)
         sub_category = sub_category.strip().upper()
         if Species.objects.filter(sub_category__iexact=sub_category, major_category__iexact=family_name).exclude(id=species_id).exists():
-            messages.error(request, f'Species "{sub_category}" already exists in {family_name}.')
+            messages.error(request, f'Coral life form "{sub_category}" already exists in {family_name}.')
             return redirect('admin_manage_family_species_by_name', family_name=family_name)
         species.sub_category = sub_category
         species.major_category = family_name.strip().upper()
         species.code = code
         species.save()
-        messages.success(request, f'Species updated to "{sub_category}".')
+        messages.success(request, f'Coral life form updated to "{sub_category}".')
     return redirect('admin_manage_family_species_by_name', family_name=family_name)
 
 
@@ -3350,7 +3413,7 @@ def admin_delete_species(request, species_id):
             messages.error(request, f'Cannot delete "{name}" — it is used in an approved assessment.')
             return redirect('admin_manage_family_species_by_name', family_name=family_name)
         species.delete()
-        messages.success(request, f'Species "{name}" deleted.')
+        messages.success(request, f'Coral life form "{name}" deleted.')
     return redirect('admin_manage_family_species_by_name', family_name=family_name)
 
 
@@ -3364,11 +3427,11 @@ def admin_delete_family(request, family_name):
             species__in=species_in_family, transect__assessment__status='approved'
         ).exists()
         if has_approved:
-            messages.error(request, f'Cannot delete family "{family_name}" — some species are used in approved assessments.')
+            messages.error(request, f'Cannot delete family "{family_name}" — some coral life forms are used in approved assessments.')
             return redirect('admin_manage_species')
         count = species_in_family.count()
         species_in_family.delete()
-        messages.success(request, f'Family "{family_name}" and {count} species deleted.')
+        messages.success(request, f'Family "{family_name}" and {count} coral life forms deleted.')
     return redirect('admin_manage_species')
 
 
@@ -3584,7 +3647,7 @@ def curator_assessment_action(request, assessment_id):
             save_barangay_transect_coords(assessment)
             if assessment.methodology not in built_in:
                 CustomMethodology.objects.get_or_create(name=assessment.methodology)
-            messages.success(request, f'Assessment #{assessment.id} approved. {species_count} species record(s) created.')
+            messages.success(request, f'Assessment #{assessment.id} approved. {species_count} sub category record(s) created.')
             log_security_event('assessment_approved', request=request, details={'assessment_id': assessment.id})
             if assessment.uploaded_by != request.user:
                 create_assessment_notification(
@@ -3638,7 +3701,7 @@ def curator_assessment_action(request, assessment_id):
                 orphan_ids = set(species_ids) - other_approved_species
                 if orphan_ids:
                     Species.objects.filter(id__in=orphan_ids, source=Species.SOURCE_ASSESSMENT).delete()
-            messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} species record(s) removed.')
+            messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} sub category record(s) removed.')
         else:
             messages.error(request, 'Invalid action.')
 
@@ -3758,10 +3821,49 @@ def public_dashboard(request):
 
 @require_GET
 @cache_page(60 * 3)  # cache API response for 3 minutes
+def public_location_options(request):
+    """Public API: Return filter options (all provinces, and cascading municipalities/barangays)."""
+    province_id = request.GET.get('province_id')
+    municipality_id = request.GET.get('municipality_id')
+
+    latest = Assessment.objects.filter(status='approved').order_by('-assessment_date', '-approved_at').first()
+    latest_province_id = None
+    if latest:
+        latest_province_id = latest.municipality.province_id
+
+    response = {
+        'provinces': list(
+            Province.objects.order_by('name').values('id', 'name')
+        ),
+        'latest_province_id': latest_province_id,
+    }
+
+    if municipality_id:
+        response['barangays'] = list(
+            Barangay.objects.filter(municipality_id=municipality_id).order_by('name').values('id', 'name')
+        )
+    else:
+        response['barangays'] = []
+
+    if province_id:
+        response['municipalities'] = list(
+            Municipality.objects.filter(province_id=province_id).order_by('name').values('id', 'name')
+        )
+    else:
+        response['municipalities'] = list(
+            Municipality.objects.order_by('name').values('id', 'name')
+        )
+
+    return JsonResponse(response)
+
+
+@require_GET
+@cache_page(60 * 3)  # cache API response for 3 minutes
 def public_dashboard_data(request):
     """Public API: Return all approved assessment data for the map dashboard."""
     municipality_id = request.GET.get('municipality_id')
     barangay_id = request.GET.get('barangay_id')
+    province_id = request.GET.get('province_id')
     year_from = request.GET.get('year_from')
     year_to = request.GET.get('year_to')
     condition = request.GET.get('condition')
@@ -3774,6 +3876,8 @@ def public_dashboard_data(request):
         'transects__species_data__species'
     )
 
+    if province_id:
+        assessments = assessments.filter(municipality__province_id=province_id)
     if municipality_id:
         assessments = assessments.filter(municipality_id=municipality_id)
     if barangay_id:
@@ -3813,7 +3917,8 @@ def public_dashboard_data(request):
 
         if m_id not in municipalities:
             municipalities[m_id] = {
-                'id': m_id, 'name': m_name, 'province': a.municipality.province.name, 'barangays': {}
+                'id': m_id, 'name': m_name, 'province': a.municipality.province.name,
+                'province_id': a.municipality.province_id, 'barangays': {}
             }
         if b_id not in municipalities[m_id]['barangays']:
             municipalities[m_id]['barangays'][b_id] = {
@@ -3933,10 +4038,21 @@ def public_dashboard_data(request):
             'id': m_id,
             'name': m_data['name'],
             'province': m_data.get('province', ''),
+            'province_id': m_data.get('province_id'),
             'lat': m_lat,
             'lng': m_lng,
             'b': b_list,
         })
+
+    province_by_id = {}
+    provinces_by_name = {}
+    for m in result_m:
+        pname = m.get('province')
+        pid = m.get('province_id')
+        if pname and pid is not None and pname not in provinces_by_name:
+            provinces_by_name[pname] = True
+            province_by_id[pid] = pname
+    result_provinces = [{'id': pid, 'name': pname} for pid, pname in province_by_id.items()]
 
     result_t = []
     for year in sorted(trend_years.keys()):
@@ -3949,6 +4065,7 @@ def public_dashboard_data(request):
 
     return JsonResponse({
         'm': result_m,
+        'provinces': result_provinces,
         's': {
             'total_assessments': len(assessments),
         'total_transects': total_transects,

@@ -1,6 +1,6 @@
 {% extends 'admin/base_admin.html' %}
 {% load static %}
-{% block title %}Species Families - Admin - ReefTrack{% endblock %}
+{% block title %}Coral Life Forms - Admin - ReefTrack{% endblock %}
 
 {% block content %}
 <style>
@@ -76,7 +76,7 @@
     <div class="sp-breadcrumb">
         <a href="{% url 'admin_dashboard' %}"><i class="fas fa-home"></i></a>
         <span class="sep">/</span>
-        <a href="{% url 'admin_manage_species' %}">Species</a>
+        <a href="{% url 'admin_manage_species' %}">Coral Life Forms</a>
         <span class="sep">/</span>
         <span>Families</span>
     </div>
@@ -84,7 +84,7 @@
     <div class="sp-header">
         <div class="sp-header-left">
             <h3><i class="fas fa-fish"></i> Coral Families</h3>
-            <p>Manage coral taxonomic families and their species records</p>
+            <p>Manage coral taxonomic families and their coral life forms</p>
         </div>
         <div class="sp-header-right">
             <button class="sp-btn sp-btn-success" data-bs-toggle="modal" data-bs-target="#addFamilyModal">
@@ -106,7 +106,7 @@
                 <div class="sp-stat-val">{{ total_species }}</div>
                 <div class="sp-stat-icon"><i class="fas fa-fish"></i></div>
             </div>
-            <div class="sp-stat-lbl">Total Species</div>
+            <div class="sp-stat-lbl">Total Coral Life Forms</div>
         </div>
     </div>
 
@@ -116,7 +116,7 @@
             <thead>
                 <tr>
                     <th>Family</th>
-                    <th>Species</th>
+                    <th>Sub Category</th>
                     <th style="width:100px;text-align:center;">Actions</th>
                 </tr>
             </thead>
@@ -130,12 +130,12 @@
                     </td>
                     <td>
                         <a href="{% url 'admin_manage_family_species' %}?name={{ f.major_category|urlencode }}" class="sp-count">
-                            <i class="fas fa-fish"></i> {{ f.species_count }} species
+                            <i class="fas fa-fish"></i> {{ f.species_count }} sub category
                         </a>
                     </td>
                     <td>
                         <div class="sp-actions" style="display:flex;gap:.35rem;justify-content:center;">
-                            <a href="{% url 'admin_manage_family_species' %}?name={{ f.major_category|urlencode }}" class="sp-act view" title="View species">
+                            <a href="{% url 'admin_manage_family_species' %}?name={{ f.major_category|urlencode }}" class="sp-act view" title="View coral life forms">
                                 <i class="fas fa-eye"></i>
                             </a>
                             <button class="sp-act delete" title="Delete family"
@@ -152,18 +152,29 @@
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body" style="padding-top:1rem;">
-                                        <p style="color:#475569;">Delete family <strong>{{ f.major_category }}</strong> and all <strong>{{ f.species_count }}</strong> species inside it?</p>
+                                        <p style="color:#475569;">Delete family <strong>{{ f.major_category }}</strong> and all <strong>{{ f.species_count }}</strong> coral life forms inside it?</p>
+                                        {% if f.major_category in in_use_families %}
+                                        <div class="alert alert-danger d-flex align-items-start gap-2 mb-0" style="border-radius:10px;font-size:.85rem;">
+                                            <i class="fas fa-ban mt-1"></i>
+                                            <span>This family <strong>cannot</strong> be deleted because some of its coral life forms are used in approved assessments.</span>
+                                        </div>
+                                        {% else %}
                                         <div class="alert alert-warning d-flex align-items-start gap-2 mb-0" style="border-radius:10px;font-size:.85rem;">
                                             <i class="fas fa-exclamation-circle mt-1"></i>
-                                            <span>This cannot be undone. Species used in approved assessments cannot be deleted.</span>
+                                            <span>This family is <strong>not</strong> used in any approved assessment and can be safely deleted. This cannot be undone.</span>
                                         </div>
+                                        {% endif %}
                                     </div>
                                     <div class="modal-footer">
                                         <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                        {% if f.major_category in in_use_families %}
+                                        <button type="button" class="btn btn-danger" disabled title="This family is used in approved assessments"><i class="fas fa-ban"></i> Cannot Delete</button>
+                                        {% else %}
                                         <form action="{% url 'admin_delete_family' f.major_category|urlencode %}" method="post" style="display:inline;">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete Family</button>
                                         </form>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -205,13 +216,13 @@
                         <div class="form-text">Major category / family name (e.g. ACROPORA, PORITES)</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.85rem;">Initial Species</label>
+                        <label class="form-label fw-bold" style="font-size:.85rem;">Initial Coral Life Form</label>
                         <input type="text" name="sub_category" class="form-control"
                                placeholder="e.g. ACROPORA BRIDGESI" style="border-radius:8px;">
-                        <div class="form-text">Optional — first species to add to this family</div>
+                        <div class="form-text">Optional — first coral life form to add to this family</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.85rem;">Species Code</label>
+                        <label class="form-label fw-bold" style="font-size:.85rem;">Coral Life Form Code</label>
                         <input type="text" name="code" class="form-control"
                                placeholder="e.g. ACRO-01" style="border-radius:8px;">
                     </div>
