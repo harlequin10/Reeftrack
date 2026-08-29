@@ -82,10 +82,10 @@
                             <a href="{% url 'admin_confirm_approval' a.id %}" class="am-act am-act-r" title="Review & approve"><i class="fas fa-eye"></i></a>
                             {% endif %}
                             {% if a.status == 'rejected' %}
-                            <form method="POST" action="{% url 'delete_assessment' a.id %}" class="d-inline" style="margin:0;" onclick="event.stopPropagation()">
-                                {% csrf_token %}
-                                <button type="submit" class="am-act am-act-d" title="Delete" onclick="return confirm('Delete Assessment #{{ a.id }}?')"><i class="fas fa-trash-can"></i></button>
-                            </form>
+                            <button type="button" class="am-act am-act-d" title="Delete"
+                                    onclick="event.stopPropagation();openDeleteModal({{ a.id }}, '{{ a.barangay.name|escapejs }}, {{ a.municipality.name|escapejs }}', '{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email|escapejs }}')">
+                                <i class="fas fa-trash-can"></i>
+                            </button>
                             {% endif %}
                         </div>
                     </td>

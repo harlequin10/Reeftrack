@@ -2332,16 +2332,13 @@ def contributor_assessment_detail(request, assessment_id):
 @login_required
 @contributor_required
 def delete_assessment(request, assessment_id):
-    """Delete assessment. Curators cannot delete. Admin can delete rejected only. Contributors can delete submitted/rejected."""
+    """Delete an assessment. Admins can delete any rejected assessment; the
+    uploader (contributor or curator) can delete their own rejected assessment.
+    Submitted and approved assessments are protected from deletion."""
     if request.method != 'POST':
         return redirect('my_assessments')
 
     user_role = request.user.profile.role if hasattr(request.user, 'profile') else 'contributor'
-
-    # Curators cannot delete assessments
-    if user_role == 'curator':
-        messages.error(request, 'Curators do not have permission to delete assessments.')
-        return redirect('curator_assessments')
 
     with transaction.atomic():
         if user_role == 'admin':
@@ -2353,14 +2350,12 @@ def delete_assessment(request, assessment_id):
                 Assessment.objects.select_for_update(), id=assessment_id, uploaded_by=request.user
             )
 
-        # Admin can only delete rejected; contributors can delete submitted or rejected
-        if user_role == 'admin' and assessment.status != 'rejected':
-            messages.error(request, 'Admin can only delete rejected assessments.')
-            return redirect('admin_assessments')
-
-        if user_role == 'contributor' and assessment.status not in ('submitted', 'rejected'):
-            messages.error(request, 'You can only delete assessments that are pending or rejected.')
-            return redirect('my_assessments')
+        # Only rejected assessments can be deleted
+        if assessment.status != 'rejected':
+            messages.error(request, 'Only rejected assessments can be deleted.')
+            if user_role == 'admin':
+                return redirect('admin_assessments')
+            return redirect('curator_assessments' if user_role == 'curator' else 'my_assessments')
 
         # Delete associated files
         if assessment.thesis_pdf:
@@ -2388,6 +2383,8 @@ def delete_assessment(request, assessment_id):
         notify_assessment_refresh('delete')
     if user_role == 'admin':
         return redirect('admin_assessments')
+    if user_role == 'curator':
+        return redirect('curator_assessments')
     return redirect('my_assessments')
 
 

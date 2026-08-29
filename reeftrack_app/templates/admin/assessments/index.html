@@ -367,11 +367,47 @@
     </div>
 </div>
 
+<div class="modal fade" id="rowDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border:none;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div class="modal-header" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;padding:1.1rem 1.5rem;">
+                <h6 class="modal-title" style="font-weight:700;"><i class="fas fa-triangle-exclamation"></i> Delete Assessment</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="rowDeleteForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body" style="padding:1.5rem;">
+                    <p style="margin:0 0 .9rem;font-size:.9rem;color:#334155;">
+                        You are about to permanently delete <strong>this assessment</strong>.
+                        This action <strong>cannot be undone</strong>.
+                    </p>
+                    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;">
+                        <div style="display:flex;align-items:center;gap:.55rem;font-size:.82rem;color:#7f1d1d;">
+                            <i class="fas fa-map-pin"></i> <span id="rowDeleteLoc"></span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:.55rem;font-size:.82rem;color:#7f1d1d;margin-top:.4rem;">
+                            <i class="fas fa-user"></i> Uploaded by <span id="rowDeleteUser"></span>
+                        </div>
+                    </div>
+                    <p style="margin:0;font-size:.78rem;color:#991b1b;display:flex;gap:.4rem;align-items:center;">
+                        <i class="fas fa-circle-exclamation"></i> Only rejected assessments can be deleted. Submitted and approved assessments are protected.
+                    </p>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:.85rem 1.25rem;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px;font-weight:600;">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-danger" style="border-radius:8px;font-weight:600;"><i class="fas fa-trash-can"></i> Delete Assessment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="{% static 'js/assessment_sync.js' %}"></script>
 <script>
 (function(){
     var RTASSESS={
         'ajaxUrl':'{% url 'admin_assessments_ajax' %}',
+        'deleteUrl':'{% url 'delete_assessment' 0 %}',
         'provinces':{
             {% for p in provinces %}
             "{{ p.id }}":{"name":"{{ p.name|escapejs }}","munis":[{% for m in p.municipalities.all %}{% if not forloop.first %},{% endif %}["{{ m.id }}","{{ m.name|escapejs }}"]{% endfor %}]}{% if not forloop.last %},{% endif %}
@@ -425,6 +461,14 @@
 
     function updBulk(){var n=document.querySelectorAll('.assess-check:checked').length;var cnt=document.getElementById('bulkCount');if(cnt)cnt.textContent=n;var b=document.getElementById('bulkDeleteBtn');if(b)b.classList.toggle('d-none',n===0);}
     function bindBulk(){var sa=document.getElementById('selectAll');if(sa){sa.onchange=function(){var c=this.checked;document.querySelectorAll('.assess-check').forEach(function(cb){cb.checked=c;});updBulk();};}document.querySelectorAll('.assess-check').forEach(function(cb){cb.onchange=updBulk;});updBulk();}
+
+    window.openDeleteModal=function(id,loc,name){
+        document.getElementById('rowDeleteLoc').textContent=loc;
+        document.getElementById('rowDeleteUser').textContent=name||'—';
+        var form=document.getElementById('rowDeleteForm');
+        form.action=RTASSESS.deleteUrl.replace('0',String(id));
+        new bootstrap.Modal(document.getElementById('rowDeleteModal')).show();
+    };
 
     window.confirmBulkDelete=function(){
         var sel=[],skip=[];
