@@ -1,392 +1,616 @@
 {% extends 'curator/base_curator.html' %}
 
-{% block title %}Assessment #{{ assessment.id }} - Curator - ReefTrack{% endblock %}
+{% block title %}Assessment - Curator - ReefTrack{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-12 col-lg-10">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="mb-0">
-                    <i class="fas fa-clipboard-list"></i> Assessment #{{ assessment.id }}
-                    <span class="badge
-                        {% if assessment.status == 'approved' %}bg-success
-                        {% elif assessment.status == 'submitted' %}bg-warning text-dark
-                        {% elif assessment.status == 'rejected' %}bg-danger
-                        {% else %}bg-secondary{% endif %} ms-2">
-                        {{ assessment.get_status_display }}
+<style>
+    .dam-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1.25rem 1.5rem; border-radius: 10px;
+        background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+        border-left: 4px solid var(--rt-primary); margin-bottom: 1.5rem;
+    }
+    .dam-header-left { display: flex; align-items: center; gap: 0.75rem; }
+    .dam-header .icon {
+        width: 48px; height: 48px; border-radius: 12px;
+        background: linear-gradient(135deg, var(--rt-primary), var(--rt-navy));
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        font-size: 1.25rem; flex-shrink: 0;
+    }
+    .dam-header h4 { margin: 0; font-weight: 700; color: var(--rt-navy); font-size: 1.15rem; }
+    .dam-header small { color: #64748b; font-size: 0.82rem; }
+    .dam-header .back-btn {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.45rem 1rem; border-radius: 8px; border: 1px solid #cbd5e1;
+        background: #fff; color: #475569; font-size: 0.82rem; font-weight: 500;
+        text-decoration: none; transition: all 0.2s;
+    }
+    .dam-header .back-btn:hover { background: #f8fafc; border-color: #94a3b8; color: #1e293b; }
+
+    .dam-status-badge {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        border-radius: 6px; padding: 0.25rem 0.7rem; font-size: 0.78rem; font-weight: 600;
+    }
+    .dam-status-badge.approved { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border: 1px solid #86efac; color: #166534; }
+    .dam-status-badge.submitted { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b; color: #92400e; }
+    .dam-status-badge.rejected { background: linear-gradient(135deg, #fee2e2, #fecaca); border: 1px solid #f87171; color: #991b1b; }
+
+    .dam-section {
+        background: #fff; border-radius: 10px; border: 1px solid #e5e7eb;
+        margin-bottom: 1.25rem; overflow: hidden;
+    }
+    .dam-section-header {
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        background: #f8fafc; border-bottom: 1px solid #e5e7eb;
+        font-weight: 600; font-size: 0.88rem; color: #1e293b;
+    }
+    .dam-section-header i { color: var(--rt-primary); font-size: 0.9rem; }
+    .dam-section-body { padding: 1.25rem; }
+
+    .dam-info-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+    .dam-info-item {
+        background: #f8fafc; border-radius: 8px; padding: 0.75rem 1rem;
+        border: 1px solid #f1f5f9;
+    }
+    .dam-info-item .label {
+        font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.6px;
+        color: #94a3b8; font-weight: 600; margin-bottom: 0.2rem;
+    }
+    .dam-info-item .value { font-size: 0.92rem; font-weight: 600; color: #1e293b; }
+
+    .dam-desc-box {
+        background: #f8fafc; border-radius: 8px; padding: 1rem 1.25rem;
+        border: 1px solid #f1f5f9; margin-top: 1rem;
+    }
+    .dam-desc-box .label {
+        font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.6px;
+        color: #94a3b8; font-weight: 600; margin-bottom: 0.3rem;
+    }
+    .dam-desc-box .value { font-size: 0.9rem; color: #334155; line-height: 1.5; }
+
+    .dam-contrib-tag {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        border: 1px solid #cbd5e1; border-radius: 6px;
+        padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight: 500;
+        color: #475569;
+    }
+
+    .dam-condition-badge {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        border-radius: 6px; padding: 0.2rem 0.6rem; font-size: 0.78rem; font-weight: 600;
+    }
+
+    .dam-map-container {
+        height: 320px; border-radius: 8px; border: 1px solid #e5e7eb;
+        margin-bottom: 1rem; overflow: hidden;
+    }
+    .dam-map-legend { display: flex; gap: 1.5rem; padding: 0.6rem 0; margin-bottom: 0.5rem; }
+    .dam-map-legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #64748b; }
+    .dam-map-legend-line { width: 20px; height: 3px; border-radius: 2px; }
+
+    .dam-transect {
+        border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;
+        margin-bottom: 0.75rem;
+    }
+    .dam-transect-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.65rem 1rem;
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        color: #fff; font-weight: 600; font-size: 0.85rem;
+    }
+    .dam-transect-body { padding: 1rem; }
+    .dam-depth-header {
+        display: flex; align-items: center; gap: 0.4rem;
+        font-weight: 600; font-size: 0.85rem; margin: 0.75rem 0 0.4rem;
+        padding: 0.3rem 0.6rem; border-radius: 6px;
+    }
+    .dam-depth-header.shallow { background: #ecfeff; color: #0891b2; }
+    .dam-depth-header.deep { background: #eff6ff; color: #2563eb; }
+    .dam-depth-health-badge {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        border-radius: 5px; padding: 0.15rem 0.55rem; font-size: 0.75rem; font-weight: 600;
+        margin-left: auto;
+    }
+    .dam-depth-health-badge .health-dot {
+        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dam-gps-tag {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        background: #eff6ff; color: #1d4ed8; border-radius: 5px;
+        padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 500;
+        border: 1px solid #bfdbfe;
+    }
+    .dam-excel-tag {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        background: #f0fdf4; color: #15803d; border-radius: 5px;
+        padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 500;
+        border: 1px solid #bbf7d0;
+    }
+
+    .dam-species-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .dam-species-table th {
+        background: #f1f5f9; font-size: 0.72rem; text-transform: uppercase;
+        letter-spacing: 0.5px; color: #64748b; font-weight: 600;
+        padding: 0.6rem 0.8rem; border-bottom: 2px solid #e2e8f0;
+    }
+    .dam-species-table td {
+        padding: 0.55rem 0.8rem; font-size: 0.85rem; color: #334155;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .dam-species-table tr:last-child td { border-bottom: none; }
+    .dam-species-table tr:hover td { background: #f8fafc; }
+    .dam-family-badge {
+        display: inline-flex; align-items: center; gap: 0.25rem;
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        border: 1px solid #cbd5e1; border-radius: 5px;
+        padding: 0.15rem 0.5rem; font-size: 0.75rem; font-weight: 600;
+        color: #475569;
+    }
+
+    .dam-pdf-link {
+        display: inline-flex; align-items: center; gap: 0.6rem;
+        background: linear-gradient(135deg, #fef2f2, #fee2e2);
+        border: 1px solid #fca5a5; border-radius: 8px;
+        padding: 0.7rem 1.2rem; text-decoration: none;
+        color: #991b1b; font-weight: 600; font-size: 0.88rem;
+        transition: all 0.2s;
+    }
+    .dam-pdf-link:hover { background: #fee2e2; color: #7f1d1d; transform: translateY(-1px); }
+    .dam-pdf-link .sub { font-weight: 400; font-size: 0.75rem; opacity: 0.8; }
+
+    .dam-img-carousel { border-radius: 8px; overflow: hidden; background: #0f172a; }
+    .dam-img-carousel img { max-height: 450px; object-fit: contain; }
+
+    .dam-warn-card {
+        border-radius: 10px; overflow: hidden; margin-bottom: 0.75rem;
+        border: 1px solid #e5e7eb; background: #fff;
+        transition: box-shadow 0.2s;
+    }
+    .dam-warn-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .dam-warn-card.exact { border-left: 4px solid #dc2626; }
+    .dam-warn-card.similar { border-left: 4px solid #f59e0b; }
+    .dam-warn-card-body { padding: 1rem 1.25rem; }
+    .dam-warn-title {
+        display: flex; align-items: center; gap: 0.5rem;
+        font-weight: 700; font-size: 0.85rem; letter-spacing: 0.3px;
+    }
+    .dam-warn-title .warn-icon {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 28px; height: 28px; border-radius: 8px; font-size: 0.75rem; flex-shrink: 0;
+    }
+    .dam-warn-title.exact { color: #991b1b; }
+    .dam-warn-title.exact .warn-icon { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .dam-warn-title.similar { color: #92400e; }
+    .dam-warn-title.similar .warn-icon { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .dam-warn-meta { font-size: 0.82rem; color: #64748b; margin-top: 0.4rem; line-height: 1.5; }
+    .dam-warn-detail-row {
+        display: flex; align-items: center; gap: 0.5rem;
+        font-size: 0.82rem; color: #475569; margin-top: 0.3rem;
+    }
+    .dam-warn-detail-row i { font-size: 0.7rem; color: #94a3b8; }
+    .dam-warn-badge {
+        display: inline-flex; align-items: center; gap: 0.25rem;
+        border-radius: 5px; padding: 0.15rem 0.5rem;
+        font-size: 0.72rem; font-weight: 600;
+    }
+    .dam-warn-badge.critical { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .dam-warn-badge.warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+
+    .dam-actions {
+        background: #fff; border-radius: 10px; border: 1px solid #e5e7eb;
+        padding: 1.5rem; margin-bottom: 2rem;
+    }
+    .dam-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .dam-btn-approve {
+        display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        width: 100%; padding: 0.85rem 1rem; border: none; border-radius: 8px;
+        font-size: 0.95rem; font-weight: 600; cursor: pointer;
+        background: linear-gradient(135deg, #16a34a, #15803d);
+        color: #fff; transition: all 0.2s; text-decoration: none;
+    }
+    .dam-btn-approve:hover { background: linear-gradient(135deg, #15803d, #166534); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,0.3); color: #fff; }
+    .dam-btn-reject {
+        display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .dam-btn-reject textarea {
+        border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.6rem 0.8rem;
+        font-size: 0.85rem; resize: vertical; width: 100%;
+    }
+    .dam-btn-reject textarea:focus { border-color: #f87171; box-shadow: 0 0 0 3px rgba(248,113,113,0.15); outline: none; }
+    .dam-btn-reject button {
+        display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        width: 100%; padding: 0.85rem 1rem; border: none; border-radius: 8px;
+        font-size: 0.95rem; font-weight: 600; cursor: pointer;
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        color: #fff; transition: all 0.2s;
+    }
+    .dam-btn-reject button:hover { background: linear-gradient(135deg, #b91c1c, #991b1b); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(220,38,38,0.3); }
+    .dam-btn-return {
+        display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        width: 100%; padding: 0.85rem 1rem; border: 2px solid #e2e8f0; border-radius: 8px;
+        font-size: 0.95rem; font-weight: 600; cursor: pointer;
+        background: #fff; color: #64748b; transition: all 0.2s; text-decoration: none;
+    }
+    .dam-btn-return:hover { background: #f8fafc; border-color: #cbd5e1; color: #334155; }
+
+    .dam-rejection-box {
+        background: linear-gradient(135deg, #fef2f2, #fee2e2);
+        border: 1px solid #fecaca; border-radius: 8px;
+        padding: 0.75rem 1rem; margin-top: 0.75rem;
+    }
+    .dam-rejection-box .label {
+        font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.6px;
+        color: #991b1b; font-weight: 600; margin-bottom: 0.3rem;
+    }
+    .dam-rejection-box .value { font-size: 0.88rem; color: #7f1d1d; line-height: 1.5; }
+
+    @media (max-width: 768px) {
+        .dam-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+        .dam-info-grid { grid-template-columns: 1fr 1fr; }
+        .dam-actions-grid { grid-template-columns: 1fr; }
+        .dam-map-container { height: 250px; }
+    }
+    @media (max-width: 480px) {
+        .dam-info-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="dam-header">
+    <div class="dam-header-left">
+        <div class="icon"><i class="fas fa-clipboard-list"></i></div>
+        <div>
+            <h4>Assessment
+                {% if assessment.status == 'approved' %}
+                <span class="dam-status-badge approved"><i class="fas fa-check-circle"></i> Approved</span>
+                {% elif assessment.status == 'submitted' %}
+                <span class="dam-status-badge submitted"><i class="fas fa-clock"></i> Pending Review</span>
+                {% elif assessment.status == 'rejected' %}
+                <span class="dam-status-badge rejected"><i class="fas fa-times-circle"></i> Rejected</span>
+                {% endif %}
+            </h4>
+            <small>{{ assessment.barangay.name }}, {{ assessment.municipality.name }}, {{ assessment.municipality.province.name }} — {{ assessment.assessment_date }}</small>
+        </div>
+    </div>
+    <a href="{% url 'curator_assessments' %}" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<!-- Assessment Info -->
+<div class="dam-section">
+    <div class="dam-section-header">
+        <i class="fas fa-info-circle"></i> Assessment Details
+    </div>
+    <div class="dam-section-body">
+        <div class="dam-info-grid">
+            <div class="dam-info-item">
+                <div class="label">Province</div>
+                <div class="value">{{ assessment.municipality.province.name }}</div>
+            </div>
+            <div class="dam-info-item">
+                <div class="label">Municipality</div>
+                <div class="value">{{ assessment.municipality.name }}</div>
+            </div>
+            <div class="dam-info-item">
+                <div class="label">Barangay</div>
+                <div class="value">{{ assessment.barangay.name }}</div>
+            </div>
+            <div class="dam-info-item">
+                <div class="label">Assessment Date</div>
+                <div class="value">{{ assessment.assessment_date|date:"M d, Y" }}</div>
+            </div>
+            <div class="dam-info-item">
+                <div class="label">Methodology</div>
+                <div class="value">{{ assessment.get_methodology_display_name }}</div>
+            </div>
+            <div class="dam-info-item">
+                <div class="label">Uploaded By</div>
+                <div class="value">{{ assessment.uploaded_by.profile.get_full_name|default:assessment.uploaded_by.email }}</div>
+            </div>
+            <div class="dam-info-item">
+                <div class="label">Coral Cover</div>
+                <div class="value">{% if assessment.overall_coral_cover %}{{ assessment.overall_coral_cover }}%{% else %}—{% endif %}</div>
+            </div>
+            <div class="dam-info-item">
+                <div class="label">Condition</div>
+                <div class="value">
+                    {% if assessment.condition %}
+                    <span class="dam-condition-badge" style="background:{% if assessment.condition == 'excellent' %}linear-gradient(135deg,#dcfce7,#bbf7d0);border:1px solid #86efac;color:#166534;{% elif assessment.condition == 'good' %}linear-gradient(135deg,#dbeafe,#bfdbfe);border:1px solid #93c5fd;color:#1e40af;{% elif assessment.condition == 'fair' %}linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;color:#92400e;{% else %}linear-gradient(135deg,#fee2e2,#fecaca);border:1px solid #fca5a5;color:#991b1b;{% endif %}">
+                        {{ assessment.get_condition_display|title }}
                     </span>
-                </h4>
+                    {% else %}—{% endif %}
+                </div>
             </div>
-            <a href="{% url 'curator_assessments' %}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to List
-            </a>
-        </div>
-
-        <!-- Assessment Info -->
-        <div class="card mb-4">
-            <div class="card-header bg-light">
-                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Assessment Details</h6>
+            <div class="dam-info-item">
+                <div class="label">Reviewed By</div>
+                <div class="value">{% if assessment.reviewed_by %}{{ assessment.reviewed_by.profile.get_full_name|default:assessment.reviewed_by.email }}{% else %}—{% endif %}</div>
             </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Province</small><br>
-                        <strong>{{ assessment.municipality.province.name }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Municipality</small><br>
-                        <strong>{{ assessment.municipality.name }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Barangay</small><br>
-                        <strong>{{ assessment.barangay.name }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Date</small><br>
-                        <strong>{{ assessment.assessment_date|date:"M d, Y" }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Methodology</small><br>
-                        <strong>{{ assessment.get_methodology_display }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Uploaded By</small><br>
-                        <strong>{{ assessment.uploaded_by.profile.get_full_name|default:assessment.uploaded_by.email }}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Coral Cover</small><br>
-                        <strong>{% if assessment.overall_coral_cover %}{{ assessment.overall_coral_cover }}%{% else %}-{% endif %}</strong>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Condition</small><br>
-                        {% if assessment.condition %}
-                            <span class="badge
-                                {% if assessment.condition == 'excellent' %}bg-success
-                                {% elif assessment.condition == 'good' %}bg-primary
-                                {% elif assessment.condition == 'fair' %}bg-warning text-dark
-                                {% else %}bg-danger{% endif %}">
-                                {{ assessment.get_condition_display }}
-                            </span>
-                        {% else %}-{% endif %}
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <small class="text-muted">Reviewed By</small><br>
-                        <strong>{% if assessment.reviewed_by %}{{ assessment.reviewed_by.profile.get_full_name|default:assessment.reviewed_by.email }}{% else %}-{% endif %}</strong>
-                    </div>
-                    {% if assessment.description %}
-                    <div class="col-12">
-                        <small class="text-muted">Description</small><br>
-                        <strong>{{ assessment.description }}</strong>
-                    </div>
-                    {% endif %}
-                    {% if assessment.contributors.all %}
-                    <div class="col-12">
-                        <small class="text-muted">Contributors</small><br>
-                        {% for c in assessment.contributors.all %}
-                        <span class="badge bg-secondary me-1 d-inline-flex align-items-center gap-1" style="padding:.35rem .6rem;">
-                            {% if c.profile.profile_picture %}
-                            <img src="{{ c.profile.profile_picture.url }}" class="rounded-circle" style="width:18px;height:18px;object-fit:cover;" alt="">
-                            {% else %}
-                            <span class="rounded-circle bg-white d-inline-flex align-items-center justify-content-center" style="width:18px;height:18px;font-size:.6rem;font-weight:700;color:#475569;">{{ c.get_full_name|slice:":1" }}</span>
-                            {% endif %}
-                            {{ c.get_full_name }}
-                        </span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-
-                {% if assessment.thesis_pdf %}
-                <div class="mt-3">
-                    <a href="{{ assessment.thesis_pdf.url }}" class="btn btn-sm btn-outline-danger" target="_blank">
-                        <i class="fas fa-file-pdf"></i> View Thesis PDF
-                    </a>
-                </div>
-                {% endif %}
-
-                {% if assessment.notes %}
-                <div class="mt-3">
-                    <small class="text-muted">Rejection Reason:</small><br>
-                    <div class="alert alert-danger py-2 mb-0">{{ assessment.notes }}</div>
-                </div>
-                {% endif %}
+            {% if assessment.approved_at %}
+            <div class="dam-info-item">
+                <div class="label">Approved On</div>
+                <div class="value">{{ assessment.approved_at|date:"M d, Y H:i" }}</div>
+            </div>
+            {% endif %}
+            <div class="dam-info-item">
+                <div class="label">Date Submitted</div>
+                <div class="value">{{ assessment.created_at|date:"M d, Y H:i" }}</div>
             </div>
         </div>
-
-
-
-        {% if assessment.images.all %}
-        <div class="card mb-4 rt-card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-images"></i> Assessment Images ({{ assessment.images.count }})</h6>
-            </div>
-            <div class="card-body">
-                <div id="imgCarousel" class="carousel slide" data-bs-ride="false">
-                    <div class="carousel-inner" style="border-radius:8px; overflow:hidden; background:#000;">
-                        {% for img in assessment.images.all %}
-                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                            <img src="{{ img.image.url }}" class="d-block w-100" style="max-height:500px; object-fit:contain;" alt="{{ img.caption|default:'Assessment image' }}">
-                            {% if img.caption %}
-                            <div class="carousel-caption d-none d-md-block" style="background:rgba(0,0,0,0.5); border-radius:4px; padding:4px 12px;">
-                                <small>{{ img.caption }}</small>
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% if assessment.images.count > 1 %}
-                    <button class="carousel-control-prev" type="button" data-bs-target="#imgCarousel" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.6));"></span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#imgCarousel" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.6));"></span>
-                    </button>
-                    {% endif %}
-                </div>
-                {% if assessment.images.count > 1 %}
-                <div class="text-center mt-2">
-                    <small class="text-muted">Use arrows to navigate ({{ assessment.images.count }} images)</small>
-                </div>
-                {% endif %}
-            </div>
+        {% if assessment.description %}
+        <div class="dam-desc-box">
+            <div class="label">Description</div>
+            <div class="value">{{ assessment.description }}</div>
         </div>
         {% endif %}
-
-        <!-- Transects -->
-        <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
-        <div class="card mb-4 border-primary">
-            <div class="card-header bg-primary text-white">
-                <h6 class="mb-0"><i class="fas fa-map-marked-alt"></i> Transect Locations</h6>
-            </div>
-            <div class="card-body">
-                <div id="transectMap" style="height:350px; border-radius:8px; border:1px solid #dee2e6; margin-bottom:1rem;"></div>
-                <div class="d-flex gap-3 mb-0">
-                    <small><span style="display:inline-block;width:14px;height:3px;background:#0dcaf0;vertical-align:middle;"></span> Shallow transect</small>
-                    <small><span style="display:inline-block;width:14px;height:3px;background:#0d6efd;vertical-align:middle;"></span> Deep transect</small>
-                </div>
-            </div>
-        </div>
-        {% for t in transects %}
-        <div class="card mb-4 border-primary">
-            <div class="card-header bg-primary text-white d-flex justify-content-between">
-                <h6 class="mb-0"><i class="fas fa-ruler-horizontal"></i> Transect {{ t.transect_number }}</h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <h6 class="text-info"><i class="fas fa-water"></i> Shallow</h6>
-                        <small>
-                            {% if t.shallow_start_lat or t.shallow_end_lat %}
-                                Start: {{ t.shallow_start_lat|default:"-" }}, {{ t.shallow_start_lng|default:"-" }}<br>
-                                End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}<br>
-                                {% if t.shallow_length %}<strong>{{ t.shallow_length }} m</strong>{% endif %}
-                                {% if t.shallow_depth %}<br><strong class="text-info"><i class="fas fa-arrows-up-down"></i> Est. Depth: {{ t.shallow_depth }} m</strong>{% endif %}
-                            {% else %}
-                                <span class="text-muted">No coordinates</span>
-                            {% endif %}
-                        </small>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-primary"><i class="fas fa-water"></i> Deep</h6>
-                        <small>
-                            {% if t.deep_start_lat or t.deep_end_lat %}
-                                Start: {{ t.deep_start_lat|default:"-" }}, {{ t.deep_start_lng|default:"-" }}<br>
-                                End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}<br>
-                                {% if t.deep_length %}<strong>{{ t.deep_length }} m</strong>{% endif %}
-                                {% if t.deep_depth %}<br><strong class="text-primary"><i class="fas fa-arrows-up-down"></i> Est. Depth: {{ t.deep_depth }} m</strong>{% endif %}
-                            {% else %}
-                                <span class="text-muted">No coordinates</span>
-                            {% endif %}
-                        </small>
-                    </div>
-                </div>
-
-                <!-- Species by depth -->
-                {% if has_species_records %}
-                {% regroup t.species_data.all by depth as depth_groups %}
-                {% for depth_group in depth_groups %}
-                <h6 class="{% if depth_group.grouper == 'shallow' %}text-info{% else %}text-primary{% endif %} mt-3" style="display:flex;align-items:center;justify-content:space-between;">
-                    <span><i class="fas fa-table"></i> {{ depth_group.grouper|title }} Sub Categories ({{ depth_group.list|length }})</span>
-                    {% if depth_group.grouper == 'shallow' %}
-                    {% with h=t.shallow_health %}
-                    <span style="display:inline-flex;align-items:center;gap:0.3rem;border-radius:5px;padding:0.15rem 0.55rem;font-size:0.75rem;font-weight:600;background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
-                        <span style="width:7px;height:7px;border-radius:50%;background:{{ h.color }};flex-shrink:0;"></span>
-                        {{ h.label }} · {{ h.avg|floatformat:1 }}%
-                    </span>
-                    {% endwith %}
-                    {% else %}
-                    {% with h=t.deep_health %}
-                    <span style="display:inline-flex;align-items:center;gap:0.3rem;border-radius:5px;padding:0.15rem 0.55rem;font-size:0.75rem;font-weight:600;background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
-                        <span style="width:7px;height:7px;border-radius:50%;background:{{ h.color }};flex-shrink:0;"></span>
-                        {{ h.label }} · {{ h.avg|floatformat:1 }}%
-                    </span>
-                    {% endwith %}
-                    {% endif %}
-                </h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Sub Category</th>
-                                <th>Family</th>
-                                <th class="text-end">Cover %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for ts in depth_group.list %}
-                            <tr>
-                                <td>{{ forloop.counter }}</td>
-                                <td>{{ ts.species.display_sub_category }}</td>
-                                <td><span class="badge bg-secondary">{{ ts.species.display_major_category }}</span></td>
-                                <td class="text-end"><strong>{{ ts.cover }}</strong></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endfor %}
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-
-        {% if not has_species_records and parsed_species %}
-        <div class="card mb-4 rt-card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-file-excel"></i> Parsed Sub Categories from Excel Files</h6>
-            </div>
-            <div class="card-body">
-                {% regroup parsed_species by depth as parsed_depth_groups %}
-                {% for depth_group in parsed_depth_groups %}
-                <h6 class="{% if depth_group.grouper == 'Shallow' %}text-info{% else %}text-primary{% endif %} mt-3">
-                    <i class="fas fa-table"></i> {{ depth_group.grouper }} Sub Categories ({{ depth_group.list|length }})
-                </h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Transect</th>
-                                <th>Sub Category</th>
-                                <th>Family</th>
-                                <th class="text-end">Cover %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for sp in depth_group.list %}
-                            <tr>
-                                <td>{{ forloop.counter }}</td>
-                                <td>T{{ sp.transect_number }}</td>
-                                <td>{{ sp.display_sub_category }}</td>
-                                <td><span class="badge bg-secondary">{{ sp.display_major_category }}</span></td>
-                                <td class="text-end"><strong>{{ sp.cover|floatformat:1 }}</strong></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+        {% if assessment.contributors.all %}
+        <div class="mt-3">
+            <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.6px;color:#94a3b8;font-weight:600;margin-bottom:0.4rem;">Contributors</div>
+            <div class="d-flex flex-wrap gap-2">
+                {% for c in assessment.contributors.all %}
+                <span class="dam-contrib-tag">{% if c.profile.profile_picture %}<img src="{{ c.profile.profile_picture.url }}" class="rounded-circle" style="width:16px;height:16px;object-fit:cover;" alt="">{% else %}<i class="fas fa-user"></i>{% endif %} {{ c.get_full_name }}</span>
                 {% endfor %}
             </div>
         </div>
         {% endif %}
-
-        <!-- Potential Duplicates -->
-        {% if similar_assessments %}
-        <div class="card mb-4 border-danger">
-            <div class="card-header bg-danger text-white">
-                <h6 class="mb-0"><i class="fas fa-copy"></i> Potential Duplicate Assessments</h6>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-warning py-2 mb-3">
-                    <i class="fas fa-exclamation-triangle me-1"></i>
-                    <strong>This assessment's sub category data overlaps with previous assessments.</strong>
-                    Review carefully before approving.
-                </div>
-                {% for sim in similar_assessments %}
-                <div class="card mb-2 {% if sim.is_exact %}border-danger{% else %}border-warning{% endif %}">
-                    <div class="card-body py-2">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <strong>
-                                    Assessment #{{ sim.assessment.id }}
-                                    {% if sim.is_exact %}
-                                        <span class="badge bg-danger ms-1">EXACT DUPLICATE</span>
-                                    {% elif sim.match_pct >= 75 %}
-                                        <span class="badge bg-warning text-dark ms-1">{{ sim.match_pct }}% match</span>
-                                    {% else %}
-                                        <span class="badge bg-info">{{ sim.match_pct }}% similar</span>
-                                    {% endif %}
-                                </strong>
-                                <br>
-                                <small class="text-muted">
-                                    {{ sim.assessment.barangay.name }}, {{ sim.assessment.municipality.name }}, {{ sim.assessment.municipality.province.name }}
-                                    | {{ sim.assessment.assessment_date|date:"M d, Y" }}
-                                    | Uploaded by {{ sim.assessment.uploaded_by.profile.get_full_name|default:sim.assessment.uploaded_by.email }}
-                                    | {{ sim.match_count }}/{{ sim.total }} sub categories match exactly
-                                </small>
-                            </div>
-                            <a href="{% url 'curator_assessment_detail' sim.assessment.id %}" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-eye"></i> View
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Approve / Reject Actions -->
-        {% if assessment.status == 'submitted' %}
-        <div class="card mb-4 border-warning">
-            <div class="card-header bg-warning text-dark">
-                <h6 class="mb-0"><i class="fas fa-gavel"></i> Review Actions</h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <a href="{% url 'curator_confirm_approval' assessment.id %}" class="btn btn-success btn-lg w-100">
-                            <i class="fas fa-check-circle"></i> Review & Approve
-                        </a>
-                    </div>
-                    <div class="col-md-6">
-                        <form method="POST" action="{% url 'curator_assessment_action' assessment.id %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="reject">
-                            <div class="mb-2">
-                                <label class="form-label fw-bold">Rejection Reason</label>
-                                <textarea class="form-control" name="rejection_reason" rows="3"
-                                          placeholder="Provide a reason for rejection..." required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-danger btn-lg w-100">
-                                <i class="fas fa-times-circle"></i> Reject Assessment
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if assessment.status == 'approved' or assessment.status == 'rejected' %}
-        <div class="card mb-4 border-secondary">
-            <div class="card-body">
-                <form method="POST" action="{% url 'curator_assessment_action' assessment.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="return_to_pending">
-                    <button type="submit" class="btn btn-outline-secondary btn-lg w-100"
-                            onclick="return confirm('Return Assessment #{{ assessment.id }} to pending review?')">
-                        <i class="fas fa-undo"></i> Return to Pending Review
-                    </button>
-                </form>
-            </div>
+        {% if assessment.notes %}
+        <div class="dam-rejection-box">
+            <div class="label">Rejection Reason</div>
+            <div class="value">{{ assessment.notes }}</div>
         </div>
         {% endif %}
     </div>
 </div>
+
+{% if assessment.thesis_pdf %}
+<div class="dam-section">
+    <div class="dam-section-header">
+        <i class="fas fa-file-pdf"></i> Thesis / Reference PDF
+    </div>
+    <div class="dam-section-body">
+        <a href="{{ assessment.thesis_pdf.url }}" target="_blank" class="dam-pdf-link">
+            <i class="fas fa-file-pdf fa-lg"></i>
+            <div>
+                <div>{{ assessment.thesis_pdf.name|cut:"assessments/thesis/" }}</div>
+                <div class="sub">Click to open in new tab</div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Assessment Images -->
+{% if assessment.images.all %}
+<div class="dam-section">
+    <div class="dam-section-header">
+        <i class="fas fa-images"></i> Assessment Images ({{ assessment.images.count }})
+    </div>
+    <div class="dam-section-body" style="padding:0;">
+        <div id="imgCarousel" class="carousel slide" data-bs-ride="false">
+            <div class="carousel-inner dam-img-carousel">
+                {% for img in assessment.images.all %}
+                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    <img src="{{ img.image.url }}" class="d-block w-100" style="max-height:450px; object-fit:contain;" alt="{{ img.caption|default:'Assessment image' }}">
+                    {% if img.caption %}
+                    <div class="carousel-caption d-none d-md-block" style="background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);border-radius:4px;padding:6px 14px;">
+                        <small>{{ img.caption }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% if assessment.images.count > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#imgCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" style="filter:drop-shadow(0 1px 4px rgba(0,0,0,0.5));"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#imgCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" style="filter:drop-shadow(0 1px 4px rgba(0,0,0,0.5));"></span>
+            </button>
+            {% endif %}
+        </div>
+        {% if assessment.images.count > 1 %}
+        <div class="text-center py-2">
+            <small class="text-muted">Use arrows to navigate ({{ assessment.images.count }} images)</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Transect Map -->
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+<div class="dam-section">
+    <div class="dam-section-header">
+        <i class="fas fa-map-marked-alt"></i> Transect Locations ({{ transects.count }})
+    </div>
+    <div class="dam-section-body">
+        <div id="transectMap" class="dam-map-container"></div>
+        <div class="dam-map-legend">
+            <div class="dam-map-legend-item">
+                <div class="dam-map-legend-line" style="background:#06b6d4;"></div> Shallow transect
+            </div>
+            <div class="dam-map-legend-item">
+                <div class="dam-map-legend-line" style="background:#2563eb;"></div> Deep transect
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transect Details -->
+{% for t in transects %}
+<div class="dam-transect">
+    <div class="dam-transect-header">
+        <span><i class="fas fa-water"></i> Transect {{ t.transect_number }}</span>
+        <div class="d-flex gap-2">
+            {% if t.shallow_excel %}<span class="dam-excel-tag"><i class="fas fa-file-excel"></i> Shallow</span>{% endif %}
+            {% if t.deep_excel %}<span class="dam-excel-tag"><i class="fas fa-file-excel"></i> Deep</span>{% endif %}
+        </div>
+    </div>
+    <div class="dam-transect-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="dam-depth-header shallow"><i class="fas fa-arrow-up"></i> Shallow</div>
+                <div class="d-flex flex-column gap-1">
+                    {% if t.shallow_start_lat and t.shallow_start_lng %}
+                    <span class="dam-gps-tag"><i class="fas fa-map-pin"></i> Start: {{ t.shallow_start_lat }}, {{ t.shallow_start_lng }}</span>
+                    {% endif %}
+                    {% if t.shallow_end_lat and t.shallow_end_lng %}
+                    <span class="dam-gps-tag"><i class="fas fa-flag-checkered"></i> End: {{ t.shallow_end_lat }}, {{ t.shallow_end_lng }}</span>
+                    {% endif %}
+                    {% if t.shallow_length %}
+                    <span class="dam-gps-tag" style="background:#ecfeff;color:#0891b2;border-color:#a5f3fc;"><i class="fas fa-ruler"></i> {{ t.shallow_length }} m</span>
+                    {% endif %}
+                    {% if t.shallow_depth %}
+                    <span class="dam-gps-tag" style="background:#ecfeff;color:#0891b2;border-color:#a5f3fc;"><i class="fas fa-arrows-up-down"></i> Est. Depth: {{ t.shallow_depth }} m</span>
+                    {% endif %}
+                    {% if not t.shallow_start_lat and not t.shallow_end_lat %}
+                    <span class="text-muted" style="font-size:0.82rem;"><i class="fas fa-map-pin"></i> No coordinates</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="dam-depth-header deep"><i class="fas fa-arrow-down"></i> Deep</div>
+                <div class="d-flex flex-column gap-1">
+                    {% if t.deep_start_lat and t.deep_start_lng %}
+                    <span class="dam-gps-tag"><i class="fas fa-map-pin"></i> Start: {{ t.deep_start_lat }}, {{ t.deep_start_lng }}</span>
+                    {% endif %}
+                    {% if t.deep_end_lat and t.deep_end_lng %}
+                    <span class="dam-gps-tag"><i class="fas fa-flag-checkered"></i> End: {{ t.deep_end_lat }}, {{ t.deep_end_lng }}</span>
+                    {% endif %}
+                    {% if t.deep_length %}
+                    <span class="dam-gps-tag" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;"><i class="fas fa-ruler"></i> {{ t.deep_length }} m</span>
+                    {% endif %}
+                    {% if t.deep_depth %}
+                    <span class="dam-gps-tag" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;"><i class="fas fa-arrows-up-down"></i> Est. Depth: {{ t.deep_depth }} m</span>
+                    {% endif %}
+                    {% if not t.deep_start_lat and not t.deep_end_lat %}
+                    <span class="text-muted" style="font-size:0.82rem;"><i class="fas fa-map-pin"></i> No coordinates</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if has_species_records %}
+        {% regroup t.species_data.all by depth as depth_groups %}
+        {% for depth_group in depth_groups %}
+        <div class="dam-depth-header {% if depth_group.grouper == 'shallow' %}shallow{% else %}deep{% endif %}" style="display:flex;align-items:center;justify-content:space-between;">
+            <div><i class="fas fa-layer-group"></i> {{ depth_group.grouper|title }} Sub Categories ({{ depth_group.list|length }})</div>
+            {% if depth_group.grouper == 'shallow' %}
+            {% with h=t.shallow_health %}
+            <span class="dam-depth-health-badge" style="background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
+                <span class="health-dot" style="background:{{ h.color }};"></span>
+                {{ h.label }} · {{ h.avg|floatformat:1 }}%
+            </span>
+            {% endwith %}
+            {% else %}
+            {% with h=t.deep_health %}
+            <span class="dam-depth-health-badge" style="background:{{ h.color }}15;color:{{ h.color }};border:1px solid {{ h.color }}40;">
+                <span class="health-dot" style="background:{{ h.color }};"></span>
+                {{ h.label }} · {{ h.avg|floatformat:1 }}%
+            </span>
+            {% endwith %}
+            {% endif %}
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="dam-species-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Sub Category</th>
+                        <th>Family</th>
+                        <th class="text-end">Cover %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ts in depth_group.list %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ ts.species.display_sub_category }}</td>
+                        <td><span class="dam-family-badge">{{ ts.species.display_major_category }}</span></td>
+                        <td class="text-end"><strong>{{ ts.cover }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+<!-- Parsed Species (if no DB records) -->
+{% if not has_species_records and parsed_species %}
+<div class="dam-section">
+    <div class="dam-section-header">
+        <i class="fas fa-file-excel"></i> Parsed Sub Categories from Excel Files
+    </div>
+    <div class="dam-section-body">
+        {% regroup parsed_species by depth as parsed_depth_groups %}
+        {% for depth_group in parsed_depth_groups %}
+        <div class="dam-depth-header {% if depth_group.grouper == 'Shallow' %}shallow{% else %}deep{% endif %}">
+            <i class="fas fa-layer-group"></i> {{ depth_group.grouper }} Sub Categories ({{ depth_group.list|length }})
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="dam-species-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Transect</th>
+                        <th>Sub Category</th>
+                        <th>Family</th>
+                        <th class="text-end">Cover %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sp in depth_group.list %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>T{{ sp.transect_number }}</td>
+                        <td>{{ sp.display_sub_category }}</td>
+                        <td><span class="dam-family-badge">{{ sp.display_major_category }}</span></td>
+                        <td class="text-end"><strong>{{ sp.cover|floatformat:1 }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Review Actions -->
+{% if assessment.status == 'submitted' %}
+<div class="dam-actions">
+    <div style="font-weight:600;font-size:0.88rem;color:#1e293b;margin-bottom:1rem;">
+        <i class="fas fa-gavel" style="color:var(--rt-primary);"></i> Review Actions
+    </div>
+    <div class="dam-actions-grid">
+        <a href="{% url 'curator_confirm_approval' assessment.id %}" class="dam-btn-approve" style="grid-column:1/-1;">
+            <i class="fas fa-check-circle"></i> Review Assessment
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Return to Pending -->
+{% if assessment.status == 'approved' or assessment.status == 'rejected' %}
+<div class="dam-actions" style="text-align:center;">
+    <form method="POST" action="{% url 'curator_assessment_action' assessment.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="return_to_pending">
+        <button type="submit" class="dam-btn-return" style="display:inline-flex;"
+                onclick="return confirm('Return Assessment #{{ assessment.id }} to pending review?')">
+            <i class="fas fa-undo"></i> Return to Pending Review
+        </button>
+    </form>
+</div>
+{% endif %}
 
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script>
@@ -418,29 +642,29 @@ document.addEventListener('DOMContentLoaded', function() {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    function makeIcon(color, num) {
+    function makeIcon(color, label) {
         return L.divIcon({
             className: '',
-            html: '<div style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:' + color + ';color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);line-height:1;">' + num + '</div>',
-            iconSize: [26, 26],
-            iconAnchor: [13, 13]
+            html: '<div style="display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:6px;background:' + color + ';color:#fff;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;line-height:1;">' + label + '</div>',
+            iconSize: [40, 22],
+            iconAnchor: [20, 11]
         });
     }
 
     var bounds = [];
     transectData.forEach(function(t) {
         if (t.sLat && t.sLng && t.eLat && t.eLng) {
-            var sLabel = 'Transect ' + t.num + ' — Shallow' + (t.sLen ? ' (' + t.sLen + ' m)' : '') + (t.sDepth ? ' — Depth: ' + t.sDepth + ' m' : '');
-            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup(sLabel);
-            L.marker([t.sLat, t.sLng], {icon: makeIcon('#0dcaf0', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow Start');
-            L.marker([t.eLat, t.eLng], {icon: makeIcon('#0dcaf0', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow End');
+            var sLabel = '<b>Transect ' + t.num + '</b> — Shallow' + (t.sLen ? '<br>' + t.sLen + ' m' : '') + (t.sDepth ? '<br>Depth: ' + t.sDepth + ' m' : '');
+            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#06b6d4', weight: 3, opacity: 0.85, dashArray: '6,4'}).addTo(map).bindPopup(sLabel);
+            L.marker([t.sLat, t.sLng], {icon: makeIcon('#0891b2', 'T' + t.num + 'S')}).addTo(map).bindPopup('<b>T' + t.num + ' Shallow Start</b>');
+            L.marker([t.eLat, t.eLng], {icon: makeIcon('#0891b2', 'T' + t.num + 'E')}).addTo(map).bindPopup('<b>T' + t.num + ' Shallow End</b>');
             bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
         }
         if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
-            var dLabel = 'Transect ' + t.num + ' — Deep' + (t.dLen ? ' (' + t.dLen + ' m)' : '') + (t.dDepth ? ' — Depth: ' + t.dDepth + ' m' : '');
-            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup(dLabel);
-            L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#0d6efd', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep Start');
-            L.marker([t.dELat, t.dELng], {icon: makeIcon('#0d6efd', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep End');
+            var dLabel = '<b>Transect ' + t.num + '</b> — Deep' + (t.dLen ? '<br>' + t.dLen + ' m' : '') + (t.dDepth ? '<br>Depth: ' + t.dDepth + ' m' : '');
+            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#2563eb', weight: 3, opacity: 0.85, dashArray: '6,4'}).addTo(map).bindPopup(dLabel);
+            L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#1d4ed8', 'T' + t.num + 'S')}).addTo(map).bindPopup('<b>T' + t.num + ' Deep Start</b>');
+            L.marker([t.dELat, t.dELng], {icon: makeIcon('#1d4ed8', 'T' + t.num + 'E')}).addTo(map).bindPopup('<b>T' + t.num + ' Deep End</b>');
             bounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);
         }
     });

@@ -229,6 +229,22 @@
         background: #fff; color: #64748b; transition: all 0.2s; text-decoration: none;
     }
     .dam-btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; color: #334155; }
+    .dam-btn-reject {
+        display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .dam-btn-reject textarea {
+        border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.6rem 0.8rem;
+        font-size: 0.85rem; resize: vertical; width: 100%;
+    }
+    .dam-btn-reject textarea:focus { border-color: #f87171; box-shadow: 0 0 0 3px rgba(248,113,113,0.15); outline: none; }
+    .dam-btn-reject button {
+        display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        width: 100%; padding: 0.85rem 1rem; border: none; border-radius: 8px;
+        font-size: 0.95rem; font-weight: 600; cursor: pointer;
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        color: #fff; transition: all 0.2s;
+    }
+    .dam-btn-reject button:hover { background: linear-gradient(135deg, #b91c1c, #991b1b); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(220,38,38,0.3); }
 
     @media (max-width: 768px) {
         .dam-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
@@ -623,6 +639,12 @@
 
 <!-- Action Buttons -->
 <div class="dam-actions">
+    <div style="font-weight:600;font-size:0.88rem;color:#1e293b;margin-bottom:0.5rem;">
+        <i class="fas fa-gavel" style="color:var(--rt-primary);"></i> Make Your Decision
+    </div>
+    <small class="text-muted" style="display:block;margin-bottom:1rem;">
+        Approve to publish this assessment, or reject with a reason for the uploader.
+    </small>
     <div class="dam-actions-grid">
         <form method="POST" action="{% url 'admin_assessment_action' assessment.id %}">
             {% csrf_token %}
@@ -637,8 +659,20 @@
             </button>
             {% endif %}
         </form>
+        <form method="POST" action="{% url 'admin_assessment_action' assessment.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="reject">
+            <div class="dam-btn-reject">
+                <textarea name="rejection_reason" rows="2" placeholder="Provide a reason for rejection..." required></textarea>
+                <button type="submit">
+                    <i class="fas fa-times-circle"></i> Reject Assessment
+                </button>
+            </div>
+        </form>
+    </div>
+    <div style="margin-top:1rem;">
         <a href="{% url 'admin_assessment_detail' assessment.id %}" class="dam-btn-cancel">
-            <i class="fas fa-times"></i> Cancel
+            <i class="fas fa-arrow-left"></i> Back to Assessment Details
         </a>
     </div>
 </div>

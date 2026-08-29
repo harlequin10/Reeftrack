@@ -584,52 +584,6 @@
 </div>
 {% endif %}
 
-<!-- Potential Duplicates -->
-{% if similar_assessments %}
-<div class="dam-section" style="border-color:#fde68a;">
-    <div class="dam-section-header" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-bottom-color:#fde68a;">
-        <i class="fas fa-clone" style="color:#d97706;"></i>
-        <span style="color:#92400e;">Potential Duplicates</span>
-        <span class="dam-warn-badge warning" style="margin-left:auto;">{{ similar_assessments|length }} found</span>
-    </div>
-    <div class="dam-section-body">
-        {% for sim in similar_assessments %}
-        <div class="dam-warn-card {% if sim.is_exact %}exact{% else %}similar{% endif %}">
-            <div class="dam-warn-card-body">
-                <div class="dam-warn-title {% if sim.is_exact %}exact{% else %}similar{% endif %}">
-                    <span class="warn-icon"><i class="fas {% if sim.is_exact %}fa-exclamation-circle{% else %}fa-exclamation-triangle{% endif %}"></i></span>
-                    {% if sim.is_exact %}
-                    <span>Exact Duplicate</span>
-                    <span class="dam-warn-badge critical" style="margin-left:0.5rem;">100% Match</span>
-                    {% elif sim.match_pct >= 75 %}
-                    <span>High Similarity</span>
-                    <span class="dam-warn-badge warning" style="margin-left:0.5rem;">{{ sim.match_pct }}% Match</span>
-                    {% else %}
-                    <span>Moderate Similarity</span>
-                    <span class="dam-warn-badge warning" style="margin-left:0.5rem;">{{ sim.match_pct }}% Match</span>
-                    {% endif %}
-                </div>
-                <div class="dam-warn-detail-row" style="margin-top:0.5rem;">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>{{ sim.assessment.barangay.name }}, {{ sim.assessment.municipality.name }}, {{ sim.assessment.municipality.province.name }}</span>
-                    <span style="color:#94a3b8;">·</span>
-                    <span>{{ sim.assessment.assessment_date|date:"M d, Y" }}</span>
-                </div>
-                <div class="dam-warn-detail-row">
-                    <i class="fas fa-user"></i>
-                    <span>Uploaded by {{ sim.assessment.uploaded_by.profile.get_full_name|default:sim.assessment.uploaded_by.email }}</span>
-                </div>
-                <div class="dam-warn-detail-row">
-                    <i class="fas fa-paw"></i>
-                    <span>{{ sim.match_count }}/{{ sim.total }} sub categories match exactly</span>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
 <!-- Review Actions -->
 {% if assessment.status == 'submitted' %}
 <div class="dam-actions">
@@ -637,19 +591,9 @@
         <i class="fas fa-gavel" style="color:var(--rt-primary);"></i> Review Actions
     </div>
     <div class="dam-actions-grid">
-        <a href="{% url 'admin_confirm_approval' assessment.id %}" class="dam-btn-approve">
-            <i class="fas fa-check-circle"></i> Review & Approve
+        <a href="{% url 'admin_confirm_approval' assessment.id %}" class="dam-btn-approve" style="grid-column:1/-1;">
+            <i class="fas fa-check-circle"></i> Review Assessment
         </a>
-        <div class="dam-btn-reject">
-            <form method="POST" action="{% url 'admin_assessment_action' assessment.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="reject">
-                <textarea name="rejection_reason" rows="2" placeholder="Provide a reason for rejection..." required></textarea>
-                <button type="submit">
-                    <i class="fas fa-times-circle"></i> Reject Assessment
-                </button>
-            </form>
-        </div>
     </div>
 </div>
 {% endif %}

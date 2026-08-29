@@ -2602,55 +2602,9 @@ def admin_assessment_detail(request, assessment_id):
                     s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
 
-    # Find potential duplicate assessments
-    similar_assessments = []
-    current_species = set()
-
-    # Use parsed species if no DB records
-    if not has_species_records:
-        for sp in parsed_species:
-                current_species.add((sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)))
-    else:
-        for ts in TransectSpecies.objects.filter(
-            transect__assessment=assessment
-        ).select_related('species'):
-            current_species.add((ts.species.sub_category.lower(), ts.species.major_category.lower(), float(ts.cover)))
-
-    if current_species:
-        other_assessments = Assessment.objects.filter(
-            barangay=assessment.barangay,
-            status='approved',
-        ).exclude(id=assessment.id).order_by('-assessment_date')[:10]
-
-        for other in other_assessments:
-            other_species = set()
-            for ts in TransectSpecies.objects.filter(
-                transect__assessment=other
-            ).select_related('species'):
-                other_species.add((ts.species.sub_category.lower(), ts.species.major_category.lower(), float(ts.cover)))
-
-            if not other_species:
-                continue
-
-            overlap = current_species & other_species
-            total = max(len(current_species), len(other_species))
-            if total == 0:
-                continue
-
-            match_pct = (len(overlap) / total) * 100
-            if match_pct >= 50:
-                similar_assessments.append({
-                    'assessment': other,
-                    'match_count': len(overlap),
-                    'total': total,
-                    'match_pct': round(match_pct, 1),
-                    'is_exact': match_pct == 100 and len(current_species) == len(other_species),
-                })
-
     return render(request, 'admin/assessments/detail.html', {
         'assessment': assessment,
         'transects': transects,
-        'similar_assessments': similar_assessments,
         'parsed_species': parsed_species,
         'has_species_records': has_species_records,
     })
@@ -3745,54 +3699,9 @@ def curator_assessment_detail(request, assessment_id):
                     s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
 
-    # Find potential duplicate assessments
-    similar_assessments = []
-    current_species = set()
-
-    if not has_species_records:
-        for sp in parsed_species:
-                current_species.add((sp['sub_category'].lower(), sp['major_category'].lower(), round(sp['cover'], 2)))
-    else:
-        for ts in TransectSpecies.objects.filter(
-            transect__assessment=assessment
-        ).select_related('species'):
-            current_species.add((ts.species.sub_category.lower(), ts.species.major_category.lower(), float(ts.cover)))
-
-    if current_species:
-        other_assessments = Assessment.objects.filter(
-            barangay=assessment.barangay,
-            status='approved',
-        ).exclude(id=assessment.id).order_by('-assessment_date')[:10]
-
-        for other in other_assessments:
-            other_species = set()
-            for ts in TransectSpecies.objects.filter(
-                transect__assessment=other
-            ).select_related('species'):
-                other_species.add((ts.species.sub_category.lower(), ts.species.major_category.lower(), float(ts.cover)))
-
-            if not other_species:
-                continue
-
-            overlap = current_species & other_species
-            total = max(len(current_species), len(other_species))
-            if total == 0:
-                continue
-
-            match_pct = (len(overlap) / total) * 100
-            if match_pct >= 50:
-                similar_assessments.append({
-                    'assessment': other,
-                    'match_count': len(overlap),
-                    'total': total,
-                    'match_pct': round(match_pct, 1),
-                    'is_exact': match_pct == 100 and len(current_species) == len(other_species),
-                })
-
     return render(request, 'curator/assessment_detail.html', {
         'assessment': assessment,
         'transects': transects,
-        'similar_assessments': similar_assessments,
         'parsed_species': parsed_species,
         'has_species_records': has_species_records,
     })
