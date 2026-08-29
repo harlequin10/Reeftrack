@@ -18,7 +18,7 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
 from django.http import JsonResponse
-from .forms import RegisterForm, LoginForm, AdminCreateUserForm, UserProfileForm, CustomPasswordChangeForm, GoogleProfileForm
+from .forms import RegisterForm, LoginForm, AdminCreateUserForm, UserProfileForm, CustomPasswordChangeForm, GoogleProfileForm, _resolve_other, _SPECIFY_CHOICES
 from .decorators import admin_required, curator_required, contributor_required
 from .models import (
     UserProfile, Province, Municipality, Barangay, Assessment,
@@ -108,6 +108,8 @@ def public_assessment_detail(request, assessment_id):
                     s['depth'] = 'Shallow'
                     s['transect_id'] = transect.id
                     s['transect_number'] = transect.transect_number
+                    s['display_sub_category'] = Species._sentence_case(s['sub_category'])
+                    s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
             if transect.deep_excel and os.path.exists(transect.deep_excel.path):
                 sp, _ = parse_cpc_excel(transect.deep_excel.path)
@@ -115,6 +117,8 @@ def public_assessment_detail(request, assessment_id):
                     s['depth'] = 'Deep'
                     s['transect_id'] = transect.id
                     s['transect_number'] = transect.transect_number
+                    s['display_sub_category'] = Species._sentence_case(s['sub_category'])
+                    s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
 
     return render(request, 'public/assessment_detail.html', {
@@ -277,6 +281,8 @@ def complete_google_profile(request):
             user.save(update_fields=['first_name', 'last_name'])
             profile.middle_initial = form.cleaned_data.get('middle_initial', '')
             profile.suffix = form.cleaned_data.get('suffix', '')
+            profile.affiliation = _resolve_other(form.cleaned_data.get('affiliation', ''), form.cleaned_data.get('affiliation_other', ''))
+            profile.position = _resolve_other(form.cleaned_data.get('position', ''), form.cleaned_data.get('position_other', ''))
             profile.profile_completed = True
             profile.save()
             if profile.status != 'approved':
@@ -441,6 +447,7 @@ def admin_manage_users(request):
 def admin_manage_users_ajax(request):
     """AJAX: Render only the filtered users results (chips, info bar, table, pagination)."""
     context = _admin_manage_users_filter_context(request)
+    context['is_superuser'] = request.user.is_superuser
     return render(request, 'admin/manage_users/_results.html', context)
 
 @login_required
@@ -536,7 +543,18 @@ def admin_edit_user(request, user_id):
         email = request.POST.get('email')
         role = request.POST.get('role')
         status = request.POST.get('status')
-        
+        affiliation = request.POST.get('affiliation', '')
+        affiliation_other = request.POST.get('affiliation_other', '').strip()
+        position = request.POST.get('position', '')
+        position_other = request.POST.get('position_other', '').strip()
+
+        if affiliation in _SPECIFY_CHOICES and not affiliation_other:
+            messages.error(request, 'Please specify your affiliation / organization.')
+            return redirect('admin_edit_user', user_id=user.id)
+        if position == 'other' and not position_other:
+            messages.error(request, 'Please specify your position / specialization.')
+            return redirect('admin_edit_user', user_id=user.id)
+
         user.first_name = first_name
         user.last_name = last_name
         if email:
@@ -544,6 +562,8 @@ def admin_edit_user(request, user_id):
         
         user.profile.middle_initial = middle_initial
         user.profile.suffix = suffix
+        user.profile.affiliation = _resolve_other(affiliation, affiliation_other)
+        user.profile.position = _resolve_other(position, position_other)
         
         if role and role in dict(UserProfile.ROLE_CHOICES):
             if role == 'admin' and not request.user.is_superuser:
@@ -589,6 +609,10 @@ def admin_edit_user(request, user_id):
         'edit_user': user,
         'role_choices': UserProfile.ROLE_CHOICES if request.user.is_superuser else [c for c in UserProfile.ROLE_CHOICES if c[0] != 'admin'],
         'status_choices': UserProfile.STATUS_CHOICES,
+        'affiliation_choices': UserProfile.AFFILIATION_CHOICES,
+        'affiliation_values': [c[0] for c in UserProfile.AFFILIATION_CHOICES],
+        'position_choices': UserProfile.POSITION_CHOICES,
+        'position_values': [c[0] for c in UserProfile.POSITION_CHOICES],
         'is_superuser': request.user.is_superuser,
     }
     
@@ -834,13 +858,26 @@ def curator_edit_contributor(request, user_id):
         suffix = request.POST.get('suffix', '')
         email = request.POST.get('email')
         status = request.POST.get('status')
-        
+        affiliation = request.POST.get('affiliation', '')
+        affiliation_other = request.POST.get('affiliation_other', '').strip()
+        position = request.POST.get('position', '')
+        position_other = request.POST.get('position_other', '').strip()
+
+        if affiliation in _SPECIFY_CHOICES and not affiliation_other:
+            messages.error(request, 'Please specify your affiliation / organization.')
+            return redirect('curator_edit_contributor', user_id=user.id)
+        if position == 'other' and not position_other:
+            messages.error(request, 'Please specify your position / specialization.')
+            return redirect('curator_edit_contributor', user_id=user.id)
+
         user.first_name = first_name
         user.last_name = last_name
         if email:
             user.email = email
         user.profile.middle_initial = middle_initial
         user.profile.suffix = suffix
+        user.profile.affiliation = _resolve_other(affiliation, affiliation_other)
+        user.profile.position = _resolve_other(position, position_other)
         
         if status and status in dict(UserProfile.STATUS_CHOICES):
             user.profile.status = status
@@ -860,6 +897,10 @@ def curator_edit_contributor(request, user_id):
     context = {
         'edit_user': user,
         'status_choices': UserProfile.STATUS_CHOICES,
+        'affiliation_choices': UserProfile.AFFILIATION_CHOICES,
+        'affiliation_values': [c[0] for c in UserProfile.AFFILIATION_CHOICES],
+        'position_choices': UserProfile.POSITION_CHOICES,
+        'position_values': [c[0] for c in UserProfile.POSITION_CHOICES],
     }
     
     return render(request, 'curator/edit_contributor.html', context)
@@ -1390,7 +1431,10 @@ def validate_species_list(species_items):
                 'major_category': major_cat,
                 'status': 'new' if not similar else 'similar',
                 'suggested_match': similar.id if similar else None,
-                'suggested_name': str(similar) if similar else None,
+                'suggested_name': (
+                    f"{similar.display_sub_category} ({similar.display_major_category})"
+                    if similar else None
+                ),
             })
     return results
 
@@ -1571,6 +1615,8 @@ def add_transect(request):
             deep_start_lng = request.POST.get('deep_start_lng')
             deep_end_lat = request.POST.get('deep_end_lat')
             deep_end_lng = request.POST.get('deep_end_lng')
+            shallow_depth = (request.POST.get('shallow_depth') or '').strip()
+            deep_depth = (request.POST.get('deep_depth') or '').strip()
 
             if not shallow_file or not deep_file:
                 messages.error(request, 'Both shallow and deep Excel files are required.')
@@ -1578,7 +1624,7 @@ def add_transect(request):
                     'shallow_start_lat': shallow_start_lat, 'shallow_start_lng': shallow_start_lng,
                     'shallow_end_lat': shallow_end_lat, 'shallow_end_lng': shallow_end_lng,
                     'deep_start_lat': deep_start_lat, 'deep_start_lng': deep_start_lng,
-                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng,
+                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng, 'shallow_depth': shallow_depth, 'deep_depth': deep_depth,
                 }
                 return redirect('add_transect')
 
@@ -1611,7 +1657,27 @@ def add_transect(request):
                     'shallow_start_lat': shallow_start_lat, 'shallow_start_lng': shallow_start_lng,
                     'shallow_end_lat': shallow_end_lat, 'shallow_end_lng': shallow_end_lng,
                     'deep_start_lat': deep_start_lat, 'deep_start_lng': deep_start_lng,
-                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng,
+                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng, 'shallow_depth': shallow_depth, 'deep_depth': deep_depth,
+                }
+                return redirect('add_transect')
+
+            # Validate optional estimated depths (meters) - must be positive numbers if provided
+            depth_errors = []
+            for label, val in (('Shallow depth', shallow_depth), ('Deep depth', deep_depth)):
+                if val and val.strip() != '':
+                    try:
+                        num = float(val)
+                        if num <= 0 or num > 500:
+                            depth_errors.append(f'{label} must be between 0 and 500 meters.')
+                    except (TypeError, ValueError):
+                        depth_errors.append(f'{label} must be a valid number.')
+            if depth_errors:
+                messages.error(request, ' '.join(depth_errors))
+                request.session['pending_transect'] = {
+                    'shallow_start_lat': shallow_start_lat, 'shallow_start_lng': shallow_start_lng,
+                    'shallow_end_lat': shallow_end_lat, 'shallow_end_lng': shallow_end_lng,
+                    'deep_start_lat': deep_start_lat, 'deep_start_lng': deep_start_lng,
+                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng, 'shallow_depth': shallow_depth, 'deep_depth': deep_depth,
                 }
                 return redirect('add_transect')
 
@@ -1628,6 +1694,8 @@ def add_transect(request):
                 'deep_start_lng': deep_start_lng,
                 'deep_end_lat': deep_end_lat,
                 'deep_end_lng': deep_end_lng,
+                'shallow_depth': shallow_depth,
+                'deep_depth': deep_depth,
                 'shallow_species': [],
                 'deep_species': [],
             }
@@ -1643,6 +1711,9 @@ def add_transect(request):
                 species, parse_errors = parse_cpc_excel(shallow_path)
                 shallow_errors = parse_errors
                 if species:
+                    for _sp in species:
+                        _sp['display_sub_category'] = Species._sentence_case(_sp['sub_category'])
+                        _sp['display_major_category'] = Species._sentence_case(_sp['major_category'])
                     transect_info['shallow_species'] = species
                     transect_info['shallow_filename'] = shallow_file.name
             except Exception as e:
@@ -1659,6 +1730,9 @@ def add_transect(request):
                 species, parse_errors = parse_cpc_excel(deep_path)
                 deep_errors = parse_errors
                 if species:
+                    for _sp in species:
+                        _sp['display_sub_category'] = Species._sentence_case(_sp['sub_category'])
+                        _sp['display_major_category'] = Species._sentence_case(_sp['major_category'])
                     transect_info['deep_species'] = species
                     transect_info['deep_filename'] = deep_file.name
             except Exception as e:
@@ -1683,7 +1757,7 @@ def add_transect(request):
                     'shallow_start_lat': shallow_start_lat, 'shallow_start_lng': shallow_start_lng,
                     'shallow_end_lat': shallow_end_lat, 'shallow_end_lng': shallow_end_lng,
                     'deep_start_lat': deep_start_lat, 'deep_start_lng': deep_start_lng,
-                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng,
+                    'deep_end_lat': deep_end_lat, 'deep_end_lng': deep_end_lng, 'shallow_depth': shallow_depth, 'deep_depth': deep_depth,
                 }
                 return redirect('add_transect')
 
@@ -1793,6 +1867,9 @@ def preview_assessment(request):
             all_species.append((sp['sub_category'], sp['major_category']))
 
     species_validation = validate_species_list(all_species)
+    for _sv in species_validation:
+        _sv['display_sub_category'] = Species._sentence_case(_sv['sub_category'])
+        _sv['display_major_category'] = Species._sentence_case(_sv['major_category'])
     has_new = any(s['status'] in ('new', 'similar') for s in species_validation)
     user_role = request.user.profile.role if hasattr(request.user, 'profile') else 'contributor'
 
@@ -1858,6 +1935,19 @@ def confirm_assessment(request):
         description=pending.get('description', ''),
     )
 
+    # Notify curators/admins about new submitted assessment
+    if assessment_status == 'submitted':
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        curators = User.objects.filter(profile__role__in=['curator', 'admin'])
+        for curator in curators:
+            if curator != assessment.uploaded_by:
+                create_assessment_notification(
+                    curator, assessment, 'info',
+                    f'New Assessment Submitted #{assessment.id}',
+                    f'Contributor {assessment.uploaded_by.get_full_name or assessment.uploaded_by.email} has submitted a new assessment for {assessment.barangay.name}, {assessment.municipality.name}.'
+                )
+
     # Add contributors
     contributor_ids = pending.get('contributor_ids', [])
     if contributor_ids:
@@ -1910,6 +2000,8 @@ def confirm_assessment(request):
             deep_start_lng=to_decimal(t_info.get('deep_start_lng')),
             deep_end_lat=to_decimal(t_info.get('deep_end_lat')),
             deep_end_lng=to_decimal(t_info.get('deep_end_lng')),
+            shallow_depth=to_decimal(t_info.get('shallow_depth')),
+            deep_depth=to_decimal(t_info.get('deep_depth')),
         )
 
         # Move shallow excel
@@ -2216,6 +2308,8 @@ def contributor_assessment_detail(request, assessment_id):
                     s['depth'] = 'Shallow'
                     s['transect_id'] = transect.id
                     s['transect_number'] = transect.transect_number
+                    s['display_sub_category'] = Species._sentence_case(s['sub_category'])
+                    s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
             if transect.deep_excel and os.path.exists(transect.deep_excel.path):
                 sp, _ = parse_cpc_excel(transect.deep_excel.path)
@@ -2223,6 +2317,8 @@ def contributor_assessment_detail(request, assessment_id):
                     s['depth'] = 'Deep'
                     s['transect_id'] = transect.id
                     s['transect_number'] = transect.transect_number
+                    s['display_sub_category'] = Species._sentence_case(s['sub_category'])
+                    s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
 
     return render(request, 'contributor/assessment_detail.html', {
@@ -2493,6 +2589,8 @@ def admin_assessment_detail(request, assessment_id):
                     s['depth'] = 'Shallow'
                     s['transect_id'] = transect.id
                     s['transect_number'] = transect.transect_number
+                    s['display_sub_category'] = Species._sentence_case(s['sub_category'])
+                    s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
             if transect.deep_excel and os.path.exists(transect.deep_excel.path):
                 sp, _ = parse_cpc_excel(transect.deep_excel.path)
@@ -2500,6 +2598,8 @@ def admin_assessment_detail(request, assessment_id):
                     s['depth'] = 'Deep'
                     s['transect_id'] = transect.id
                     s['transect_number'] = transect.transect_number
+                    s['display_sub_category'] = Species._sentence_case(s['sub_category'])
+                    s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
 
     # Find potential duplicate assessments
@@ -2583,12 +2683,16 @@ def admin_confirm_approval(request, assessment_id):
             for sp in species_list:
                 sp['transect'] = transect.transect_number
                 sp['depth'] = 'Shallow'
+                sp['display_sub_category'] = Species._sentence_case(sp['sub_category'])
+                sp['display_major_category'] = Species._sentence_case(sp['major_category'])
                 all_species.append(sp)
         if transect.deep_excel and os.path.exists(transect.deep_excel.path):
             species_list, _ = parse_cpc_excel(transect.deep_excel.path)
             for sp in species_list:
                 sp['transect'] = transect.transect_number
                 sp['depth'] = 'Deep'
+                sp['display_sub_category'] = Species._sentence_case(sp['sub_category'])
+                sp['display_major_category'] = Species._sentence_case(sp['major_category'])
                 all_species.append(sp)
 
     duplicate_warnings, within_warnings, unique_new = get_review_warnings(all_species, assessment)
@@ -3325,6 +3429,10 @@ def admin_manage_species(request):
         .annotate(species_count=Count('id'))
         .order_by('major_category')
     )
+    families = [
+        {**f, 'display_major_category': Species._sentence_case(f['major_category'])}
+        for f in families
+    ]
     in_use_families = set(
         TransectSpecies.objects.filter(
             transect__assessment__status='approved'
@@ -3376,6 +3484,7 @@ def admin_manage_family_species(request):
     )
     return render(request, 'admin/species/family_species.html', {
         'family_name': family_name,
+        'display_family': Species._sentence_case(family_name),
         'species_list': species_list,
         'species_count': species_list.count(),
         'used_species_ids': used_species_ids,
@@ -3623,6 +3732,8 @@ def curator_assessment_detail(request, assessment_id):
                     s['depth'] = 'Shallow'
                     s['transect_id'] = transect.id
                     s['transect_number'] = transect.transect_number
+                    s['display_sub_category'] = Species._sentence_case(s['sub_category'])
+                    s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
             if transect.deep_excel and os.path.exists(transect.deep_excel.path):
                 sp, _ = parse_cpc_excel(transect.deep_excel.path)
@@ -3630,6 +3741,8 @@ def curator_assessment_detail(request, assessment_id):
                     s['depth'] = 'Deep'
                     s['transect_id'] = transect.id
                     s['transect_number'] = transect.transect_number
+                    s['display_sub_category'] = Species._sentence_case(s['sub_category'])
+                    s['display_major_category'] = Species._sentence_case(s['major_category'])
                     parsed_species.append(s)
 
     # Find potential duplicate assessments
@@ -3711,12 +3824,16 @@ def curator_confirm_approval(request, assessment_id):
             for sp in species_list:
                 sp['transect'] = transect.transect_number
                 sp['depth'] = 'Shallow'
+                sp['display_sub_category'] = Species._sentence_case(sp['sub_category'])
+                sp['display_major_category'] = Species._sentence_case(sp['major_category'])
                 all_species.append(sp)
         if transect.deep_excel and os.path.exists(transect.deep_excel.path):
             species_list, _ = parse_cpc_excel(transect.deep_excel.path)
             for sp in species_list:
                 sp['transect'] = transect.transect_number
                 sp['depth'] = 'Deep'
+                sp['display_sub_category'] = Species._sentence_case(sp['sub_category'])
+                sp['display_major_category'] = Species._sentence_case(sp['major_category'])
                 all_species.append(sp)
 
     duplicate_warnings, within_warnings, unique_new = get_review_warnings(all_species, assessment)
@@ -4077,6 +4194,8 @@ def public_dashboard_data(request):
                 'dh': _health_for_species(deep_sp),
                 'sl': t.shallow_length,
                 'dl': t.deep_length,
+                'sd': float(t.shallow_depth) if t.shallow_depth is not None else None,
+                'dd': float(t.deep_depth) if t.deep_depth is not None else None,
             })
 
         cover = float(a.overall_coral_cover) if a.overall_coral_cover is not None else None

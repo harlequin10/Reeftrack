@@ -41,8 +41,8 @@
                 </tr>
             </thead>
             <tbody>
-                {% for c in contributors %}
-                <tr>
+{% for c in contributors %}
+                <tr class="um-row {% if c != request.user %}um-clickable{% endif %}">
                     <td>
                         <div class="um-user-cell">
                             <div class="um-avatar">
@@ -52,7 +52,11 @@
                             </div>
                             <div class="um-user-info">
                                 <div class="um-user-name">
+                                    {% if c != request.user %}
+                                    <a href="{% url 'curator_edit_contributor' c.id %}" class="um-row-link">{{ c.profile.get_full_name|default:c.email }}</a>
+                                    {% else %}
                                     {{ c.profile.get_full_name|default:c.email }}
+                                    {% endif %}
                                     {% if c == request.user %}<span class="badge bg-info" style="font-size:.6rem;padding:.15rem .4rem;border-radius:4px;font-weight:600;">You</span>{% endif %}
                                 </div>
                                 <div class="um-user-email">{{ c.email }}</div>

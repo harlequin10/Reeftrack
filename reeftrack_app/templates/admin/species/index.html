@@ -83,7 +83,7 @@
 
     <div class="sp-header">
         <div class="sp-header-left">
-            <h3><i class="fas fa-fish"></i> Coral Families</h3>
+            <h3><i class="fas fa-mountain"></i> Coral Families</h3>
             <p>Manage coral taxonomic families and their coral life forms</p>
         </div>
         <div class="sp-header-right">
@@ -104,7 +104,7 @@
         <div class="sp-stat" style="background:linear-gradient(135deg,#16a34a,#15803d);">
             <div class="sp-stat-top">
                 <div class="sp-stat-val">{{ total_species }}</div>
-                <div class="sp-stat-icon"><i class="fas fa-fish"></i></div>
+                <div class="sp-stat-icon"><i class="fas fa-mountain"></i></div>
             </div>
             <div class="sp-stat-lbl">Total Coral Life Forms</div>
         </div>
@@ -125,12 +125,12 @@
                 <tr>
                     <td>
                         <div class="sp-family-name">
-                            <a href="{% url 'admin_manage_family_species' %}?name={{ f.major_category|urlencode }}">{{ f.major_category }}</a>
+                            <a href="{% url 'admin_manage_family_species' %}?name={{ f.major_category|urlencode }}">{{ f.display_major_category }}</a>
                         </div>
                     </td>
                     <td>
                         <a href="{% url 'admin_manage_family_species' %}?name={{ f.major_category|urlencode }}" class="sp-count">
-                            <i class="fas fa-fish"></i> {{ f.species_count }} sub category
+                            <i class="fas fa-mountain"></i> {{ f.species_count }} sub category
                         </a>
                     </td>
                     <td>
@@ -152,7 +152,7 @@
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body" style="padding-top:1rem;">
-                                        <p style="color:#475569;">Delete family <strong>{{ f.major_category }}</strong> and all <strong>{{ f.species_count }}</strong> coral life forms inside it?</p>
+                                        <p style="color:#475569;">Delete family <strong>{{ f.display_major_category }}</strong> and all <strong>{{ f.species_count }}</strong> coral life forms inside it?</p>
                                         {% if f.major_category in in_use_families %}
                                         <div class="alert alert-danger d-flex align-items-start gap-2 mb-0" style="border-radius:10px;font-size:.85rem;">
                                             <i class="fas fa-ban mt-1"></i>
@@ -185,7 +185,7 @@
                 <tr>
                     <td colspan="3">
                         <div class="sp-empty">
-                            <i class="fas fa-fish"></i>
+                            <i class="fas fa-mountain"></i>
                             <h5>No families found</h5>
                             <p>Click <strong>Add Family</strong> to create your first coral family.</p>
                         </div>

@@ -91,8 +91,8 @@
                                 {% for sp in transect.shallow_species %}
                                 <tr>
                                     <td>{{ forloop.counter }}</td>
-                                    <td>{{ sp.sub_category }}</td>
-                                    <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                                    <td>{{ sp.display_sub_category }}</td>
+                                    <td><span class="badge bg-secondary">{{ sp.display_major_category }}</span></td>
                                     <td class="text-end">{{ sp.cover }}</td>
                                 </tr>
                                 {% endfor %}
@@ -114,8 +114,8 @@
                                 {% for sp in transect.deep_species %}
                                 <tr>
                                     <td>{{ forloop.counter }}</td>
-                                    <td>{{ sp.sub_category }}</td>
-                                    <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                                    <td>{{ sp.display_sub_category }}</td>
+                                    <td><span class="badge bg-secondary">{{ sp.display_major_category }}</span></td>
                                     <td class="text-end">{{ sp.cover }}</td>
                                 </tr>
                                 {% endfor %}

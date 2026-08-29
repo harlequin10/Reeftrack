@@ -626,24 +626,9 @@ function showBDetails(b,m){
 }
 
 window.SA=function(aid){
-  var f=null;
-  D.m.forEach(function(m){m.b.forEach(function(b){b.a.forEach(function(a){if(a.id===aid)f={a:a,b:b,m:m};});});});
-  if(!f)return;
-  var a=f.a,c=HC[a.c]||'#6b7280';
-  document.getElementById('modalTitle').textContent=f.m.name+', '+f.m.province+' - '+f.b.name+' ('+a.d+')';
-  document.getElementById('modalBody').innerHTML='<div class="rt-dash-minfo"><div class="rt-dash-dr"><span>Date</span><span>'+a.d+'</span></div><div class="rt-dash-dr"><span>Condition</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(a.c?a.c.charAt(0).toUpperCase()+a.c.slice(1):'N/A')+'</span></div><div class="rt-dash-dr"><span>Coral Cover</span><span style="font-weight:700">'+(a.cc!==null?a.cc+'%':'N/A')+'</span></div><div class="rt-dash-dr"><span>Methodology</span><span>'+a.mt+'</span></div><div class="rt-dash-dr"><span>Uploaded By</span><span>'+a.up+'</span></div></div><div style="text-align:center;padding:1.5rem;color:var(--rt-ink-soft)"><i class="fas fa-spinner fa-spin"></i> Loading transect data...</div>';
-  document.getElementById('detailModal').classList.add('rt-dash-modal-show');
-  fetch('/api/public/assessment/'+aid+'/').then(function(r){if(!r.ok)throw new Error();return r.json();}).then(function(d){
-    var th='';d.tr.forEach(function(t){
-      var sh=t.sp.filter(function(s){return s.dp==='shallow';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
-      var dp=t.sp.filter(function(s){return s.dp==='deep';}).map(function(s){return '<div class="rt-dash-sr"><span><b>'+s.co+'</b> '+s.nm+'</span><span>'+s.cv+'%</span></div>';}).join('');
-      th+='<div class="rt-dash-tc"><div class="rt-dash-tch" onclick="this.nextElementSibling.classList.toggle(\'rt-dash-ddo\');this.querySelector(\'i\').classList.toggle(\'rt-dash-ddi\')"><span>Transect '+t.n+' <small>('+t.sp.length+' coral life forms)</small></span><i class="fas fa-chevron-down"></i></div><div class="rt-dash-ddc"><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0891b2">Shallow</div>'+(sh||'<div class="rt-dash-es">No shallow coral life forms data</div>')+'</div><div class="rt-dash-ds"><div class="rt-dash-dst" style="border-bottom-color:#0e7490">Deep</div>'+(dp||'<div class="rt-dash-es">No deep coral life forms data</div>')+'</div></div></div>';
-    });
-    document.getElementById('modalBody').innerHTML='<div class="rt-dash-minfo"><div class="rt-dash-dr"><span>Date</span><span>'+d.d+'</span></div><div class="rt-dash-dr"><span>Condition</span><span class="rt-dash-badge" style="background:'+c+';color:#fff">'+(d.c?d.c.charAt(0).toUpperCase()+d.c.slice(1):'N/A')+'</span></div><div class="rt-dash-dr"><span>Coral Cover</span><span style="font-weight:700">'+(d.cc!==null?d.cc+'%':'N/A')+'</span></div><div class="rt-dash-dr"><span>Methodology</span><span>'+d.mt+'</span></div><div class="rt-dash-dr"><span>Uploaded By</span><span>'+d.up+'</span></div></div><h4 style="margin:1rem 0 .5rem;color:#062E3f;font-size:.95rem"><i class="fas fa-draw-polygon"></i> Transects ('+d.tr.length+')</h4>'+th;
-  }).catch(function(){
-    document.getElementById('modalBody').innerHTML='<div style="text-align:center;padding:2rem;color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed to load coral life forms data. Please try again.</div>';
-  });
+  window.open('/assessment/'+aid+'/', '_blank');
 };
+
 
 function showBLines(b){
   tLayer.clearLayers();map.addLayer(tLayer);
@@ -780,6 +765,8 @@ function showLines(){
 }
 
 function depthLabel(hc){return hc&&hc.label?hc.label.charAt(0).toUpperCase()+hc.label.slice(1):'No data';}
+function fmtDate(s){var p=String(s).split('-');var m=['January','February','March','April','May','June','July','August','September','October','November','December'];return p.length===3?m[parseInt(p[1],10)-1]+' '+parseInt(p[2],10)+', '+p[0]:String(s);}
+function titleCase(s){return s?String(s).charAt(0).toUpperCase()+String(s).slice(1):'N/A';}
 function drawLine(t,a,bn){
   var sHC=t.sh||null;
   var dHC=t.dh||null;
@@ -787,14 +774,14 @@ function drawLine(t,a,bn){
   var dcc=HC[dHC&&dHC.label?dHC.label:null]||'#6b7280';
   var sCnt=sHC&&sHC.avg!==null?sHC.avg:'—';
   var dCnt=dHC&&dHC.avg!==null?dHC.avg:'—';
-  var sLen=t.sl?'<br>'+t.sl+' m':'';
-  var dLen=t.dl?'<br>'+t.dl+' m':'';
+  var sPop='— Shallow<br><b>Length:</b> '+t.sl+' m'+(t.sd?'<br><b>Depth:</b> '+t.sd+' m':'')+'<br><b>Date:</b> '+bn+' · '+fmtDate(a.d)+'<br><b>Condition:</b> <span style="color:'+scc+';font-weight:700">'+titleCase(a.c)+'</span><br><b>Average Coral Cover:</b> '+sCnt+'%<br><b>Coral Life Forms:</b> '+t.sc;
+  var dPop='— Deep<br><b>Length:</b> '+t.dl+' m'+(t.dd?'<br><b>Depth:</b> '+t.dd+' m':'')+'<br><b>Date:</b> '+bn+' · '+fmtDate(a.d)+'<br><b>Condition:</b> <span style="color:'+dcc+';font-weight:700">'+titleCase(a.c)+'</span><br><b>Average Coral Cover:</b> '+dCnt+'%<br><b>Coral Life Forms:</b> '+t.sc;
   if(t.s.s&&t.s.e){
     var glow=L.polyline([t.s.s,t.s.e],{color:scc,weight:8,opacity:.2,smoothFactor:1,lineCap:'round'});
     tLayer.addLayer(glow);
     var sl=L.polyline([t.s.s,t.s.e],{color:scc,weight:4,opacity:.92,smoothFactor:1,lineCap:'round'});
-    sl.bindTooltip('<b>T'+t.n+'</b> Shallow'+sLen+'<br><span style="color:'+scc+'">'+depthLabel(sHC)+'</span> · '+sCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-s',sticky:true});
-    sl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Shallow</b>'+sLen+'<br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+scc+';font-weight:700">'+depthLabel(sHC)+'</span><br>Avg cover: <b>'+sCnt+'%</b><br>'+t.sc+' coral life forms<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
+    sl.bindTooltip('<b>Transect '+t.n+' '+sPop,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-s',sticky:true});
+    sl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' '+sPop+'<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
     tLayer.addLayer(sl);
     var ep1=L.circleMarker(t.s.s,{radius:4,fillColor:'#8b5cf6',color:'#fff',weight:1.5,fillOpacity:1});
     ep1.bindTooltip('Start · '+t.s.s[0].toFixed(5)+', '+t.s.s[1].toFixed(5),{direction:'top',offset:[0,-6]});
@@ -807,8 +794,8 @@ function drawLine(t,a,bn){
     var dglow=L.polyline([t.d.s,t.d.e],{color:dcc,weight:8,opacity:.12,smoothFactor:1,lineCap:'round'});
     tLayer.addLayer(dglow);
     var dl=L.polyline([t.d.s,t.d.e],{color:dcc,weight:4,opacity:.55,smoothFactor:1,lineCap:'round',dashArray:'10,7'});
-    dl.bindTooltip('<b>T'+t.n+'</b> Deep'+dLen+'<br><span style="color:'+dcc+'">'+depthLabel(dHC)+'</span> · '+dCnt+'% cover<br>'+a.d,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-d',sticky:true});
-    dl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' — Deep</b>'+dLen+'<br><small>'+bn+' · '+a.d+'</small><br><span style="color:'+dcc+';font-weight:700">'+depthLabel(dHC)+'</span><br>Avg cover: <b>'+dCnt+'%</b><br>'+t.sc+' coral life forms<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
+    dl.bindTooltip('<b>Transect '+t.n+' '+dPop,{direction:'center',className:'rt-dash-ttl rt-dash-ttl-d',sticky:true});
+    dl.bindPopup('<div class="rt-dash-pop"><b>Transect '+t.n+' '+dPop+'<br><button onclick="window.SA('+a.id+')">View Assessment</button></div>');
     tLayer.addLayer(dl);
     var ep3=L.circleMarker(t.d.s,{radius:4,fillColor:'#8b5cf6',color:'#fff',weight:1.5,fillOpacity:1});
     ep3.bindTooltip('Start · '+t.d.s[0].toFixed(5)+', '+t.d.s[1].toFixed(5),{direction:'top',offset:[0,-6]});

@@ -83,6 +83,11 @@
     .um-tbl tbody tr{transition:background .1s;}
     .um-tbl tbody tr:hover{background:#f8fafc;}
     .um-tbl tbody tr:last-child td{border-bottom:none;}
+    .um-row.um-clickable{cursor:pointer;}
+    .um-row.um-clickable .um-user-name{color:var(--rt-navy);}
+    .um-row.um-clickable:hover .um-user-name{text-decoration:underline;}
+    .um-row-link{color:inherit;text-decoration:none;}
+    .um-row-link:hover{color:#0ea5e9;}
 
     .um-user-cell{display:flex;align-items:center;gap:.65rem;}
     .um-avatar{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#fff;flex-shrink:0;text-transform:uppercase;}
@@ -171,7 +176,7 @@
     <div class="um-header">
         <div class="um-header-left">
             <h3><i class="fas fa-users-cog"></i> Manage Users</h3>
-            <p>View, create, and manage all system user accounts</p>
+            <p>View, create, and manage all system user accounts. Click any user to view and edit their details.</p>
         </div>
         <div class="um-header-right">
             <a href="{% url 'admin_create_user' %}" class="um-btn um-btn-primary">
@@ -433,6 +438,13 @@ document.addEventListener('click', function(e){
         if(stl.getAttribute('data-status')) p.set('status', stl.getAttribute('data-status'));
         p.delete('page');
         applyUM(p.toString()); return;
+    }
+    var row=e.target.closest('tr.um-row.um-clickable');
+    if(row){
+        if(e.target.closest('a,button,input,select,textarea,form,[data-bs-toggle]')) return;
+        var el=row.querySelector('a.um-act-btn.edit');
+        if(el){ window.location.href=el.getAttribute('href'); }
+        return;
     }
 });
 

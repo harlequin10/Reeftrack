@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     // Auto-dismiss alerts after 5 seconds
-    const alerts = document.querySelectorAll('.alert');
+    const alerts = document.querySelectorAll('.alert:not(.rt-persist)');
     alerts.forEach(function(alert) {
         setTimeout(function() {
             alert.classList.remove('show');

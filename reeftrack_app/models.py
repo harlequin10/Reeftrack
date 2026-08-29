@@ -122,6 +122,41 @@ class Species(models.Model):
     code = models.CharField(max_length=20, blank=True, help_text="Short code extracted from name")
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_MANUAL)
 
+    @staticmethod
+    def _sentence_case(value):
+        """Capitalize only the first letter, keep parenthetical codes uppercase.
+
+        e.g. 'ACROPORA DIGITATE (ACD)' -> 'Acropora digitate (ACD)'
+             'ACROPORIDAE'               -> 'Acroporidae'
+        """
+        if not value:
+            return value
+        import re
+        # Extract any parenthetical codes (e.g. ACD) and preserve them uppercase
+        parts = re.split(r'(\([^)]*\))', value)
+        result = []
+        for p in parts:
+            if p.startswith('(') and p.endswith(')'):
+                # Uppercase the content inside the parentheses
+                content = p[1:-1].strip().upper()
+                result.append('(' + content + ')')
+            else:
+                text = p.strip()
+                if text:
+                    lowered = text.lower()
+                    result.append(lowered[0].upper() + lowered[1:])
+                else:
+                    result.append(text)
+        return ' '.join(x for x in result if x)
+
+    @property
+    def display_sub_category(self):
+        return self._sentence_case(self.sub_category)
+
+    @property
+    def display_major_category(self):
+        return self._sentence_case(self.major_category)
+
     def __str__(self):
         return f"{self.sub_category} ({self.major_category})"
 
@@ -221,6 +256,10 @@ class Transect(models.Model):
     deep_end_lat = models.DecimalField(max_digits=12, decimal_places=8, blank=True, null=True)
     deep_end_lng = models.DecimalField(max_digits=12, decimal_places=8, blank=True, null=True)
     deep_excel = models.FileField(upload_to='assessments/transect_excel/', blank=True, null=True)
+
+    # Estimated depth (meters) per depth zone - optional
+    shallow_depth = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Estimated Shallow Depth (m)")
+    deep_depth = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Estimated Deep Depth (m)")
 
     def __str__(self):
         return f"Transect {self.transect_number} ({self.assessment})"
@@ -397,6 +436,30 @@ class UserProfile(models.Model):
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     )
+
+    POSITION_CHOICES = (
+        ('marine_biologist', 'Marine Biologist'),
+        ('research_associate', 'Research Associate'),
+        ('research_assistant', 'Research Assistant'),
+        ('field_technician', 'Field Technician'),
+        ('student_intern', 'Student / Intern'),
+        ('professor_educator', 'Professor / Educator'),
+        ('coastal_resource_manager', 'Coastal Resource Manager'),
+        ('government_staff', 'Government Staff'),
+        ('other', 'Other'),
+    )
+
+    AFFILIATION_CHOICES = (
+        ('university_institution', 'University / Academic Institution'),
+        ('research_institute', 'Research Institute'),
+        ('government_agency', 'Government Agency'),
+        ('lgu', 'Local Government Unit (LGU)'),
+        ('ngo', 'Non-Government Organization (NGO)'),
+        ('private_sector', 'Private Sector / Consultancy'),
+        ('community_org', 'Community / Fisherfolk Organization'),
+        ('independent', 'Independent / Volunteer'),
+        ('other', 'Other'),
+    )
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='contributor')
@@ -404,6 +467,8 @@ class UserProfile(models.Model):
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     middle_initial = models.CharField(max_length=1, blank=True, default='')
     suffix = models.CharField(max_length=20, blank=True, default='')
+    affiliation = models.CharField(max_length=200, choices=AFFILIATION_CHOICES, verbose_name='Affiliation / Organization')
+    position = models.CharField(max_length=200, choices=POSITION_CHOICES, verbose_name='Position / Specialization')
     bio = models.TextField(blank=True, null=True)
     approved_by = models.ForeignKey(
         User, 

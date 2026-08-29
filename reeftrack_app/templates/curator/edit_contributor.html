@@ -34,6 +34,7 @@
 
     .ec-user-banner{display:flex;align-items:center;gap:1rem;padding:1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:1.25rem;}
     .ec-user-avatar{width:50px;height:50px;border-radius:14px;background:linear-gradient(135deg,#16a34a,#15803d);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;font-weight:700;text-transform:uppercase;flex-shrink:0;}
+    .ec-user-avatar-img{width:50px;height:50px;border-radius:14px;object-fit:cover;flex-shrink:0;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.12);}
     .ec-user-info{min-width:0;flex:1;}
     .ec-user-name{font-weight:700;color:var(--rt-navy);font-size:1rem;}
     .ec-user-email{font-size:.8rem;color:#94a3b8;}
@@ -109,11 +110,15 @@
                 <div class="ec-card-body">
                     <!-- User Banner -->
                     <div class="ec-user-banner">
+                        {% if edit_user.profile.profile_picture %}
+                            <img src="{{ edit_user.profile.profile_picture.url }}" class="ec-user-avatar-img" alt="{{ edit_user.profile.get_full_name|default:edit_user.email }}">
+                        {% else %}
                         <div class="ec-user-avatar">
                             {% with name=edit_user.profile.get_full_name|default:edit_user.email %}
                             {{ name|truncatechars:2 }}
                             {% endwith %}
                         </div>
+                        {% endif %}
                         <div class="ec-user-info">
                             <div class="ec-user-name">{{ edit_user.profile.get_full_name|default:edit_user.email }}</div>
                             <div class="ec-user-email">{{ edit_user.email }}</div>
@@ -166,6 +171,37 @@
                         <div class="ec-form-group">
                             <label>Email Address <span class="req">*</span></label>
                             <input type="email" name="email" id="email" class="form-control" value="{{ edit_user.email }}" required>
+                        </div>
+
+                        <div class="ec-divider"></div>
+
+                        <!-- Affiliation & Position -->
+                        <div class="ec-form-group">
+                            <label>Affiliation / Organization <span class="req">*</span></label>
+                            <select name="affiliation" id="affiliation" class="form-select">
+                                <option value="" {% if not edit_user.profile.affiliation %}selected{% endif %}>Select affiliation</option>
+                                {% for value, label in affiliation_choices %}
+                                    <option value="{{ value }}" {% if edit_user.profile.affiliation == value %}selected{% endif %}{% if value == 'other' and edit_user.profile.affiliation and edit_user.profile.affiliation not in affiliation_values %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div id="affiliationOtherWrap" style="display:none;">
+                                <input type="text" name="affiliation_other" id="id_affiliation_other" class="form-control" value="{% if edit_user.profile.affiliation and edit_user.profile.affiliation not in affiliation_values %}{{ edit_user.profile.affiliation }}{% endif %}">
+                                <div id="affiliationUnivHint" class="field-help" style="display:none;">Format: <strong>University - Campus</strong>, e.g. Mindanao State University - General Santos</div>
+                                <a href="#" id="affiliationOtherWrapBack" style="display:none; margin-top:.35rem; font-size:.75rem; font-weight:600; color:#64748b; text-decoration:none;">← Choose from list</a>
+                            </div>
+                        </div>
+                        <div class="ec-form-group">
+                            <label>Position / Specialization <span class="req">*</span></label>
+                            <select name="position" id="position" class="form-select">
+                                <option value="" {% if not edit_user.profile.position %}selected{% endif %}>Select position</option>
+                                {% for value, label in position_choices %}
+                                    <option value="{{ value }}" {% if edit_user.profile.position == value %}selected{% endif %}{% if value == 'other' and edit_user.profile.position and edit_user.profile.position not in position_values %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div id="positionOtherWrap" style="display:none;">
+                                <input type="text" name="position_other" id="id_position_other" class="form-control" value="{% if edit_user.profile.position and edit_user.profile.position not in position_values %}{{ edit_user.profile.position }}{% endif %}">
+                                <a href="#" id="positionOtherWrapBack" style="display:none; margin-top:.35rem; font-size:.75rem; font-weight:600; color:#64748b; text-decoration:none;">← Choose from list</a>
+                            </div>
                         </div>
 
                         <!-- Status -->
@@ -235,7 +271,37 @@
     </div>
 </div>
 
+<!-- Profile Photo Lightbox -->
+<div class="modal fade" id="photoLightbox" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width:640px;">
+        <div class="modal-content" style="background:transparent;border:none;box-shadow:none;">
+            <div style="text-align:right;margin-bottom:.5rem;">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
+                        style="background:rgba(0,0,0,.6);padding:.7rem;border-radius:50%;opacity:.9;"></button>
+            </div>
+            <img id="lightboxImg" src="" alt="Profile photo"
+                 style="width:100%;border-radius:12px;background:#000;object-fit:contain;">
+        </div>
+    </div>
+</div>
+
 <script>
+// Expand profile photo on click (Facebook-style lightbox)
+document.querySelectorAll('.ec-user-avatar-img').forEach(function(img) {
+    img.style.cursor = 'zoom-in';
+    img.title = 'Click to enlarge';
+    img.addEventListener('click', function() {
+        var lb = document.getElementById('lightboxImg');
+        if (!lb) return;
+        lb.src = img.getAttribute('src');
+        var modalEl = document.getElementById('photoLightbox');
+        if (modalEl) {
+            var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    });
+});
+
 // Auto-capitalize middle initial
 document.getElementById('middle_initial').addEventListener('input', function() {
     this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
@@ -251,6 +317,41 @@ document.getElementById('middle_initial').addEventListener('input', function() {
         this.setSelectionRange(pos, pos);
     });
 });
+
+function setupSpecifyOther(selectId, wrapId, specifyValues) {
+    var select = document.getElementById(selectId);
+    var wrap = document.getElementById(wrapId);
+    var back = document.getElementById(wrapId + 'Back');
+    if (!select || !wrap) return;
+    function showOther(on) {
+        select.style.display = on ? 'none' : '';
+        wrap.style.display = on ? 'block' : 'none';
+        if (back) back.style.display = on ? 'inline-block' : 'none';
+        var input = wrap.querySelector('input');
+        if (on) {
+            var isUniv = select.value === 'university_institution';
+            input.placeholder = isUniv ? 'University - Campus' : 'Specify your affiliation';
+            var hint = document.getElementById('affiliationUnivHint');
+            if (hint) hint.style.display = isUniv ? 'block' : 'none';
+            input.focus();
+        } else {
+            input.value = '';
+            var hint = document.getElementById('affiliationUnivHint');
+            if (hint) hint.style.display = 'none';
+        }
+    }
+    select.addEventListener('change', function() {
+        showOther(specifyValues.indexOf(select.value) !== -1);
+    });
+    if (back) back.addEventListener('click', function(e) {
+        e.preventDefault();
+        select.value = '';
+        showOther(false);
+    });
+    showOther(specifyValues.indexOf(select.value) !== -1);
+}
+setupSpecifyOther('affiliation', 'affiliationOtherWrap', ['other', 'university_institution']);
+setupSpecifyOther('position', 'positionOtherWrap', ['other']);
 
 // Submit loading state
 document.getElementById('editForm').addEventListener('submit', function(e) {

@@ -78,7 +78,7 @@ a:hover { color: var(--rt-coral); }
 .rt-navbar .nav-link { color: var(--rt-seafoam) !important; }
 .rt-navbar .nav-link:hover { color: var(--rt-white) !important; }
 .rt-navbar .navbar-brand { color: var(--rt-white) !important; font-weight: 700; letter-spacing: 0.02em; }
-.rt-navbar .dropdown-menu { background: var(--rt-white); border: 1px solid var(--rt-border); }
+.rt-navbar .dropdown-menu { background: var(--rt-white); border: 1px solid var(--rt-border); z-index: 9999; }
 .rt-navbar .dropdown-item { color: var(--rt-ink); }
 .rt-navbar .dropdown-item:hover { background: var(--rt-sand-light); color: var(--rt-navy); }
 

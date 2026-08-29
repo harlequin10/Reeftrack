@@ -166,6 +166,39 @@
 
                         <div class="au-divider"></div>
 
+                        <!-- Affiliation & Position -->
+                        <div class="au-form-group">
+                            <label>Affiliation / Organization <span class="req">*</span></label>
+                            {{ form.affiliation }}
+                            {% if form.affiliation.errors %}
+                                <div class="field-errors">{{ form.affiliation.errors }}</div>
+                            {% endif %}
+                            <div id="affiliationOtherWrap" style="display:none;">
+                                {{ form.affiliation_other }}
+                                {% if form.affiliation_other.errors %}
+                                    <div class="field-errors">{{ form.affiliation_other.errors }}</div>
+                                {% endif %}
+                                <div id="affiliationUnivHint" class="field-help" style="display:none;">Format: <strong>University - Campus</strong>, e.g. Mindanao State University - General Santos</div>
+                                <a href="#" id="affiliationOtherWrapBack" style="display:none; margin-top:.35rem; font-size:.75rem; font-weight:600; color:#64748b; text-decoration:none;">← Choose from list</a>
+                            </div>
+                        </div>
+                        <div class="au-form-group">
+                            <label>Position / Specialization <span class="req">*</span></label>
+                            {{ form.position }}
+                            {% if form.position.errors %}
+                                <div class="field-errors">{{ form.position.errors }}</div>
+                            {% endif %}
+                            <div id="positionOtherWrap" style="display:none;">
+                                {{ form.position_other }}
+                                {% if form.position_other.errors %}
+                                    <div class="field-errors">{{ form.position_other.errors }}</div>
+                                {% endif %}
+                                <a href="#" id="positionOtherWrapBack" style="display:none; margin-top:.35rem; font-size:.75rem; font-weight:600; color:#64748b; text-decoration:none;">← Choose from list</a>
+                            </div>
+                        </div>
+
+                        <div class="au-divider"></div>
+
                         <!-- Role -->
                         <div class="au-form-group">
                             <label>Role <span class="req">*</span></label>
@@ -236,6 +269,41 @@ function selectRole(role) {
     document.getElementById('role-' + role).classList.add('active');
     document.getElementById('roleInput').value = role;
 }
+
+function setupSpecifyOther(selectId, wrapId, specifyValues) {
+    var select = document.getElementById(selectId);
+    var wrap = document.getElementById(wrapId);
+    var back = document.getElementById(wrapId + 'Back');
+    if (!select || !wrap) return;
+    function showOther(on) {
+        select.style.display = on ? 'none' : '';
+        wrap.style.display = on ? 'block' : 'none';
+        if (back) back.style.display = on ? 'inline-block' : 'none';
+        var input = wrap.querySelector('input');
+        if (on) {
+            var isUniv = select.value === 'university_institution';
+            input.placeholder = isUniv ? 'University - Campus' : 'Specify your affiliation';
+            var hint = document.getElementById('affiliationUnivHint');
+            if (hint) hint.style.display = isUniv ? 'block' : 'none';
+            input.focus();
+        } else {
+            input.value = '';
+            var hint = document.getElementById('affiliationUnivHint');
+            if (hint) hint.style.display = 'none';
+        }
+    }
+    select.addEventListener('change', function() {
+        showOther(specifyValues.indexOf(select.value) !== -1);
+    });
+    if (back) back.addEventListener('click', function(e) {
+        e.preventDefault();
+        select.value = '';
+        showOther(false);
+    });
+    showOther(specifyValues.indexOf(select.value) !== -1);
+}
+setupSpecifyOther('id_affiliation', 'affiliationOtherWrap', ['other', 'university_institution']);
+setupSpecifyOther('id_position', 'positionOtherWrap', ['other']);
 
 // Initialize default role
 document.addEventListener('DOMContentLoaded', function() {

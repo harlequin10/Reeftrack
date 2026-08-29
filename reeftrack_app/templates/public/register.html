@@ -40,6 +40,8 @@
     .reg-field-error i{font-size:.7rem;}
     .reg-field-input .reg-eye{position:absolute;right:.5rem;top:50%;transform:translateY(-50%);border:none;background:none;color:#9ca3af;cursor:pointer;padding:.25rem;font-size:.85rem;}
     .reg-field-input .reg-eye:hover{color:var(--rt-teal);}
+    .reg-other-back{display:inline-block;margin-top:.4rem;font-size:.72rem;font-weight:600;color:var(--rt-teal);text-decoration:none;}
+    .reg-other-back:hover{color:var(--rt-navy);text-decoration:underline;}
 
     .reg-name-row{display:grid;grid-template-columns:1.5fr .6fr 1.5fr .6fr;gap:.6rem;}
     @media(max-width:575px){
@@ -132,6 +134,42 @@
                     </div>
                 </div>
 
+                <div class="reg-section-label" style="margin-top:.5rem;"><i class="fas fa-briefcase"></i> Professional Information</div>
+
+                <div class="reg-field">
+                    <label for="id_affiliation">Affiliation / Organization <span class="req">*</span></label>
+                    <div class="reg-field-input">
+                        {{ form.affiliation }}
+                        {% if form.affiliation.errors %}
+                        <div class="reg-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.affiliation.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="reg-field-input" id="affiliationOtherWrap" style="display:none;">
+                        {{ form.affiliation_other }}
+                        {% if form.affiliation_other.errors %}
+                        <div class="reg-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.affiliation_other.errors.0 }}</div>
+                        {% endif %}
+                        <div id="affiliationUnivHint" class="reg-field-hint" style="display:none;">Format: <strong>University - Campus</strong>, e.g. Mindanao State University - General Santos</div>
+                        <a href="#" id="affiliationOtherWrapBack" class="reg-other-back" style="display:none;">← Choose from list</a>
+                    </div>
+                </div>
+                <div class="reg-field">
+                    <label for="id_position">Position / Specialization <span class="req">*</span></label>
+                    <div class="reg-field-input">
+                        {{ form.position }}
+                        {% if form.position.errors %}
+                        <div class="reg-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.position.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="reg-field-input" id="positionOtherWrap" style="display:none;">
+                        {{ form.position_other }}
+                        {% if form.position_other.errors %}
+                        <div class="reg-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.position_other.errors.0 }}</div>
+                        {% endif %}
+                        <a href="#" id="positionOtherWrapBack" class="reg-other-back" style="display:none;">← Choose from list</a>
+                    </div>
+                </div>
+
                 <div class="reg-section-label" style="margin-top:.5rem;"><i class="fas fa-envelope"></i> Account Credentials</div>
 
                 <div class="reg-field">
@@ -203,6 +241,40 @@ function togglePassword(fieldId, btn) {
 document.getElementById('id_middle_initial').addEventListener('input', function() {
     this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
 });
+function setupSpecifyOther(selectId, wrapId, specifyValues) {
+    var select = document.getElementById(selectId);
+    var wrap = document.getElementById(wrapId);
+    var back = document.getElementById(wrapId + 'Back');
+    if (!select || !wrap) return;
+    function showOther(on) {
+        select.style.display = on ? 'none' : '';
+        wrap.style.display = on ? 'block' : 'none';
+        if (back) back.style.display = on ? 'inline-block' : 'none';
+        var input = wrap.querySelector('input');
+        if (on) {
+            var isUniv = select.value === 'university_institution';
+            input.placeholder = isUniv ? 'University - Campus' : 'Specify your affiliation';
+            var hint = document.getElementById('affiliationUnivHint');
+            if (hint) hint.style.display = isUniv ? 'block' : 'none';
+            input.focus();
+        } else {
+            input.value = '';
+            var hint = document.getElementById('affiliationUnivHint');
+            if (hint) hint.style.display = 'none';
+        }
+    }
+    select.addEventListener('change', function() {
+        showOther(specifyValues.indexOf(select.value) !== -1);
+    });
+    if (back) back.addEventListener('click', function(e) {
+        e.preventDefault();
+        select.value = '';
+        showOther(false);
+    });
+    showOther(specifyValues.indexOf(select.value) !== -1);
+}
+setupSpecifyOther('id_affiliation', 'affiliationOtherWrap', ['other', 'university_institution']);
+setupSpecifyOther('id_position', 'positionOtherWrap', ['other']);
 ['id_first_name', 'id_last_name'].forEach(function(id) {
     var el = document.getElementById(id);
     if (!el) return;

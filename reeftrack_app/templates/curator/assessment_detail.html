@@ -175,6 +175,7 @@
                                 Start: {{ t.shallow_start_lat|default:"-" }}, {{ t.shallow_start_lng|default:"-" }}<br>
                                 End: {{ t.shallow_end_lat|default:"-" }}, {{ t.shallow_end_lng|default:"-" }}<br>
                                 {% if t.shallow_length %}<strong>{{ t.shallow_length }} m</strong>{% endif %}
+                                {% if t.shallow_depth %}<br><strong class="text-info"><i class="fas fa-arrows-up-down"></i> Est. Depth: {{ t.shallow_depth }} m</strong>{% endif %}
                             {% else %}
                                 <span class="text-muted">No coordinates</span>
                             {% endif %}
@@ -187,6 +188,7 @@
                                 Start: {{ t.deep_start_lat|default:"-" }}, {{ t.deep_start_lng|default:"-" }}<br>
                                 End: {{ t.deep_end_lat|default:"-" }}, {{ t.deep_end_lng|default:"-" }}<br>
                                 {% if t.deep_length %}<strong>{{ t.deep_length }} m</strong>{% endif %}
+                                {% if t.deep_depth %}<br><strong class="text-primary"><i class="fas fa-arrows-up-down"></i> Est. Depth: {{ t.deep_depth }} m</strong>{% endif %}
                             {% else %}
                                 <span class="text-muted">No coordinates</span>
                             {% endif %}
@@ -230,8 +232,8 @@
                             {% for ts in depth_group.list %}
                             <tr>
                                 <td>{{ forloop.counter }}</td>
-                                <td>{{ ts.species.sub_category }}</td>
-                                <td><span class="badge bg-secondary">{{ ts.species.major_category }}</span></td>
+                                <td>{{ ts.species.display_sub_category }}</td>
+                                <td><span class="badge bg-secondary">{{ ts.species.display_major_category }}</span></td>
                                 <td class="text-end"><strong>{{ ts.cover }}</strong></td>
                             </tr>
                             {% endfor %}
@@ -271,8 +273,8 @@
                             <tr>
                                 <td>{{ forloop.counter }}</td>
                                 <td>T{{ sp.transect_number }}</td>
-                                <td>{{ sp.sub_category }}</td>
-                                <td><span class="badge bg-secondary">{{ sp.major_category }}</span></td>
+                                <td>{{ sp.display_sub_category }}</td>
+                                <td><span class="badge bg-secondary">{{ sp.display_major_category }}</span></td>
                                 <td class="text-end"><strong>{{ sp.cover|floatformat:1 }}</strong></td>
                             </tr>
                             {% endfor %}
@@ -395,7 +397,9 @@ document.addEventListener('DOMContentLoaded', function() {
             dELat: {{ t.deep_end_lat|default:"null" }},
             dELng: {{ t.deep_end_lng|default:"null" }},
             sLen: {{ t.shallow_length|default:"null" }},
-            dLen: {{ t.deep_length|default:"null" }}
+            dLen: {{ t.deep_length|default:"null" }},
+            sDepth: {{ t.shallow_depth|default:"null" }},
+            dDepth: {{ t.deep_depth|default:"null" }}
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
@@ -419,14 +423,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var bounds = [];
     transectData.forEach(function(t) {
         if (t.sLat && t.sLng && t.eLat && t.eLng) {
-            var sLabel = 'Transect ' + t.num + ' — Shallow' + (t.sLen ? ' (' + t.sLen + ' m)' : '');
+            var sLabel = 'Transect ' + t.num + ' — Shallow' + (t.sLen ? ' (' + t.sLen + ' m)' : '') + (t.sDepth ? ' — Depth: ' + t.sDepth + ' m' : '');
             L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup(sLabel);
             L.marker([t.sLat, t.sLng], {icon: makeIcon('#0dcaf0', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow Start');
             L.marker([t.eLat, t.eLng], {icon: makeIcon('#0dcaf0', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Shallow End');
             bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
         }
         if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
-            var dLabel = 'Transect ' + t.num + ' — Deep' + (t.dLen ? ' (' + t.dLen + ' m)' : '');
+            var dLabel = 'Transect ' + t.num + ' — Deep' + (t.dLen ? ' (' + t.dLen + ' m)' : '') + (t.dDepth ? ' — Depth: ' + t.dDepth + ' m' : '');
             L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup(dLabel);
             L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#0d6efd', 'S' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep Start');
             L.marker([t.dELat, t.dELng], {icon: makeIcon('#0d6efd', 'E' + t.num)}).addTo(map).bindPopup('T' + t.num + ' Deep End');

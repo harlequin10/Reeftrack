@@ -133,6 +133,14 @@
                                                            name="shallow_end_lng" id="shallow_end_lng" placeholder="e.g. 125.1245678" value="{{ pending_transect.shallow_end_lng|default:'' }}">
                                                 </div>
                                             </div>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold"><i class="fas fa-arrows-up-down text-info"></i> Estimated Depth (m)</label>
+                                                    <input type="number" step="any" min="0" max="500" class="form-control form-control-sm"
+                                                           name="shallow_depth" id="shallow_depth" placeholder="e.g. 5" value="{{ pending_transect.shallow_depth|default:'' }}">
+                                                    <div class="form-text">Optional. Approximate depth of the shallow zone in meters.</div>
+                                                </div>
+                                            </div>
                                             <label class="form-label small fw-bold">
                                                 <i class="fas fa-file-excel text-success"></i> CPCe Excel File
                                             </label>
@@ -182,6 +190,14 @@
                                                     <input type="number" step="any" min="-180" max="180" required
                                                            class="form-control form-control-sm coord-input"
                                                            name="deep_end_lng" id="deep_end_lng" placeholder="e.g. 125.1245678">
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold"><i class="fas fa-arrows-up-down text-primary"></i> Estimated Depth (m)</label>
+                                                    <input type="number" step="any" min="0" max="500" class="form-control form-control-sm"
+                                                           name="deep_depth" id="deep_depth" placeholder="e.g. 10" value="{{ pending_transect.deep_depth|default:'' }}">
+                                                    <div class="form-text">Optional. Approximate depth of the deep zone in meters.</div>
                                                 </div>
                                             </div>
                                             <label class="form-label small fw-bold">
@@ -252,6 +268,9 @@
                                 {% else %}
                                     <span class="text-muted">No coordinates</span>
                                 {% endif %}
+                                {% if t.shallow_depth %}
+                                    <br><small class="text-info fw-bold"><i class="fas fa-arrows-up-down"></i> Estimated Depth: {{ t.shallow_depth }} m</small>
+                                {% endif %}
                                 {% if t.shallow_filename %}
                                     <br><small class="text-success"><i class="fas fa-file-excel"></i> {{ t.shallow_filename }}
                                     ({{ t.shallow_species|length }} sub categories)</small>
@@ -267,6 +286,9 @@
                                     {% endif %}
                                 {% else %}
                                     <span class="text-muted">No coordinates</span>
+                                {% endif %}
+                                {% if t.deep_depth %}
+                                    <br><small class="text-primary fw-bold"><i class="fas fa-arrows-up-down"></i> Estimated Depth: {{ t.deep_depth }} m</small>
                                 {% endif %}
                                 {% if t.deep_filename %}
                                     <br><small class="text-success"><i class="fas fa-file-excel"></i> {{ t.deep_filename }}
@@ -405,6 +427,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
+    function formatLength(meters) {
+        var val = meters.toFixed(1);
+        var parts = val.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.') + ' m';
+    }
+
     function updateLengthDisplay() {
         var sL1 = getVal('shallow_start_lat'), sN1 = getVal('shallow_start_lng');
         var sL2 = getVal('shallow_end_lat'),   sN2 = getVal('shallow_end_lng');
@@ -439,6 +468,11 @@ document.addEventListener('DOMContentLoaded', function() {
         var dLat1 = getVal('deep_start_lat'),     dLng1 = getVal('deep_start_lng');
         var dLat2 = getVal('deep_end_lat'),       dLng2 = getVal('deep_end_lng');
 
+        var sDepthInput = document.getElementById('shallow_depth');
+        var dDepthInput = document.getElementById('deep_depth');
+        var sDepthText = (sDepthInput && sDepthInput.value.trim()) ? '<br><b>Transect Depth:</b> ' + sDepthInput.value.trim() + ' m' : '';
+        var dDepthText = (dDepthInput && dDepthInput.value.trim()) ? '<br><b>Transect Depth:</b> ' + dDepthInput.value.trim() + ' m' : '';
+
         if (shallowLine) { map.removeLayer(shallowLine); shallowLine = null; }
         if (deepLine)    { map.removeLayer(deepLine);    deepLine = null; }
         if (shallowStartMarker) { map.removeLayer(shallowStartMarker); shallowStartMarker = null; }
@@ -457,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function() {
             bounds.push([sLat2, sLng2]);
         }
         if (sLat1 !== null && sLng1 !== null && sLat2 !== null && sLng2 !== null) {
-            shallowLine = L.polyline([[sLat1, sLng1], [sLat2, sLng2]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Shallow Transect');
+            shallowLine = L.polyline([[sLat1, sLng1], [sLat2, sLng2]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(map).bindPopup('<b>Transect Type:</b> Shallow Transect<br><b>Transect Length:</b> ' + formatLength(haversine(sLat1, sLng1, sLat2, sLng2)) + sDepthText);
         }
 
         if (dLat1 !== null && dLng1 !== null) {
@@ -469,7 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
             bounds.push([dLat2, dLng2]);
         }
         if (dLat1 !== null && dLng1 !== null && dLat2 !== null && dLng2 !== null) {
-            deepLine = L.polyline([[dLat1, dLng1], [dLat2, dLng2]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup('Deep Transect');
+            deepLine = L.polyline([[dLat1, dLng1], [dLat2, dLng2]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup('<b>Transect Type:</b> Deep Transect<br><b>Transect Length:</b> ' + formatLength(haversine(dLat1, dLng1, dLat2, dLng2)) + dDepthText);
         }
 
         if (bounds.length > 0) {
@@ -480,6 +514,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelectorAll('.coord-input').forEach(function(el) {
         el.addEventListener('input', updateMap);
+    });
+    ['shallow_depth', 'deep_depth'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateMap);
     });
 
     // ── Reference match detection ──
@@ -572,7 +610,9 @@ document.addEventListener('DOMContentLoaded', function() {
             dSLat: {{ t.deep_start_lat|default:"null" }},
             dSLng: {{ t.deep_start_lng|default:"null" }},
             dELat: {{ t.deep_end_lat|default:"null" }},
-            dELng: {{ t.deep_end_lng|default:"null" }}
+            dELng: {{ t.deep_end_lng|default:"null" }},
+            sDepth: {{ t.shallow_depth|default:"null" }},
+            dDepth: {{ t.deep_depth|default:"null" }}
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
@@ -582,13 +622,13 @@ document.addEventListener('DOMContentLoaded', function() {
         prevTransects.forEach(function(t, i) {
             var num = i + 1;
             if (t.sLat && t.sLng && t.eLat && t.eLng) {
-                L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#6c757d', weight: 3, opacity: 0.7, dashArray: '6,4'}).addTo(map).bindPopup('Transect ' + num + ' Shallow');
+                L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#6c757d', weight: 3, opacity: 0.7, dashArray: '6,4'}).addTo(map).bindPopup('<b>Transect Type:</b> Shallow Transect<br><b>Transect Length:</b> ' + formatLength(haversine(t.sLat, t.sLng, t.eLat, t.eLng)) + (t.sDepth ? '<br><b>Transect Depth:</b> ' + t.sDepth + ' m' : ''));
                 L.marker([t.sLat, t.sLng], {icon: makeIcon('#6c757d', 'S' + num)}).addTo(map).bindPopup('T' + num + ' Shallow Start');
                 L.marker([t.eLat, t.eLng], {icon: makeIcon('#6c757d', 'E' + num)}).addTo(map).bindPopup('T' + num + ' Shallow End');
                 prevBounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
             }
             if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
-                L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#6c757d', weight: 3, opacity: 0.7, dashArray: '6,4'}).addTo(map).bindPopup('Transect ' + num + ' Deep');
+                L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#6c757d', weight: 3, opacity: 0.7, dashArray: '6,4'}).addTo(map).bindPopup('<b>Transect Type:</b> Deep Transect<br><b>Transect Length:</b> ' + formatLength(haversine(t.dSLat, t.dSLng, t.dELat, t.dELng)) + (t.dDepth ? '<br><b>Transect Depth:</b> ' + t.dDepth + ' m' : ''));
                 L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#6c757d', 'S' + num)}).addTo(map).bindPopup('T' + num + ' Deep Start');
                 L.marker([t.dELat, t.dELng], {icon: makeIcon('#6c757d', 'E' + num)}).addTo(map).bindPopup('T' + num + ' Deep End');
                 prevBounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);

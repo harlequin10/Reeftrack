@@ -50,12 +50,18 @@
             </thead>
             <tbody>
                 {% for u in users %}
-                <tr>
+                <tr class="um-row {% if u != request.user %}{% if u.profile.role != 'admin' or is_superuser %}um-clickable{% endif %}{% endif %}">
                     <td>
                         <div class="um-user-cell">
                             <div class="um-user-info">
                                 <div class="um-user-name">
+                                    {% if u != request.user %}{% if u.profile.role != 'admin' or is_superuser %}
+                                    <a href="{% url 'admin_edit_user' u.id %}" class="um-row-link">{{ u.profile.get_full_name|default:u.email }}</a>
+                                    {% else %}
                                     {{ u.profile.get_full_name|default:u.email }}
+                                    {% endif %}{% else %}
+                                    {{ u.profile.get_full_name|default:u.email }}
+                                    {% endif %}
                                 </div>
                                 <div class="um-user-email">{{ u.email }}</div>
                                 <div class="um-user-badges">

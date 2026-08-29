@@ -556,8 +556,8 @@
                 <tbody>
                     {% for sp in new_species %}
                     <tr>
-                        <td><strong>{{ sp.sub_category }}</strong></td>
-                        <td><span class="dam-new-badge">{{ sp.major_category }}</span></td>
+                        <td><strong>{{ sp.display_sub_category }}</strong></td>
+                        <td><span class="dam-new-badge">{{ sp.display_major_category }}</span></td>
                         <td>T{{ sp.transect }}</td>
                         <td>{{ sp.depth }}</td>
                         <td>{{ sp.cover|floatformat:1 }}%</td>
@@ -601,8 +601,8 @@
                     {% for sp in dg.list %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
-                        <td>{{ sp.sub_category }}</td>
-                        <td><span class="dam-family-badge">{{ sp.major_category }}</span></td>
+                        <td>{{ sp.display_sub_category }}</td>
+                        <td><span class="dam-family-badge">{{ sp.display_major_category }}</span></td>
                         <td>{{ sp.cover|floatformat:1 }}%</td>
                         <td>
                             {% if sp.is_new %}

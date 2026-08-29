@@ -464,6 +464,9 @@
                     {% if t.shallow_length %}
                     <span class="dam-gps-tag" style="background:#ecfeff;color:#0891b2;border-color:#a5f3fc;"><i class="fas fa-ruler"></i> {{ t.shallow_length }} m</span>
                     {% endif %}
+                    {% if t.shallow_depth %}
+                    <span class="dam-gps-tag" style="background:#ecfeff;color:#0891b2;border-color:#a5f3fc;"><i class="fas fa-arrows-up-down"></i> Est. Depth: {{ t.shallow_depth }} m</span>
+                    {% endif %}
                     {% if not t.shallow_start_lat and not t.shallow_end_lat %}
                     <span class="text-muted" style="font-size:0.82rem;"><i class="fas fa-map-pin"></i> No coordinates</span>
                     {% endif %}
@@ -480,6 +483,9 @@
                     {% endif %}
                     {% if t.deep_length %}
                     <span class="dam-gps-tag" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;"><i class="fas fa-ruler"></i> {{ t.deep_length }} m</span>
+                    {% endif %}
+                    {% if t.deep_depth %}
+                    <span class="dam-gps-tag" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;"><i class="fas fa-arrows-up-down"></i> Est. Depth: {{ t.deep_depth }} m</span>
                     {% endif %}
                     {% if not t.deep_start_lat and not t.deep_end_lat %}
                     <span class="text-muted" style="font-size:0.82rem;"><i class="fas fa-map-pin"></i> No coordinates</span>
@@ -523,8 +529,8 @@
                     {% for ts in depth_group.list %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
-                        <td>{{ ts.species.sub_category }}</td>
-                        <td><span class="dam-family-badge">{{ ts.species.major_category }}</span></td>
+                        <td>{{ ts.species.display_sub_category }}</td>
+                        <td><span class="dam-family-badge">{{ ts.species.display_major_category }}</span></td>
                         <td class="text-end"><strong>{{ ts.cover }}</strong></td>
                     </tr>
                     {% endfor %}
@@ -565,8 +571,8 @@
                     <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>T{{ sp.transect_number }}</td>
-                        <td>{{ sp.sub_category }}</td>
-                        <td><span class="dam-family-badge">{{ sp.major_category }}</span></td>
+                        <td>{{ sp.display_sub_category }}</td>
+                        <td><span class="dam-family-badge">{{ sp.display_major_category }}</span></td>
                         <td class="text-end"><strong>{{ sp.cover|floatformat:1 }}</strong></td>
                     </tr>
                     {% endfor %}
@@ -678,7 +684,9 @@ document.addEventListener('DOMContentLoaded', function() {
             dELat: {{ t.deep_end_lat|default:"null" }},
             dELng: {{ t.deep_end_lng|default:"null" }},
             sLen: {{ t.shallow_length|default:"null" }},
-            dLen: {{ t.deep_length|default:"null" }}
+            dLen: {{ t.deep_length|default:"null" }},
+            sDepth: {{ t.shallow_depth|default:"null" }},
+            dDepth: {{ t.deep_depth|default:"null" }}
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
@@ -702,14 +710,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var bounds = [];
     transectData.forEach(function(t) {
         if (t.sLat && t.sLng && t.eLat && t.eLng) {
-            var sLabel = '<b>Transect ' + t.num + '</b> — Shallow' + (t.sLen ? '<br>' + t.sLen + ' m' : '');
+            var sLabel = '<b>Transect ' + t.num + '</b> — Shallow' + (t.sLen ? '<br>' + t.sLen + ' m' : '') + (t.sDepth ? '<br>Depth: ' + t.sDepth + ' m' : '');
             L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#06b6d4', weight: 3, opacity: 0.85, dashArray: '6,4'}).addTo(map).bindPopup(sLabel);
             L.marker([t.sLat, t.sLng], {icon: makeIcon('#0891b2', 'T' + t.num + 'S')}).addTo(map).bindPopup('<b>T' + t.num + ' Shallow Start</b>');
             L.marker([t.eLat, t.eLng], {icon: makeIcon('#0891b2', 'T' + t.num + 'E')}).addTo(map).bindPopup('<b>T' + t.num + ' Shallow End</b>');
             bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
         }
         if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
-            var dLabel = '<b>Transect ' + t.num + '</b> — Deep' + (t.dLen ? '<br>' + t.dLen + ' m' : '');
+            var dLabel = '<b>Transect ' + t.num + '</b> — Deep' + (t.dLen ? '<br>' + t.dLen + ' m' : '') + (t.dDepth ? '<br>Depth: ' + t.dDepth + ' m' : '');
             L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#2563eb', weight: 3, opacity: 0.85, dashArray: '6,4'}).addTo(map).bindPopup(dLabel);
             L.marker([t.dSLat, t.dSLng], {icon: makeIcon('#1d4ed8', 'T' + t.num + 'S')}).addTo(map).bindPopup('<b>T' + t.num + ' Deep Start</b>');
             L.marker([t.dELat, t.dELng], {icon: makeIcon('#1d4ed8', 'T' + t.num + 'E')}).addTo(map).bindPopup('<b>T' + t.num + ' Deep End</b>');

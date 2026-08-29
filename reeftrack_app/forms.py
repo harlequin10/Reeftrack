@@ -6,7 +6,34 @@ from .models import UserProfile
 User = get_user_model()
 
 
-class RegisterForm(UserCreationForm):
+_SPECIFY_CHOICES = ('other', 'university_institution')
+
+
+def _resolve_other(choice_value, other_value, specify_choices=_SPECIFY_CHOICES):
+    if choice_value in specify_choices:
+        return (other_value or '').strip()
+    return choice_value
+
+
+class OtherChoiceMixin:
+    """Requires the accompanying free-text field when a 'specify' option is selected."""
+
+    def clean_affiliation_other(self):
+        affiliation = self.cleaned_data.get('affiliation')
+        other = self.cleaned_data.get('affiliation_other', '')
+        if affiliation in _SPECIFY_CHOICES and not (other and other.strip()):
+            raise forms.ValidationError('Please specify your affiliation / organization.')
+        return (other or '').strip()
+
+    def clean_position_other(self):
+        position = self.cleaned_data.get('position')
+        other = self.cleaned_data.get('position_other', '')
+        if position == 'other' and not (other and other.strip()):
+            raise forms.ValidationError('Please specify your position / specialization.')
+        return (other or '').strip()
+
+
+class RegisterForm(OtherChoiceMixin, UserCreationForm):
     first_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
@@ -21,6 +48,18 @@ class RegisterForm(UserCreationForm):
     )
     suffix = forms.ChoiceField(choices=SUFFIX_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
     email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    affiliation = forms.ChoiceField(
+        choices=[('', 'Select affiliation')] + list(UserProfile.AFFILIATION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Affiliation / Organization',
+    )
+    position = forms.ChoiceField(
+        choices=[('', 'Select position')] + list(UserProfile.POSITION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Position / Specialization',
+    )
+    affiliation_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your affiliation'}), label='Affiliation (other)')
+    position_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your position'}), label='Position (other)')
 
     class Meta:
         model = User
@@ -66,6 +105,8 @@ class RegisterForm(UserCreationForm):
             profile = user.profile
             profile.middle_initial = self.cleaned_data.get('middle_initial', '')
             profile.suffix = self.cleaned_data.get('suffix', '')
+            profile.affiliation = _resolve_other(self.cleaned_data.get('affiliation', ''), self.cleaned_data.get('affiliation_other', ''))
+            profile.position = _resolve_other(self.cleaned_data.get('position', ''), self.cleaned_data.get('position_other', ''))
             profile.role = 'contributor'
             profile.status = 'pending'
             profile.save()
@@ -84,7 +125,7 @@ class LoginForm(forms.Form):
     }))
 
 
-class GoogleProfileForm(forms.Form):
+class GoogleProfileForm(OtherChoiceMixin, forms.Form):
     """Name details required after signing in with Google."""
     SUFFIX_CHOICES = (
         ('', 'None'),
@@ -99,6 +140,18 @@ class GoogleProfileForm(forms.Form):
     middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
     last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}))
     suffix = forms.ChoiceField(choices=SUFFIX_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
+    affiliation = forms.ChoiceField(
+        choices=[('', 'Select affiliation')] + list(UserProfile.AFFILIATION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Affiliation / Organization',
+    )
+    position = forms.ChoiceField(
+        choices=[('', 'Select position')] + list(UserProfile.POSITION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Position / Specialization',
+    )
+    affiliation_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your affiliation'}), label='Affiliation (other)')
+    position_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your position'}), label='Position (other)')
 
     def clean_first_name(self):
         name = self.cleaned_data.get('first_name', '')
@@ -115,7 +168,7 @@ class GoogleProfileForm(forms.Form):
         return mi
 
 
-class AdminCreateUserForm(forms.ModelForm):
+class AdminCreateUserForm(OtherChoiceMixin, forms.ModelForm):
     SUFFIX_CHOICES = (
         ('', 'None'),
         ('Jr.', 'Jr.'),
@@ -135,6 +188,18 @@ class AdminCreateUserForm(forms.ModelForm):
         choices=UserProfile.ROLE_CHOICES,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    affiliation = forms.ChoiceField(
+        choices=[('', 'Select affiliation')] + list(UserProfile.AFFILIATION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_affiliation'}),
+        label='Affiliation / Organization',
+    )
+    position = forms.ChoiceField(
+        choices=[('', 'Select position')] + list(UserProfile.POSITION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_position'}),
+        label='Position / Specialization',
+    )
+    affiliation_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your affiliation'}), label='Affiliation (other)')
+    position_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your position'}), label='Position (other)')
 
     def __init__(self, *args, **kwargs):
         is_superuser = kwargs.pop('is_superuser', False)
@@ -189,6 +254,8 @@ class AdminCreateUserForm(forms.ModelForm):
             profile = user.profile
             profile.middle_initial = self.cleaned_data.get('middle_initial', '')
             profile.suffix = self.cleaned_data.get('suffix', '')
+            profile.affiliation = _resolve_other(self.cleaned_data.get('affiliation', ''), self.cleaned_data.get('affiliation_other', ''))
+            profile.position = _resolve_other(self.cleaned_data.get('position', ''), self.cleaned_data.get('position_other', ''))
             profile.role = self.cleaned_data['role']
             profile.status = 'approved'
             profile.save()
@@ -196,7 +263,7 @@ class AdminCreateUserForm(forms.ModelForm):
         return user
 
 
-class CuratorCreateContributorForm(forms.ModelForm):
+class CuratorCreateContributorForm(OtherChoiceMixin, forms.ModelForm):
     SUFFIX_CHOICES = (
         ('', 'None'),
         ('Jr.', 'Jr.'),
@@ -212,6 +279,18 @@ class CuratorCreateContributorForm(forms.ModelForm):
     suffix = forms.ChoiceField(choices=SUFFIX_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
     email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+    affiliation = forms.ChoiceField(
+        choices=[('', 'Select affiliation')] + list(UserProfile.AFFILIATION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_affiliation'}),
+        label='Affiliation / Organization',
+    )
+    position = forms.ChoiceField(
+        choices=[('', 'Select position')] + list(UserProfile.POSITION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_position'}),
+        label='Position / Specialization',
+    )
+    affiliation_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your affiliation'}), label='Affiliation (other)')
+    position_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your position'}), label='Position (other)')
 
     class Meta:
         model = User
@@ -260,6 +339,8 @@ class CuratorCreateContributorForm(forms.ModelForm):
             profile = user.profile
             profile.middle_initial = self.cleaned_data.get('middle_initial', '')
             profile.suffix = self.cleaned_data.get('suffix', '')
+            profile.affiliation = _resolve_other(self.cleaned_data.get('affiliation', ''), self.cleaned_data.get('affiliation_other', ''))
+            profile.position = _resolve_other(self.cleaned_data.get('position', ''), self.cleaned_data.get('position_other', ''))
             profile.role = 'contributor'
             profile.status = 'approved'
             profile.approved_by = None
@@ -268,12 +349,24 @@ class CuratorCreateContributorForm(forms.ModelForm):
         return user
 
 
-class UserProfileForm(forms.ModelForm):
+class UserProfileForm(OtherChoiceMixin, forms.ModelForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
     first_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.', 'style': 'text-transform: uppercase;'}))
     suffix = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    affiliation = forms.ChoiceField(
+        choices=[('', 'Select affiliation')] + list(UserProfile.AFFILIATION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Affiliation / Organization',
+    )
+    position = forms.ChoiceField(
+        choices=[('', 'Select position')] + list(UserProfile.POSITION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Position / Specialization',
+    )
+    affiliation_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your affiliation'}), label='Affiliation (other)')
+    position_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your position'}), label='Position (other)')
     bio = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}), required=False)
     profile_picture = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
 
@@ -287,6 +380,18 @@ class UserProfileForm(forms.ModelForm):
             self.fields['bio'].initial = self.instance.profile.bio
             self.fields['middle_initial'].initial = self.instance.profile.middle_initial
             self.fields['suffix'].initial = self.instance.profile.suffix
+            affiliation = self.instance.profile.affiliation
+            if affiliation in dict(UserProfile.AFFILIATION_CHOICES):
+                self.fields['affiliation'].initial = affiliation
+            elif affiliation:
+                self.fields['affiliation'].initial = 'other'
+                self.fields['affiliation_other'].initial = affiliation
+            position = self.instance.profile.position
+            if position in dict(UserProfile.POSITION_CHOICES):
+                self.fields['position'].initial = position
+            elif position:
+                self.fields['position'].initial = 'other'
+                self.fields['position_other'].initial = position
             self.fields['profile_picture'].initial = self.instance.profile.profile_picture
 
     def clean_email(self):
@@ -317,6 +422,8 @@ class UserProfileForm(forms.ModelForm):
                 user.profile.bio = self.cleaned_data.get('bio')
                 user.profile.middle_initial = self.cleaned_data.get('middle_initial', '')
                 user.profile.suffix = self.cleaned_data.get('suffix', '')
+                user.profile.affiliation = _resolve_other(self.cleaned_data.get('affiliation', ''), self.cleaned_data.get('affiliation_other', ''))
+                user.profile.position = _resolve_other(self.cleaned_data.get('position', ''), self.cleaned_data.get('position_other', ''))
                 profile_picture = self.cleaned_data.get('profile_picture')
                 if profile_picture:
                     user.profile.profile_picture = profile_picture
