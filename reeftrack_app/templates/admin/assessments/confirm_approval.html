@@ -307,7 +307,7 @@
             <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.6px;color:#94a3b8;font-weight:600;margin-bottom:0.4rem;">Contributors</div>
             <div class="d-flex flex-wrap gap-2">
                 {% for c in assessment.contributors.all %}
-                <span class="dam-contrib-tag"><i class="fas fa-user"></i> {{ c.get_full_name }}</span>
+                <span class="dam-contrib-tag">{% if c.profile.profile_picture %}<img src="{{ c.profile.profile_picture.url }}" class="rounded-circle" style="width:16px;height:16px;object-fit:cover;" alt="">{% else %}<i class="fas fa-user"></i>{% endif %} {{ c.get_full_name }}</span>
                 {% endfor %}
             </div>
         </div>

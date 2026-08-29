@@ -94,6 +94,15 @@
 
     .hp-empty{text-align:center;padding:2rem;color:var(--rt-ink-soft);}
     .hp-empty i{font-size:2.5rem;color:var(--rt-seafoam);opacity:.5;margin-bottom:.75rem;display:block;}
+
+    .hp-pagination{display:flex;justify-content:center;align-items:center;gap:.6rem;margin-top:1.75rem;flex-wrap:wrap;}
+    .hp-page-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s;}
+    .hp-page-btn:hover{background:#f1f5f9;color:var(--rt-navy);}
+    .hp-page-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .hp-page-dots{display:flex;align-items:center;gap:.35rem;}
+    .hp-page-dot{width:9px;height:9px;border-radius:50%;background:#cbd5e1;border:none;cursor:pointer;padding:0;transition:all .15s;}
+    .hp-page-dot:hover{background:#94a3b8;}
+    .hp-page-dot.active{background:var(--rt-coral);transform:scale(1.25);}
 </style>
 
 <!-- Hero -->
@@ -309,6 +318,11 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
             {% endfor %}
         </div>
+        <div class="hp-pagination" id="assessments-pager" style="display:none;">
+            <button type="button" class="hp-page-btn" id="assessPrev"><i class="fas fa-chevron-left"></i> Prev</button>
+            <div class="hp-page-dots" id="assessDots"></div>
+            <button type="button" class="hp-page-btn" id="assessNext">Next <i class="fas fa-chevron-right"></i></button>
+        </div>
         {% else %}
         <div class="hp-empty">
             <i class="fas fa-water"></i>
@@ -345,7 +359,11 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var cards = document.querySelectorAll('.assessment-card');
-    if (cards.length <= 3) return;
+    var pager = document.getElementById('assessments-pager');
+    var dotsWrap = document.getElementById('assessDots');
+    var prev = document.getElementById('assessPrev');
+    var next = document.getElementById('assessNext');
+    if (!cards.length) return;
     var perPage = 3, currentPage = 0, totalPages = Math.ceil(cards.length / perPage);
 
     function goToPage(page) {
@@ -353,7 +371,33 @@ document.addEventListener('DOMContentLoaded', function() {
         cards.forEach(function(card, idx) {
             card.style.display = (idx >= page * perPage && idx < (page + 1) * perPage) ? '' : 'none';
         });
+        if (prev) prev.disabled = currentPage === 0;
+        if (next) next.disabled = currentPage >= totalPages - 1;
+        if (dotsWrap) dotsWrap.querySelectorAll('.hp-page-dot').forEach(function(d, i) {
+            d.classList.toggle('active', i === currentPage);
+        });
     }
+
+    function renderDots() {
+        if (!dotsWrap) return;
+        dotsWrap.innerHTML = '';
+        for (var i = 0; i < totalPages; i++) {
+            (function(page) {
+                var d = document.createElement('button');
+                d.type = 'button';
+                d.className = 'hp-page-dot';
+                d.setAttribute('aria-label', 'Page ' + (page + 1));
+                d.addEventListener('click', function() { goToPage(page); });
+                dotsWrap.appendChild(d);
+            })(i);
+        }
+    }
+
+    if (totalPages <= 1) { goToPage(0); return; }
+    if (pager) pager.style.display = 'flex';
+    renderDots();
+    if (prev) prev.addEventListener('click', function() { if (currentPage > 0) goToPage(currentPage - 1); });
+    if (next) next.addEventListener('click', function() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); });
     goToPage(0);
 });
 </script>

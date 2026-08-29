@@ -82,7 +82,7 @@
                     </li>
                     <li class="nav-item notif-wrapper">
                         <a class="nav-link position-relative" href="#" id="notif-bell" onclick="event.preventDefault();toggleNotifPanel();">
-                            <i class="fas fa-bell"></i> Notifications
+                            <i class="fas fa-bell"></i> <span class="rt-notif-text">Notifications</span>
                             <span class="badge bg-danger rounded-pill position-absolute" id="notif-badge" style="font-size:0.6rem;top:4px;right:-4px;display:none;"></span>
                         </a>
                         <div class="notif-panel" id="notif-panel">
@@ -192,6 +192,8 @@
     <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <style>
     .notif-wrapper{position:relative;}
+    .rt-notif-text{display:none;}
+    @media(max-width:991px){.rt-notif-text{display:inline;}}
     .notif-panel{display:none;position:absolute;top:100%;right:-60px;width:360px;max-height:420px;background:#fff;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,0.18);z-index:9999;overflow:hidden;flex-direction:column;}
     .notif-panel.open{display:flex;}
     .notif-panel-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 10px;border-bottom:1px solid #e5e7eb;}

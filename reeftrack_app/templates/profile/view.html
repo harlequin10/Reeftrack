@@ -24,6 +24,11 @@
                     </a>
                     <h5 class="mt-2 mb-0">{{ user.profile.get_full_name|default:user.email }}</h5>
                     <small class="text-muted">{{ user.email }}</small>
+                    {% if user.profile.bio %}
+                    <p class="mt-2 mb-0" style="max-width:420px;margin-left:auto;margin-right:auto;font-size:.9rem;color:#475569;">{{ user.profile.bio }}</p>
+                    {% else %}
+                    <p class="mt-2 mb-0 text-muted" style="font-size:.9rem;">No bio provided</p>
+                    {% endif %}
                 </div>
                 <div class="row">
                     <div class="col-md-12">
@@ -78,16 +83,6 @@
                                     {{ user.profile.get_position_display }}
                                 {% else %}
                                     <span class="text-muted">Not provided</span>
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold">Bio</label>
-                            <p class="form-control-plaintext">
-                                {% if user.profile.bio %}
-                                    {{ user.profile.bio }}
-                                {% else %}
-                                    <span class="text-muted">No bio provided</span>
                                 {% endif %}
                             </p>
                         </div>

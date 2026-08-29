@@ -85,7 +85,14 @@
                     <div class="col-12">
                         <small class="text-muted">Contributors</small><br>
                         {% for c in assessment.contributors.all %}
-                        <span class="badge bg-secondary me-1">{{ c.get_full_name }}</span>
+                        <span class="badge bg-secondary me-1 d-inline-flex align-items-center gap-1" style="padding:.35rem .6rem;">
+                            {% if c.profile.profile_picture %}
+                            <img src="{{ c.profile.profile_picture.url }}" class="rounded-circle" style="width:18px;height:18px;object-fit:cover;" alt="">
+                            {% else %}
+                            <span class="rounded-circle bg-white d-inline-flex align-items-center justify-content-center" style="width:18px;height:18px;font-size:.6rem;font-weight:700;color:#475569;">{{ c.get_full_name|slice:":1" }}</span>
+                            {% endif %}
+                            {{ c.get_full_name }}
+                        </span>
                         {% endfor %}
                     </div>
                     {% endif %}
