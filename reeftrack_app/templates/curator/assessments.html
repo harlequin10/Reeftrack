@@ -5,7 +5,8 @@
 
 {% block content %}
 <style>
-    .am-page{margin-bottom:2rem;}
+    .am-page-wrap{margin-bottom:2rem;}
+    .am-page-btn{margin-bottom:0;}
 
     .am-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
     .am-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
@@ -16,6 +17,7 @@
     .am-header-left h3{margin:0;font-weight:800;color:var(--rt-navy);font-size:1.5rem;letter-spacing:-.02em;}
     .am-header-left h3 i{color:#d97706;margin-right:.5rem;font-size:1.2rem;}
     .am-header-left p{margin:.2rem 0 0;color:#64748b;font-size:.85rem;}
+    .am-header-right{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}
 
     .am-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem;}
     .am-stat{border-radius:12px;padding:1rem 1.15rem;color:#fff;position:relative;overflow:hidden;cursor:pointer;transition:all .2s ease;border:1px solid transparent;text-decoration:none;}
@@ -41,6 +43,9 @@
     .am-filter-btn i.icon{font-size:.75rem;color:#94a3b8;}
     .am-filter-btn i.chevron{font-size:.5rem;color:#c0c6d0;margin-left:.15rem;}
     .am-filter-btn .val{font-weight:600;color:#d97706;}
+    .am-filter-btn .val-wrap{display:inline;}
+    .am-filter-btn.active{background:#fffbeb;}
+    .am-filter-btn:disabled{opacity:.45;cursor:not-allowed;}
     .am-right{display:flex;align-items:center;gap:.4rem;margin-left:auto;padding:0 .5rem;height:100%;}
 
     .am-drop{position:relative;}
@@ -51,6 +56,12 @@
     .am-drop-opt.selected{background:#fffbeb;color:#92400e;font-weight:600;}
     .am-drop-opt .check{width:18px;height:18px;border-radius:5px;border:1.5px solid #d1d5db;display:flex;align-items:center;justify-content:center;font-size:.6rem;flex-shrink:0;}
     .am-drop-opt.selected .check{background:#f59e0b;border-color:#f59e0b;color:#fff;}
+
+    .am-drop-date{display:flex;flex-direction:column;}
+    .am-drop-date label{font-size:.68rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.25rem;}
+    .am-drop-date input{border:1px solid #e2e8f0;border-radius:8px;padding:.45rem .6rem;font-size:.8rem;color:#1e293b;background:#fff;outline:none;}
+    .am-drop-date input:focus{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.15);}
+    .am-date-apply{margin-top:.6rem;}
 
     .am-chips{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.85rem;}
     .am-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .65rem;border-radius:6px;font-size:.73rem;font-weight:500;background:#fffbeb;color:#92400e;border:1px solid #fde68a;transition:all .15s;}
@@ -113,6 +124,14 @@
     .am-btn-success:hover{background:linear-gradient(135deg,#15803d,#166534);box-shadow:0 4px 14px rgba(22,163,74,.35);transform:translateY(-1px);color:#fff;}
     .am-icon-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;transition:all .15s;font-size:.78rem;text-decoration:none;}
     .am-icon-btn:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
+    .am-icon-btn.primary{background:#f59e0b;border-color:#f59e0b;color:#fff;}
+    .am-icon-btn.primary:hover{background:#d97706;border-color:#d97706;color:#fff;}
+
+    .am-sort{color:#64748b;text-decoration:none;font-size:.7rem;text-transform:uppercase;letter-spacing:.6px;font-weight:700;display:inline-flex;align-items:center;gap:.3rem;}
+    .am-sort:hover{color:#d97706;}
+    .am-sort.on{color:#d97706;}
+    .am-sort .si{font-size:.6rem;opacity:.5;}
+    .am-sort.on .si{opacity:1;}
 
     .am-pagination{display:flex;align-items:center;justify-content:center;gap:.35rem;margin-top:1.1rem;flex-wrap:wrap;}
     .am-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 .6rem;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:.85rem;font-weight:600;text-decoration:none;transition:all .15s;}
@@ -133,7 +152,7 @@
     }
 </style>
 
-<div class="am-page">
+<div class="am-page-wrap">
     <!-- Breadcrumb -->
     <div class="am-breadcrumb">
         <a href="{% url 'curator_dashboard' %}"><i class="fas fa-home"></i></a>
@@ -147,7 +166,7 @@
             <h3><i class="fas fa-clipboard-list"></i> Assessments</h3>
             <p>Review and manage submitted reef assessments</p>
         </div>
-        <div>
+        <div class="am-header-right">
             <a href="{% url 'upload_assessment' %}" class="am-btn am-btn-success">
                 <i class="fas fa-upload"></i> Upload New
             </a>
@@ -156,278 +175,223 @@
 
     <!-- Stat Cards -->
     <div class="am-stats">
-        <a class="am-stat {% if not status_filter %}active{% endif %}"
-           href="{% url 'curator_assessments' %}" style="background:linear-gradient(135deg,#64748b,#475569);">
-            <div class="am-stat-top">
-                <div class="am-stat-val">{{ stats.total }}</div>
-                <div class="am-stat-icon"><i class="fas fa-folder-open"></i></div>
-            </div>
+        <a href="?status=&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&province={{ province_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat-link am-stat {% if not status_filter %}active{% endif %}" data-status="" style="background:linear-gradient(135deg,#64748b,#475569);text-decoration:none;color:#fff;">
+            <div class="am-stat-top"><div class="am-stat-val">{{ stats.total }}</div><div class="am-stat-icon"><i class="fas fa-folder-open"></i></div></div>
             <div class="am-stat-lbl">Total</div>
         </a>
-        <a class="am-stat {% if status_filter == 'submitted' %}active{% endif %}"
-           href="{% url 'curator_assessments' %}?status=submitted" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
-            <div class="am-stat-top">
-                <div class="am-stat-val">{{ stats.submitted }}</div>
-                <div class="am-stat-icon"><i class="fas fa-clock"></i></div>
-            </div>
+        <a href="?status=submitted&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&province={{ province_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat-link am-stat {% if status_filter == 'submitted' %}active{% endif %}" data-status="submitted" style="background:linear-gradient(135deg,#f59e0b,#d97706);text-decoration:none;color:#fff;">
+            <div class="am-stat-top"><div class="am-stat-val">{{ stats.submitted }}</div><div class="am-stat-icon"><i class="fas fa-clock"></i></div></div>
             <div class="am-stat-lbl">Pending Review</div>
         </a>
-        <a class="am-stat {% if status_filter == 'approved' %}active{% endif %}"
-           href="{% url 'curator_assessments' %}?status=approved" style="background:linear-gradient(135deg,#16a34a,#15803d);">
-            <div class="am-stat-top">
-                <div class="am-stat-val">{{ stats.approved }}</div>
-                <div class="am-stat-icon"><i class="fas fa-check-double"></i></div>
-            </div>
+        <a href="?status=approved&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&province={{ province_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat-link am-stat {% if status_filter == 'approved' %}active{% endif %}" data-status="approved" style="background:linear-gradient(135deg,#16a34a,#15803d);text-decoration:none;color:#fff;">
+            <div class="am-stat-top"><div class="am-stat-val">{{ stats.approved }}</div><div class="am-stat-icon"><i class="fas fa-check-double"></i></div></div>
             <div class="am-stat-lbl">Approved</div>
         </a>
-        <a class="am-stat {% if status_filter == 'rejected' %}active{% endif %}"
-           href="{% url 'curator_assessments' %}?status=rejected" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
-            <div class="am-stat-top">
-                <div class="am-stat-val">{{ stats.rejected }}</div>
-                <div class="am-stat-icon"><i class="fas fa-times-circle"></i></div>
-            </div>
+        <a href="?status=rejected&sort={{ sort_by }}&search={{ search_query }}&municipality={{ municipality_filter }}&province={{ province_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="am-stat-link am-stat {% if status_filter == 'rejected' %}active{% endif %}" data-status="rejected" style="background:linear-gradient(135deg,#dc2626,#b91c1c);text-decoration:none;color:#fff;">
+            <div class="am-stat-top"><div class="am-stat-val">{{ stats.rejected }}</div><div class="am-stat-icon"><i class="fas fa-times-circle"></i></div></div>
             <div class="am-stat-lbl">Rejected</div>
         </a>
     </div>
 
-    <!-- Toolbar -->
-    <div class="am-toolbar">
-        <div class="am-toolbar-row">
-            <form id="amSearchForm" method="get" action="{% url 'curator_assessments' %}" style="display:inline;flex:1;min-width:0;">
-                {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+    <form method="GET" id="filterForm">
+        <div class="am-toolbar">
+            <div class="am-toolbar-row">
                 <div class="am-search">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="amSearchInput" name="search" placeholder="Search by location or user..."
-                           value="{{ search_query }}" onkeydown="if(event.key==='Enter'){document.getElementById('amSearchForm').submit();}">
-                    <div class="am-search-kbd" title="Press Enter to search">/</div>
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="text" name="search" placeholder="Search location, contributor..." value="{{ search_query }}" autocomplete="off" id="searchInput">
+                    <span class="am-search-kbd">/</span>
                 </div>
-            </form>
-            <div class="am-divider"></div>
 
-            <!-- Status filter -->
-            <div class="am-drop" id="statusDrop">
-                <button class="am-filter-btn" onclick="toggleDrop('statusDrop')">
-                    <i class="fas fa-signal icon"></i>
-                    <span>Status</span>
-                    {% if status_filter %}<span class="val">{{ status_filter }}</span>{% endif %}
-                    <i class="fas fa-chevron-down chevron"></i>
-                </button>
-                <div class="am-drop-panel">
-                    <div class="am-drop-opt {% if not status_filter %}selected{% endif %}" onclick="setFilter('status','')">
-                        <div class="check">{% if not status_filter %}<i class="fas fa-check"></i>{% endif %}</div>
-                        All Status
+                <div class="am-divider"></div>
+
+                <div class="am-right">
+                    <input type="hidden" name="sort" value="{{ sort_by }}">
+                    <button type="submit" class="am-icon-btn primary" title="Search"><i class="fas fa-magnifying-glass"></i></button>
+                    <a href="{% url 'curator_assessments' %}" class="am-icon-btn am-reset" title="Reset filters"><i class="fas fa-rotate-left"></i></a>
+                </div>
+
+                <div class="am-filter-group">
+                    <div class="am-drop" id="statusDrop">
+                    <button type="button" class="am-filter-btn {% if status_filter %}active{% endif %}" onclick="toggleDrop('statusDrop')">
+                        <i class="fas fa-circle-half-stroke icon"></i>
+                        Status{% if status_filter %}: <span class="val">{{ status_filter|title }}</span>{% endif %}
+                        <i class="fas fa-chevron-down chevron"></i>
+                    </button>
+                    <div class="am-drop-panel">
+                        <div class="am-drop-opt {% if not status_filter %}selected{% endif %}" data-field="status" data-val="">
+                            <span class="check">{% if not status_filter %}<i class="fas fa-check"></i>{% endif %}</span> All Status
+                        </div>
+                        <div class="am-drop-opt {% if status_filter == 'submitted' %}selected{% endif %}" data-field="status" data-val="submitted">
+                            <span class="check">{% if status_filter == 'submitted' %}<i class="fas fa-check"></i>{% endif %}</span> Pending Review
+                        </div>
+                        <div class="am-drop-opt {% if status_filter == 'approved' %}selected{% endif %}" data-field="status" data-val="approved">
+                            <span class="check">{% if status_filter == 'approved' %}<i class="fas fa-check"></i>{% endif %}</span> Approved
+                        </div>
+                        <div class="am-drop-opt {% if status_filter == 'rejected' %}selected{% endif %}" data-field="status" data-val="rejected">
+                            <span class="check">{% if status_filter == 'rejected' %}<i class="fas fa-check"></i>{% endif %}</span> Rejected
+                        </div>
                     </div>
-                    <div class="am-drop-opt {% if status_filter == 'submitted' %}selected{% endif %}" onclick="setFilter('status','submitted')">
-                        <div class="check">{% if status_filter == 'submitted' %}<i class="fas fa-check"></i>{% endif %}</div>
-                        Pending Review
+                </div>
+
+                <div class="am-drop" id="provinceDrop">
+                    <button type="button" id="provDropBtn" class="am-filter-btn {% if province_filter %}active{% endif %}" onclick="toggleDrop('provinceDrop')">
+                        <i class="fas fa-map-location-dot icon"></i>
+                        Province<span class="val-wrap" id="provVal">{% if selected_province %}: <span class="val">{{ selected_province.name }}</span>{% endif %}</span>
+                        <i class="fas fa-chevron-down chevron"></i>
+                    </button>
+                    <div class="am-drop-panel" style="min-width:240px;max-height:320px;overflow-y:auto;">
+                        <div class="am-drop-opt {% if not province_filter %}selected{% endif %}" data-field="province" data-val="">
+                            <span class="check">{% if not province_filter %}<i class="fas fa-check"></i>{% endif %}</span> All Provinces
+                        </div>
+                        {% for p in provinces %}
+                        <div class="am-drop-opt {% if province_filter == p.id|stringformat:"d" %}selected{% endif %}" data-field="province" data-val="{{ p.id }}">
+                            <span class="check">{% if province_filter == p.id|stringformat:"d" %}<i class="fas fa-check"></i>{% endif %}</span> {{ p.name }}
+                        </div>
+                        {% endfor %}
                     </div>
-                    <div class="am-drop-opt {% if status_filter == 'approved' %}selected{% endif %}" onclick="setFilter('status','approved')">
-                        <div class="check">{% if status_filter == 'approved' %}<i class="fas fa-check"></i>{% endif %}</div>
-                        Approved
+                </div>
+
+                <div class="am-drop" id="muniDrop">
+                    <button type="button" id="muniDropBtn" class="am-filter-btn {% if municipality_filter %}active{% endif %}" {% if not province_filter %}disabled{% endif %} onclick="toggleDrop('muniDrop')">
+                        <i class="fas fa-location-dot icon"></i>
+                        Municipality<span class="val-wrap" id="muniVal">{% if selected_municipality %}: <span class="val">{{ selected_municipality.name }}</span>{% endif %}</span>
+                        <i class="fas fa-chevron-down chevron"></i>
+                    </button>
+                    <div class="am-drop-panel" id="muniPanel" style="min-width:240px;max-height:320px;overflow-y:auto;">
+                        {% if not province_filter %}
+                        <div class="am-drop-opt" style="cursor:default;opacity:.55;pointer-events:none;">
+                            <span class="check" style="visibility:hidden;"><i class="fas fa-check"></i></span> Select a province first
+                        </div>
+                        {% else %}
+                        <div class="am-drop-opt {% if not municipality_filter %}selected{% endif %}" data-field="municipality" data-val="">
+                            <span class="check">{% if not municipality_filter %}<i class="fas fa-check"></i>{% endif %}</span> All Municipalities
+                        </div>
+                        {% for m in municipalities %}
+                        <div class="am-drop-opt {% if municipality_filter == m.id|stringformat:"d" %}selected{% endif %}" data-field="municipality" data-val="{{ m.id }}">
+                            <span class="check">{% if municipality_filter == m.id|stringformat:"d" %}<i class="fas fa-check"></i>{% endif %}</span> {{ m.name }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
-                    <div class="am-drop-opt {% if status_filter == 'rejected' %}selected{% endif %}" onclick="setFilter('status','rejected')">
-                        <div class="check">{% if status_filter == 'rejected' %}<i class="fas fa-check"></i>{% endif %}</div>
-                        Rejected
+                </div>
+
+                <div class="am-drop" id="dateDrop">
+                    <button type="button" class="am-filter-btn {% if date_from or date_to %}active{% endif %}" onclick="toggleDrop('dateDrop')">
+                        <i class="fas fa-calendar icon"></i>
+                        Date{% if date_from or date_to %}: <span class="val">Filtered</span>{% endif %}
+                        <i class="fas fa-chevron-down chevron"></i>
+                    </button>
+                    <div class="am-drop-panel" style="width:270px;">
+                        <div class="am-drop-date">
+                            <label>From</label>
+                            <input type="date" name="date_from" value="{{ date_from }}">
+                            <div style="height:.6rem;"></div>
+                            <label>To</label>
+                            <input type="date" name="date_to" value="{{ date_to }}">
+                            <div class="am-date-apply">
+                                <button type="submit" class="am-icon-btn primary" style="width:100%;border-radius:8px;height:34px;font-size:.78rem;font-weight:600;" onclick="closeAllDrops()"><i class="fas fa-check" style="margin-right:.3rem;"></i> Apply</button>
+                            </div>
+                        </div>
                     </div>
+                </div>
                 </div>
             </div>
-
-            <div class="am-right">
-                {% if status_filter or search_query %}
-                <a href="{% url 'curator_assessments' %}" class="am-icon-btn" title="Clear all filters">
-                    <i class="fas fa-times"></i>
-                </a>
-                {% endif %}
-            </div>
         </div>
-    </div>
+    </form>
 
-    <!-- Active filter chips -->
-    {% if status_filter or search_query %}
-    <div class="am-chips">
-        {% if search_query %}
-        <span class="am-chip">
-            <i class="fas fa-search"></i> "{{ search_query }}"
-            <a href="{% url 'curator_assessments' %}?status={{ status_filter }}" class="rm"><i class="fas fa-times rm"></i></a>
-        </span>
-        {% endif %}
-        {% if status_filter %}
-        <span class="am-chip">
-            Status: {{ status_filter }}
-            <a href="{% url 'curator_assessments' %}?search={{ search_query }}" class="rm"><i class="fas fa-times rm"></i></a>
-        </span>
-        {% endif %}
-        <a href="{% url 'curator_assessments' %}" class="am-chip am-chip-clear">
-            <i class="fas fa-times"></i> Clear all
-        </a>
-    </div>
-    {% endif %}
-
-    <!-- Info bar -->
-    <div class="am-info-bar">
-        <span>Showing <strong>{{ assessments|length }}</strong> assessment{{ assessments|length|pluralize }}</span>
-        {% if assessments.paginator.num_pages > 1 %}
-        <span style="font-size:.8rem;color:#94a3b8;">Page {{ assessments.number }} of {{ assessments.paginator.num_pages }}</span>
-        {% endif %}
-    </div>
-
-    <!-- Table -->
-    <div class="am-table-card">
-        <div style="overflow-x:auto;">
-        <table class="am-tbl">
-            <thead>
-                <tr>
-                    <th>Location</th>
-                    <th>Date</th>
-                    <th>Uploaded By</th>
-                    <th>Reviewed By</th>
-                    <th>Transects</th>
-                    <th>Coral Cover</th>
-                    <th>Status</th>
-                    <th style="width:140px;text-align:center;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for a in assessments %}
-                <tr>
-                    <td>
-                        <div class="am-loc-cell">
-                            <span class="am-loc-name">{{ a.barangay.name }}</span>
-                            <span class="am-loc-sub">{{ a.municipality.name }}, {{ a.municipality.province.name }}</span>
-                        </div>
-                    </td>
-                    <td><span class="am-metric">{{ a.assessment_date|date:"M d, Y" }}</span></td>
-                    <td>
-                        <div class="am-user-cell">
-                            <div class="am-avatar">
-                                {% with name=a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email %}
-                                {{ name|truncatechars:2 }}
-                                {% endwith %}
-                            </div>
-                            <div>
-                                <div class="am-user-name">{{ a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email }}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        {% if a.reviewed_by %}
-                            <div class="am-user-cell">
-                                <div class="am-avatar">
-                                    {% with name=a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email %}
-                                    {{ name|truncatechars:2 }}
-                                    {% endwith %}
-                                </div>
-                                <div>
-                                    <div class="am-user-name">{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}</div>
-                                </div>
-                            </div>
-                        {% else %}
-                            <span class="am-metric-none">—</span>
-                        {% endif %}
-                    </td>
-                    <td><span class="am-metric">{{ a.transects.count }}</span></td>
-                    <td>
-                        {% if a.overall_coral_cover %}
-                            <span class="am-metric"><strong>{{ a.overall_coral_cover }}</strong>%</span>
-                        {% else %}
-                            <span class="am-metric-none">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="am-status {{ a.status }}">
-                            {% if a.status == 'approved' %}<i class="fas fa-check-circle"></i>
-                            {% elif a.status == 'submitted' %}<i class="fas fa-clock"></i>
-                            {% else %}<i class="fas fa-times-circle"></i>{% endif %}
-                            {{ a.get_status_display }}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="am-actions" style="justify-content:center;">
-                            <a href="{% url 'curator_assessment_detail' a.id %}" class="am-act-btn view" title="View assessment">
-                                <i class="fas fa-eye"></i> View
-                            </a>
-                            {% if a.status == 'submitted' %}
-                            <a href="{% url 'curator_confirm_approval' a.id %}" class="am-act-btn review" title="Review & approve">
-                                <i class="fas fa-check"></i> Review
-                            </a>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8">
-                        <div class="am-empty">
-                            <i class="fas fa-clipboard"></i>
-                            <h5>No assessments found</h5>
-                            <p>No assessments match your current filters.</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-    </div>
-
-    <!-- Pagination -->
-    {% if assessments.has_other_pages %}
-    <div class="am-pagination">
-        {% if assessments.has_previous %}
-        <a class="am-page-btn" href="?page={{ assessments.previous_page_number }}&status={{ status_filter }}&search={{ search_query }}"><i class="fas fa-chevron-left"></i></a>
-        {% else %}
-        <span class="am-page-btn disabled"><i class="fas fa-chevron-left"></i></span>
-        {% endif %}
-
-        {% for num in assessments.paginator.page_range %}
-            {% if assessments.number == num %}
-            <span class="am-page-btn active">{{ num }}</span>
-            {% elif num > assessments.number|add:'-3' and num < assessments.number|add:'3' %}
-            <a class="am-page-btn" href="?page={{ num }}&status={{ status_filter }}&search={{ search_query }}">{{ num }}</a>
-            {% endif %}
-        {% endfor %}
-
-        {% if assessments.has_next %}
-        <a class="am-page-btn" href="?page={{ assessments.next_page_number }}&status={{ status_filter }}&search={{ search_query }}"><i class="fas fa-chevron-right"></i></a>
-        {% else %}
-        <span class="am-page-btn disabled"><i class="fas fa-chevron-right"></i></span>
-        {% endif %}
-    </div>
-    {% endif %}
+<div id="resultsContainer">
+    {% include "curator/assessments/_results.html" %}
+</div>
 </div>
 
 <script src="{% static 'js/assessment_sync.js' %}"></script>
 <script>
-RTAssessmentSync.init({ role: 'curator', csrfToken: '{{ csrf_token }}', filters: 'status={{ status_filter }}&search={{ search_query }}' });
+(function(){
+    var RTASSESS={
+        'ajaxUrl':'{% url 'curator_assessments_ajax' %}',
+        'provinces':{
+            {% for p in provinces %}
+            "{{ p.id }}":{"name":"{{ p.name|escapejs }}","munis":[{% for m in p.municipalities.all %}{% if not forloop.first %},{% endif %}["{{ m.id }}","{{ m.name|escapejs }}"]{% endfor %}]}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        }
+    };
 
-function toggleDrop(id) {
-    var el = document.getElementById(id);
-    var wasOpen = el.classList.contains('open');
-    document.querySelectorAll('.am-drop').forEach(function(d) { d.classList.remove('open'); });
-    if (!wasOpen) el.classList.add('open');
-}
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.am-drop')) {
-        document.querySelectorAll('.am-drop').forEach(function(d) { d.classList.remove('open'); });
-    }
-});
+    function cur(){return new URLSearchParams(window.location.search);}
 
-function setFilter(param, val) {
-    var url = new URL(window.location);
-    if (val) {
-        url.searchParams.set(param, val);
-    } else {
-        url.searchParams.delete(param);
+    function applyParams(pStr){
+        if(typeof history.replaceState==='function'){history.replaceState(null,'',pStr?('?'+pStr):window.location.pathname);}
+        updateDropdownUI();
+        loadResults(pStr);
     }
-    url.searchParams.delete('page');
-    window.location = url;
-}
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === '/' && !e.target.matches('input,textarea,select')) {
-        e.preventDefault();
-        document.getElementById('amSearchInput').focus();
+    function loadResults(pStr){
+        var u=RTASSESS.ajaxUrl+(pStr?('?'+pStr):'');
+        fetch(u,{headers:{'X-Requested-With':'XMLHttpRequest'}})
+            .then(function(r){return r.text();})
+            .then(function(html){var c=document.getElementById('resultsContainer');if(c){c.innerHTML=html;var pg=c.querySelector('.am-pagination,.um-pagination');if(pg){pg.scrollIntoView({behavior:'smooth',block:'nearest'});}}})
+            .catch(function(){});
     }
-});
+
+    function muniOptions(prov,muni){
+        var pts=RTASSESS.provinces[prov];
+        var h='<div class="am-drop-opt'+(muni?'':' selected')+'" data-field="municipality" data-val=""><span class="check">'+(muni?'':'<i class="fas fa-check"></i>')+'</span> All Municipalities</div>';
+        if(!pts)return h;
+        for(var i=0;i<pts.munis.length;i++){var id=pts.munis[i][0],nm=pts.munis[i][1],sel=(id.toString()===muni.toString());
+            h+='<div class="am-drop-opt'+(sel?' selected':'')+'" data-field="municipality" data-val="'+id+'"><span class="check">'+(sel?'<i class="fas fa-check"></i>':'')+'</span> '+nm+'</div>';}
+        return h;
+    }
+
+    function updateDropdownUI(){
+        var p=cur(),prov=p.get('province')||'',muni=p.get('municipality')||'';
+        var pv=document.getElementById('provVal');
+        if(pv){var pn=prov?(RTASSESS.provinces[prov]?RTASSESS.provinces[prov].name:prov):'';pv.innerHTML=pn?(': <span class="val">'+pn+'</span>'):'';}
+        var pbtn=document.getElementById('provDropBtn');if(pbtn)pbtn.classList.toggle('active',!!prov);
+        var mbtn=document.getElementById('muniDropBtn');if(mbtn){mbtn.classList.toggle('active',!!muni);mbtn.disabled=!prov;}
+        var mv=document.getElementById('muniVal');
+        if(mv){var mn='';var pts=RTASSESS.provinces[prov];if(pts&&muni){for(var i=0;i<pts.munis.length;i++){if(pts.munis[i][0].toString()===muni.toString()){mn=pts.munis[i][1];break;}}}mv.innerHTML=mn?(': <span class="val">'+mn+'</span>'):'';}
+        var mp=document.getElementById('muniPanel');
+        if(mp){mp.innerHTML=prov?muniOptions(prov,muni):'<div class="am-drop-opt" style="cursor:default;opacity:.55;pointer-events:none;"><span class="check" style="visibility:hidden;"><i class="fas fa-check"></i></span> Select a province first</div>';}
+        var popts=document.querySelectorAll('#provinceDrop .am-drop-opt');
+        for(var j=0;j<popts.length;j++){var o=popts[j],v=o.getAttribute('data-val')||'';var s=prov&&v.toString()===prov.toString();o.classList.toggle('selected',s);o.querySelector('.check').innerHTML=s?'<i class="fas fa-check"></i>':'';}
+        var sopts=document.querySelectorAll('#statusDrop .am-drop-opt');
+        var st=p.get('status')||'';
+        for(var k=0;k<sopts.length;k++){var so=sopts[k],sv=so.getAttribute('data-val')||'';var ss=st&&sv===st;so.classList.toggle('selected',ss);so.querySelector('.check').innerHTML=ss?'<i class="fas fa-check"></i>':'';}
+        var si=document.getElementById('searchInput');if(si)si.value=p.get('search')||'';
+    }
+
+    window.toggleDrop=function(id){var d=document.getElementById(id),wasOpen=d.classList.contains('open');document.querySelectorAll('.am-drop.open').forEach(function(el){el.classList.remove('open');});if(!wasOpen)d.classList.add('open');};
+    window.closeAllDrops=function(){document.querySelectorAll('.am-drop.open').forEach(function(el){el.classList.remove('open');});};
+    document.addEventListener('click',function(e){if(!e.target.closest('.am-drop'))closeAllDrops();});
+
+    document.addEventListener('click',function(e){
+        var opt=e.target.closest('.am-drop-opt');
+        if(opt){e.preventDefault();e.stopPropagation();var drop=opt.closest('.am-drop');if(!drop)return;var name=null;
+            if(drop.id==='statusDrop')name='status';else if(drop.id==='provinceDrop')name='province';else if(drop.id==='muniDrop')name='municipality';
+            if(!name)return;var val=opt.getAttribute('data-val')||'';var p=cur();
+            if(val)p.set(name,val);else p.delete(name);
+            if(name==='province')p.delete('municipality');
+            closeAllDrops();applyParams(p.toString());return;
+        }
+        var clr=e.target.closest('[data-clear]');
+        if(clr){e.preventDefault();e.stopPropagation();var p2=cur();p2.delete(clr.getAttribute('data-clear'));applyParams(p2.toString());return;}
+        var rs=e.target.closest('.am-reset,.clear-all');
+        if(rs){e.preventDefault();closeAllDrops();applyParams('');return;}
+        var stl=e.target.closest('a.am-stat-link');
+        if(stl){e.preventDefault();var stv=stl.getAttribute('data-status')||'';var ps=cur();if(stv)ps.set('status',stv);else ps.delete('status');ps.delete('page');closeAllDrops();applyParams(ps.toString());return;}
+        var sl=e.target.closest('a.am-sort,a.am-page');
+        if(sl){e.preventDefault();var href=sl.getAttribute('href')||'?';var qs=href.indexOf('?')>=0?href.slice(href.indexOf('?')+1):'';closeAllDrops();applyParams(qs);return;}
+    });
+
+    var f=document.getElementById('filterForm');
+    if(f)f.addEventListener('submit',function(e){e.preventDefault();var q=document.getElementById('searchInput').value;var p=cur();if(q)p.set('search',q);else p.delete('search');applyParams(p.toString());});
+
+    document.addEventListener('keydown',function(e){
+        if(e.key==='/'&&!e.target.closest('input,textarea,select')){e.preventDefault();var s=document.getElementById('searchInput');if(s)s.focus();}
+        if(e.key==='Escape')closeAllDrops();
+    });
+
+    RTAssessmentSync.init({role:'curator',csrfToken:'{{ csrf_token }}',filters:'status={{ status_filter }}&search={{ search_query }}'});
+    updateDropdownUI();
+})();
 </script>
 {% endblock %}

@@ -658,15 +658,14 @@ def curator_dashboard(request):
 
 @login_required
 @curator_required
-def curator_manage_contributors(request):
-    """Manage contributors - View, filter, approve, reject"""
-    from django.core.paginator import Paginator
+def _curator_manage_contributors_filter_context(request):
+    """
+    Return the paginated/filtered contributor context shared by the full page and
+    the AJAX results partial. Keeps server-side filtering in one place.
+    """
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
     contributors = User.objects.filter(profile__role='contributor').select_related('profile').order_by('-date_joined')
-    total_contributors = contributors.count()
-    pending_count = contributors.filter(profile__status='pending').count()
-    approved_count = contributors.filter(profile__status='approved').count()
-    rejected_count = contributors.filter(profile__status='rejected').count()
 
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
@@ -678,23 +677,51 @@ def curator_manage_contributors(request):
             Q(email__icontains=search_query) |
             Q(first_name__icontains=search_query) |
             Q(last_name__icontains=search_query)
-        )
+        ).distinct()
+
+    filtered_count = contributors.count()
 
     paginator = Paginator(contributors, 10)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
+    page = request.GET.get('page', 1)
+    try:
+        contributors_page = paginator.page(page)
+    except PageNotAnInteger:
+        contributors_page = paginator.page(1)
+    except EmptyPage:
+        contributors_page = paginator.page(paginator.num_pages)
 
-    context = {
-        'contributors': page_obj,
-        'total_contributors': total_contributors,
-        'pending_count': pending_count,
-        'approved_count': approved_count,
-        'rejected_count': rejected_count,
+    return {
+        'contributors': contributors_page,
+        'page_obj': contributors_page,
+        'filtered_count': filtered_count,
         'status_filter': status_filter,
         'search_query': search_query,
-        'status_choices': UserProfile.STATUS_CHOICES,
     }
+
+
+@login_required
+@curator_required
+def curator_manage_contributors(request):
+    """Manage contributors - View, filter, approve, reject"""
+    context = _curator_manage_contributors_filter_context(request)
+
+    all_users = User.objects.filter(profile__role='contributor').select_related('profile')
+    context.update({
+        'total_contributors': all_users.count(),
+        'pending_count': all_users.filter(profile__status='pending').count(),
+        'approved_count': all_users.filter(profile__status='approved').count(),
+        'rejected_count': all_users.filter(profile__status='rejected').count(),
+        'status_choices': UserProfile.STATUS_CHOICES,
+    })
     return render(request, 'curator/manage_contributors.html', context)
+
+
+@login_required
+@curator_required
+def curator_manage_contributors_ajax(request):
+    """AJAX: Render only the filtered contributor results (chips, info bar, table, pagination)."""
+    context = _curator_manage_contributors_filter_context(request)
+    return render(request, 'curator/manage_contributors/_results.html', context)
 
 
 @login_required
@@ -3439,9 +3466,10 @@ def admin_delete_family(request, family_name):
 
 @login_required
 @curator_required
-def curator_assessments(request):
-    """Curator: List all assessments with filters."""
-    from django.core.paginator import Paginator
+def _curator_assessments_filter_context(request):
+    """Return the paginated/filtered assessments context shared by the full page
+    and the AJAX results partial for the curator. Keeps server-side filtering in one place."""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
     assessments = Assessment.objects.select_related(
         'municipality', 'barangay', 'uploaded_by', 'reviewed_by'
@@ -3449,19 +3477,78 @@ def curator_assessments(request):
 
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
+    municipality_filter = request.GET.get('municipality', '')
+    province_filter = request.GET.get('province', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    sort_by = request.GET.get('sort', '-assessment_date')
+
+    if not province_filter:
+        municipality_filter = ''
+    elif municipality_filter and not Municipality.objects.filter(id=municipality_filter, province__id=province_filter).exists():
+        municipality_filter = ''
+
+    ALLOWED_SORTS = {
+        'assessment_date': 'assessment_date',
+        '-assessment_date': '-assessment_date',
+        'id': 'id',
+        '-id': '-id',
+        'barangay': 'barangay__name',
+        '-barangay': '-barangay__name',
+        'municipality': 'municipality__name',
+        '-municipality': '-municipality__name',
+        'uploaded_by': 'uploaded_by__email',
+        '-uploaded_by': '-uploaded_by__email',
+        'status': 'status',
+        '-status': '-status',
+        'coral_cover': 'overall_coral_cover',
+        '-coral_cover': '-overall_coral_cover',
+        'transects': 'transect_count',
+    }
+    if sort_by in ALLOWED_SORTS:
+        if sort_by == 'transects':
+            assessments = assessments.annotate(transect_count=Count('transects')).order_by('-transect_count')
+        else:
+            assessments = assessments.order_by(ALLOWED_SORTS[sort_by])
+    else:
+        assessments = assessments.order_by('-assessment_date')
 
     if status_filter:
         assessments = assessments.filter(status=status_filter)
+    if municipality_filter and province_filter:
+        assessments = assessments.filter(municipality__id=municipality_filter)
+    if province_filter:
+        assessments = assessments.filter(municipality__province__id=province_filter)
+    if date_from:
+        try:
+            assessments = assessments.filter(assessment_date__gte=date_from)
+        except (ValueError, TypeError):
+            pass
+    if date_to:
+        try:
+            assessments = assessments.filter(assessment_date__lte=date_to)
+        except (ValueError, TypeError):
+            pass
     if search_query:
         assessments = assessments.filter(
             Q(barangay__name__icontains=search_query) |
             Q(municipality__name__icontains=search_query) |
-            Q(uploaded_by__email__icontains=search_query)
-        )
+            Q(municipality__province__name__icontains=search_query) |
+            Q(uploaded_by__email__icontains=search_query) |
+            Q(uploaded_by__first_name__icontains=search_query) |
+            Q(uploaded_by__last_name__icontains=search_query)
+        ).distinct()
+
+    total_count = assessments.count()
 
     paginator = Paginator(assessments, 10)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
+    page = request.GET.get('page', 1)
+    try:
+        assessments_page = paginator.page(page)
+    except PageNotAnInteger:
+        assessments_page = paginator.page(1)
+    except EmptyPage:
+        assessments_page = paginator.page(paginator.num_pages)
 
     stats = {
         'total': Assessment.objects.count(),
@@ -3470,13 +3557,47 @@ def curator_assessments(request):
         'rejected': Assessment.objects.filter(status='rejected').count(),
     }
 
-    context = {
-        'assessments': page_obj,
+    return {
+        'assessments': assessments_page,
+        'page_obj': assessments_page,
         'status_filter': status_filter,
         'search_query': search_query,
+        'municipality_filter': municipality_filter,
+        'province_filter': province_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'sort_by': sort_by,
+        'total_count': total_count,
         'stats': stats,
     }
+
+
+@login_required
+@curator_required
+def curator_assessments(request):
+    """Curator: List all assessments with filters, sorting, and search."""
+    context = _curator_assessments_filter_context(request)
+
+    municipalities = Municipality.objects.order_by('name')
+    provinces = Province.objects.order_by('name')
+    if context['province_filter']:
+        municipalities = municipalities.filter(province__id=context['province_filter'])
+
+    context.update({
+        'municipalities': municipalities,
+        'provinces': provinces,
+        'selected_province': Province.objects.filter(id=context['province_filter']).first() if context['province_filter'] else None,
+        'selected_municipality': Municipality.objects.filter(id=context['municipality_filter']).first() if context['municipality_filter'] else None,
+    })
     return render(request, 'curator/assessments.html', context)
+
+
+@login_required
+@curator_required
+def curator_assessments_ajax(request):
+    """AJAX: Render only the filtered assessments results (chips, info bar, table, pagination)."""
+    context = _curator_assessments_filter_context(request)
+    return render(request, 'curator/assessments/_results.html', context)
 
 
 @login_required

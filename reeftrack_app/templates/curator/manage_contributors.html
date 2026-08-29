@@ -6,6 +6,7 @@
 {% block content %}
 <style>
     .um-page{margin-bottom:2rem;}
+    .um-page-btn{margin-bottom:0;}
 
     .um-breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;}
     .um-breadcrumb a{color:#64748b;text-decoration:none;transition:color .15s;}
@@ -16,6 +17,7 @@
     .um-header-left h3{margin:0;font-weight:800;color:var(--rt-navy);font-size:1.5rem;letter-spacing:-.02em;}
     .um-header-left h3 i{color:var(--rt-primary);margin-right:.5rem;font-size:1.2rem;}
     .um-header-left p{margin:.2rem 0 0;color:#64748b;font-size:.85rem;}
+    .um-header-right{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}
 
     .um-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem;}
     .um-stat{border-radius:12px;padding:1rem 1.15rem;color:#fff;position:relative;overflow:hidden;cursor:pointer;transition:all .2s ease;border:1px solid transparent;text-decoration:none;}
@@ -41,6 +43,7 @@
     .um-filter-btn i.icon{font-size:.75rem;color:#94a3b8;}
     .um-filter-btn i.chevron{font-size:.5rem;color:#c0c6d0;margin-left:.15rem;}
     .um-filter-btn .val{font-weight:600;color:#d97706;}
+    .um-filter-btn.active{background:#fffbeb;}
     .um-right{display:flex;align-items:center;gap:.4rem;margin-left:auto;padding:0 .5rem;height:100%;}
     .um-icon-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;transition:all .15s;font-size:.78rem;text-decoration:none;}
     .um-icon-btn:hover{background:#f8fafc;border-color:#cbd5e1;color:#334155;}
@@ -156,7 +159,7 @@
             <h3><i class="fas fa-users"></i> Manage Contributors</h3>
             <p>View and manage all contributor accounts</p>
         </div>
-        <div>
+        <div class="um-header-right">
             <a href="{% url 'curator_create_contributor' %}" class="um-btn um-btn-primary">
                 <i class="fas fa-user-plus"></i> Create Contributor
             </a>
@@ -165,7 +168,7 @@
 
     <!-- Stat Cards -->
     <div class="um-stats">
-        <a class="um-stat {% if not status_filter %}active{% endif %}"
+        <a class="um-stat-link um-stat {% if not status_filter %}active{% endif %}" data-clear-all="1"
            href="{% url 'curator_manage_contributors' %}" style="background:linear-gradient(135deg,#64748b,#475569);">
             <div class="um-stat-top">
                 <div class="um-stat-val">{{ total_contributors }}</div>
@@ -173,7 +176,7 @@
             </div>
             <div class="um-stat-lbl">Total Contributors</div>
         </a>
-        <a class="um-stat {% if status_filter == 'approved' %}active{% endif %}"
+        <a class="um-stat-link um-stat {% if status_filter == 'approved' %}active{% endif %}" data-status="approved"
            href="{% url 'curator_manage_contributors' %}?status=approved" style="background:linear-gradient(135deg,#16a34a,#15803d);">
             <div class="um-stat-top">
                 <div class="um-stat-val">{{ approved_count }}</div>
@@ -181,7 +184,7 @@
             </div>
             <div class="um-stat-lbl">Approved</div>
         </a>
-        <a class="um-stat {% if status_filter == 'pending' %}active{% endif %}"
+        <a class="um-stat-link um-stat {% if status_filter == 'pending' %}active{% endif %}" data-status="pending"
            href="{% url 'curator_manage_contributors' %}?status=pending" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
             <div class="um-stat-top">
                 <div class="um-stat-val">{{ pending_count }}</div>
@@ -189,7 +192,7 @@
             </div>
             <div class="um-stat-lbl">Pending</div>
         </a>
-        <a class="um-stat {% if status_filter == 'rejected' %}active{% endif %}"
+        <a class="um-stat-link um-stat {% if status_filter == 'rejected' %}active{% endif %}" data-status="rejected"
            href="{% url 'curator_manage_contributors' %}?status=rejected" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
             <div class="um-stat-top">
                 <div class="um-stat-val">{{ rejected_count }}</div>
@@ -215,19 +218,19 @@
 
             <!-- Status filter -->
             <div class="um-drop" id="statusDrop">
-                <button class="um-filter-btn {% if status_filter %}active{% endif %}" onclick="toggleDrop('statusDrop')">
+                <button id="statusDropBtn" class="um-filter-btn {% if status_filter %}active{% endif %}" onclick="toggleDrop('statusDrop')">
                     <i class="fas fa-signal icon"></i>
                     <span>Status</span>
-                    {% if status_filter %}<span class="val">{{ status_filter }}</span>{% endif %}
+                    <span class="val" id="statusVal">{% if status_filter %} {{ status_filter }}{% endif %}</span>
                     <i class="fas fa-chevron-down chevron"></i>
                 </button>
                 <div class="um-drop-panel">
-                    <div class="um-drop-opt {% if not status_filter %}selected{% endif %}" onclick="setFilter('status','')">
+                    <div class="um-drop-opt {% if not status_filter %}selected{% endif %}" data-val="" onclick="setFilter('status','')">
                         <div class="check">{% if not status_filter %}<i class="fas fa-check"></i>{% endif %}</div>
                         All Status
                     </div>
                     {% for sv, sl in status_choices %}
-                    <div class="um-drop-opt {% if status_filter == sv %}selected{% endif %}" onclick="setFilter('status','{{ sv }}')">
+                    <div class="um-drop-opt {% if status_filter == sv %}selected{% endif %}" data-val="{{ sv }}" onclick="setFilter('status','{{ sv }}')">
                         <div class="check">{% if status_filter == sv %}<i class="fas fa-check"></i>{% endif %}</div>
                         {{ sl }}
                     </div>
@@ -236,232 +239,103 @@
             </div>
 
             <div class="um-right">
-                {% if status_filter or search_query %}
-                <a href="{% url 'curator_manage_contributors' %}" class="um-icon-btn" title="Clear all filters">
+                <a href="#" class="um-icon-btn um-clear-toolbar {% if not status_filter and not search_query %}d-none{% endif %}" title="Clear all filters">
                     <i class="fas fa-times"></i>
                 </a>
-                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Active filter chips -->
-    {% if status_filter or search_query %}
-    <div class="um-chips">
-        {% if search_query %}
-        <span class="um-chip">
-            <i class="fas fa-search"></i> "{{ search_query }}"
-            <a href="{% url 'curator_manage_contributors' %}?status={{ status_filter }}" class="rm"><i class="fas fa-times rm"></i></a>
-        </span>
-        {% endif %}
-        {% if status_filter %}
-        <span class="um-chip">
-            Status: {{ status_filter }}
-            <a href="{% url 'curator_manage_contributors' %}?search={{ search_query }}" class="rm"><i class="fas fa-times rm"></i></a>
-        </span>
-        {% endif %}
-        <a href="{% url 'curator_manage_contributors' %}" class="um-chip um-chip-clear">
-            <i class="fas fa-times"></i> Clear all
-        </a>
-    </div>
-    {% endif %}
-
-    <!-- Info bar -->
-    <div class="um-info-bar">
-        <span>Showing <strong>{{ contributors|length }}</strong> contributor{{ contributors|length|pluralize }}</span>
-        {% if contributors.paginator.num_pages > 1 %}
-        <span style="font-size:.8rem;color:#94a3b8;">Page {{ contributors.number }} of {{ contributors.paginator.num_pages }}</span>
-        {% endif %}
-    </div>
-
-    <!-- Table -->
-    <div class="um-table-card">
-        <div style="overflow-x:auto;">
-        <table class="um-tbl">
-            <thead>
-                <tr>
-                    <th>Contributor</th>
-                    <th>Status</th>
-                    <th>Active</th>
-                    <th>Joined</th>
-                    <th style="width:140px;text-align:center;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for c in contributors %}
-                <tr>
-                    <td>
-                        <div class="um-user-cell">
-                            <div class="um-avatar">
-                                {% with name=c.profile.get_full_name|default:c.email %}
-                                {{ name|truncatechars:2 }}
-                                {% endwith %}
-                            </div>
-                            <div class="um-user-info">
-                                <div class="um-user-name">
-                                    {{ c.profile.get_full_name|default:c.email }}
-                                    {% if c == request.user %}<span class="badge bg-info" style="font-size:.6rem;padding:.15rem .4rem;border-radius:4px;font-weight:600;">You</span>{% endif %}
-                                </div>
-                                <div class="um-user-email">{{ c.email }}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="um-status {{ c.profile.status }}">
-                            {% if c.profile.status == 'approved' %}<i class="fas fa-check-circle"></i>
-                            {% elif c.profile.status == 'pending' %}<i class="fas fa-clock"></i>
-                            {% else %}<i class="fas fa-times-circle"></i>{% endif %}
-                            {{ c.profile.get_status_display }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if c.is_active %}
-                            <span class="um-active yes"><i class="fas fa-circle" style="font-size:.45rem;"></i> Active</span>
-                        {% else %}
-                            <span class="um-active no"><i class="fas fa-circle" style="font-size:.45rem;"></i> Inactive</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="um-date">{{ c.date_joined|date:"M d, Y" }}</span>
-                    </td>
-                    <td>
-                        <div class="um-actions" style="justify-content:center;">
-                            {% if c != request.user %}
-                                <a href="{% url 'curator_edit_contributor' c.id %}" class="um-act-btn edit" title="Edit">
-                                    <i class="fas fa-pen"></i>
-                                </a>
-
-                                {% if c.profile.status == 'pending' %}
-                                    <form method="POST" action="{% url 'curator_contributor_action' c.id %}" style="display:inline;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="approve">
-                                        <button type="submit" class="um-act-btn approve" title="Approve">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    </form>
-                                    <button type="button" class="um-act-btn reject" title="Reject"
-                                            data-bs-toggle="modal" data-bs-target="#rejectModal{{ c.id }}">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                {% endif %}
-
-                                <form method="POST" action="{% url 'curator_contributor_action' c.id %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="{% if c.is_active %}deactivate{% else %}activate{% endif %}">
-                                    <button type="submit" class="um-act-btn {% if c.is_active %}deactivate{% else %}activate{% endif %}"
-                                            title="{% if c.is_active %}Deactivate{% else %}Activate{% endif %}">
-                                        <i class="fas {% if c.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
-                                    </button>
-                                </form>
-                            {% else %}
-                                <span style="font-size:.75rem;color:#94a3b8;">You</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5">
-                        <div class="um-empty">
-                            <i class="fas fa-users-slash"></i>
-                            <h5>No contributors found</h5>
-                            <p>Try adjusting your filters or wait for users to register.</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-    </div>
-
-    <!-- Pagination -->
-    {% if contributors.paginator.num_pages > 1 %}
-    <div class="um-pagination">
-        {% if contributors.has_previous %}
-        <a class="um-page-btn" href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ contributors.previous_page_number }}"><i class="fas fa-chevron-left"></i></a>
-        {% else %}
-        <span class="um-page-btn disabled"><i class="fas fa-chevron-left"></i></span>
-        {% endif %}
-
-        {% for num in contributors.paginator.page_range %}
-            {% if contributors.number == num %}
-            <span class="um-page-btn active">{{ num }}</span>
-            {% elif num > contributors.number|add:-3 and num < contributors.number|add:3 %}
-            <a class="um-page-btn" href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ num }}">{{ num }}</a>
-            {% endif %}
-        {% endfor %}
-
-        {% if contributors.has_next %}
-        <a class="um-page-btn" href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ contributors.next_page_number }}"><i class="fas fa-chevron-right"></i></a>
-        {% else %}
-        <span class="um-page-btn disabled"><i class="fas fa-chevron-right"></i></span>
-        {% endif %}
-    </div>
-    {% endif %}
+<div id="umResults">
+    {% include "curator/manage_contributors/_results.html" %}
+</div>
 </div>
 
-<!-- Reject Modals -->
-{% for c in contributors %}
-    {% if c != request.user and c.profile.status == 'pending' %}
-    <div class="modal fade um-modal" id="rejectModal{{ c.id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title"><i class="fas fa-times-circle"></i> Reject Contributor</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST" action="{% url 'curator_contributor_action' c.id %}">
-                    {% csrf_token %}
-                    <div class="modal-body">
-                        <p style="color:#475569;">Are you sure you want to reject <strong>{{ c.profile.get_full_name|default:c.email }}</strong>?</p>
-                        <input type="hidden" name="action" value="reject">
-                        <div>
-                            <label class="form-label fw-bold" style="font-size:.82rem;">Rejection Reason</label>
-                            <textarea name="rejection_reason" class="form-control" rows="3"
-                                      placeholder="Provide a reason for rejection (optional)" style="border-radius:8px;"></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-danger">Reject Contributor</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-{% endfor %}
-
 <script>
-function toggleDrop(id) {
-    var el = document.getElementById(id);
-    var wasOpen = el.classList.contains('open');
-    document.querySelectorAll('.um-drop').forEach(function(d) { d.classList.remove('open'); });
-    if (!wasOpen) el.classList.add('open');
+var UM_AJAX_URL = "{% url 'curator_manage_contributors_ajax' %}";
+
+function curParams(){ return new URLSearchParams(window.location.search); }
+
+function applyUM(pStr){
+    if(typeof history.replaceState==='function'){ history.replaceState(null,'', pStr?('?'+pStr):window.location.pathname); }
+    updateUMUI();
+    var u = UM_AJAX_URL + (pStr?('?'+pStr):'');
+    fetch(u,{headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(function(r){return r.text();})
+        .then(function(html){var c=document.getElementById('umResults'); if(c){ c.innerHTML=html; var pg=c.querySelector('.um-pagination,.am-pagination'); if(pg){ pg.scrollIntoView({behavior:'smooth',block:'nearest'}); } }})
+        .catch(function(){});
 }
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.um-drop')) {
-        document.querySelectorAll('.um-drop').forEach(function(d) { d.classList.remove('open'); });
+
+function updateUMUI(){
+    var p=curParams();
+    var status=p.get('status')||'', q=p.get('search')||'';
+    var si=document.getElementById('umSearchInput'); if(si) si.value=q;
+    var sv=document.getElementById('statusVal'); if(sv) sv.textContent = status?(' '+status):'';
+    var sb=document.getElementById('statusDropBtn'); if(sb) sb.classList.toggle('active', !!status);
+    document.querySelectorAll('#statusDrop .um-drop-opt').forEach(function(o){
+        var v=o.getAttribute('data-val')||''; var sel = v===status;
+        o.classList.toggle('selected', sel);
+        var ck=o.querySelector('.check'); if(ck) ck.innerHTML = sel?'<i class="fas fa-check"></i>':'';
+    });
+    var clrBtn=document.querySelector('.um-right .um-clear-toolbar');
+    if(clrBtn) clrBtn.classList.toggle('d-none', !(status||q));
+}
+
+function closeAllDrops(){ document.querySelectorAll('.um-drop').forEach(function(d){ d.classList.remove('open'); }); }
+
+window.setFilter=function(param,val){
+    var p=curParams();
+    if(val){ p.set(param,val); } else { p.delete(param); }
+    p.delete('page');
+    closeAllDrops();
+    applyUM(p.toString());
+};
+
+window.toggleDrop=function(id){
+    var el=document.getElementById(id);
+    var wasOpen=el.classList.contains('open');
+    closeAllDrops();
+    if(!wasOpen) el.classList.add('open');
+};
+document.addEventListener('click', function(e){
+    if(!e.target.closest('.um-drop')) closeAllDrops();
+});
+
+document.addEventListener('click', function(e){
+    var rm=e.target.closest('.um-chip-rm');
+    if(rm){ e.preventDefault(); var p=curParams(); p.delete(rm.getAttribute('data-clear')); p.delete('page'); applyUM(p.toString()); return; }
+    var cl=e.target.closest('.um-clear, .um-clear-toolbar');
+    if(cl){ e.preventDefault(); closeAllDrops(); applyUM(''); return; }
+    var pg=e.target.closest('a.um-page');
+    if(pg){ e.preventDefault(); var href=pg.getAttribute('href')||'?'; var qs=href.indexOf('?')>=0?href.slice(href.indexOf('?')+1):''; closeAllDrops(); applyUM(qs); return; }
+    var stl=e.target.closest('a.um-stat-link');
+    if(stl){ e.preventDefault(); closeAllDrops();
+        if(stl.hasAttribute('data-clear-all')){ applyUM(''); return; }
+        var p=curParams();
+        ['status','search'].forEach(function(k){p.delete(k);});
+        if(stl.getAttribute('data-status')) p.set('status', stl.getAttribute('data-status'));
+        p.delete('page');
+        applyUM(p.toString()); return;
     }
 });
 
-function setFilter(param, val) {
-    var url = new URL(window.location);
-    if (val) {
-        url.searchParams.set(param, val);
-    } else {
-        url.searchParams.delete(param);
-    }
-    url.searchParams.delete('page');
-    window.location = url;
-}
+var umForm=document.getElementById('umSearchForm');
+if(umForm) umForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var q=document.getElementById('umSearchInput').value;
+    var p=curParams();
+    if(q) p.set('search',q); else p.delete('search');
+    p.delete('page');
+    applyUM(p.toString());
+});
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === '/' && !e.target.matches('input,textarea,select')) {
+document.addEventListener('keydown', function(e){
+    if(e.key==='/' && !e.target.matches('input,textarea,select')){
         e.preventDefault();
-        document.getElementById('umSearchInput').focus();
+        var s=document.getElementById('umSearchInput'); if(s) s.focus();
     }
 });
+
+updateUMUI();
 </script>
 {% endblock %}

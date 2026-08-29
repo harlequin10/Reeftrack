@@ -30,6 +30,7 @@ urlpatterns = [
     
     # Curator Management URLs
     path('curator/manage-contributors/', views.curator_manage_contributors, name='curator_manage_contributors'),
+    path('curator/manage-contributors/ajax/', views.curator_manage_contributors_ajax, name='curator_manage_contributors_ajax'),
     path('curator/manage-contributors/create/', views.curator_create_contributor, name='curator_create_contributor'),
     path('curator/contributor/action/<int:user_id>/', views.curator_contributor_action, name='curator_contributor_action'),
     path('curator/contributor/edit/<int:user_id>/', views.curator_edit_contributor, name='curator_edit_contributor'),
@@ -110,6 +111,7 @@ urlpatterns = [
 
     # ==================== CURATOR ASSESSMENT REVIEW ====================
     path('curator/assessments/', views.curator_assessments, name='curator_assessments'),
+    path('curator/assessments/ajax/', views.curator_assessments_ajax, name='curator_assessments_ajax'),
     path('curator/assessments/<int:assessment_id>/', views.curator_assessment_detail, name='curator_assessment_detail'),
     path('curator/assessments/<int:assessment_id>/confirm-approval/', views.curator_confirm_approval, name='curator_confirm_approval'),
     path('curator/assessments/<int:assessment_id>/action/', views.curator_assessment_action, name='curator_assessment_action'),

@@ -1,0 +1,139 @@
+    {% if status_filter or search_query or municipality_filter or province_filter or date_from or date_to %}
+    <div class="am-chips">
+        {% if status_filter %}<span class="am-chip"><i class="fas fa-circle" style="font-size:.35rem;"></i> Status: {{ status_filter|title }} <i class="fas fa-xmark rm" data-clear="status"></i></span>{% endif %}
+        {% if search_query %}<span class="am-chip"><i class="fas fa-magnifying-glass" style="font-size:.5rem;"></i> "{{ search_query }}" <i class="fas fa-xmark rm" data-clear="search"></i></span>{% endif %}
+        {% if province_filter %}<span class="am-chip"><i class="fas fa-map-location-dot" style="font-size:.5rem;"></i> Province <i class="fas fa-xmark rm" data-clear="province"></i></span>{% endif %}
+        {% if municipality_filter %}<span class="am-chip"><i class="fas fa-location-dot" style="font-size:.5rem;"></i> Municipality <i class="fas fa-xmark rm" data-clear="municipality"></i></span>{% endif %}
+        {% if date_from %}<span class="am-chip"><i class="fas fa-calendar" style="font-size:.5rem;"></i> From: {{ date_from }} <i class="fas fa-xmark rm" data-clear="date_from"></i></span>{% endif %}
+        {% if date_to %}<span class="am-chip"><i class="fas fa-calendar-check" style="font-size:.5rem;"></i> To: {{ date_to }} <i class="fas fa-xmark rm" data-clear="date_to"></i></span>{% endif %}
+        <a href="{% url 'curator_assessments' %}" class="am-chip am-chip-clear clear-all"><i class="fas fa-circle-xmark"></i> Clear all</a>
+    </div>
+    {% endif %}
+
+    <div class="am-info-bar">
+        <span>Showing <strong>{{ assessments|length }}</strong> assessment{{ assessments|length|pluralize }}</span>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <span style="font-size:.8rem;color:#94a3b8;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% endif %}
+    </div>
+
+    <div class="am-table-card">
+        <div style="overflow-x:auto;">
+        <table class="am-tbl">
+            <thead>
+                <tr>
+                    {% with base="status="|add:status_filter|add:"&search="|add:search_query|add:"&province="|add:province_filter|add:"&municipality="|add:municipality_filter|add:"&date_from="|add:date_from|add:"&date_to="|add:date_to %}
+                    <th><a href="?sort={% if sort_by == 'barangay' %}-barangay{% else %}barangay{% endif %}&{{ base }}" class="am-sort {% if sort_by == 'barangay' or sort_by == '-barangay' %}on{% endif %}">Location <i class="fas fa-sort si"></i></a></th>
+                    <th><a href="?sort={% if sort_by == 'assessment_date' %}-assessment_date{% else %}assessment_date{% endif %}&{{ base }}" class="am-sort {% if sort_by == 'assessment_date' or sort_by == '-assessment_date' %}on{% endif %}">Date <i class="fas fa-sort si"></i></a></th>
+                    <th><a href="?sort={% if sort_by == 'uploaded_by' %}-uploaded_by{% else %}uploaded_by{% endif %}&{{ base }}" class="am-sort {% if sort_by == 'uploaded_by' or sort_by == '-uploaded_by' %}on{% endif %}">Uploaded By <i class="fas fa-sort si"></i></a></th>
+                    <th>Reviewed By</th>
+                    <th><a href="?sort={% if sort_by == 'transects' %}-id{% else %}transects{% endif %}&{{ base }}" class="am-sort {% if sort_by == 'transects' %}on{% endif %}">Transects <i class="fas fa-sort si"></i></a></th>
+                    <th><a href="?sort={% if sort_by == 'coral_cover' %}-coral_cover{% else %}coral_cover{% endif %}&{{ base }}" class="am-sort {% if sort_by == 'coral_cover' or sort_by == '-coral_cover' %}on{% endif %}">Cover <i class="fas fa-sort si"></i></a></th>
+                    <th><a href="?sort={% if sort_by == 'status' %}-status{% else %}status{% endif %}&{{ base }}" class="am-sort {% if sort_by == 'status' or sort_by == '-status' %}on{% endif %}">Status <i class="fas fa-sort si"></i></a></th>
+                    <th style="width:140px;text-align:center;">Actions</th>
+                    {% endwith %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in assessments %}
+                <tr>
+                    {% with name=a.uploaded_by.profile.get_full_name|default:a.uploaded_by.email %}
+                    <td>
+                        <div class="am-loc-cell">
+                            <span class="am-loc-name">{{ a.barangay.name }}</span>
+                            <span class="am-loc-sub">{{ a.municipality.name }}, {{ a.municipality.province.name }}</span>
+                        </div>
+                    </td>
+                    <td><span class="am-metric">{{ a.assessment_date|date:"M d, Y" }}</span></td>
+                    <td>
+                        <div class="am-user-cell">
+                            <div class="am-avatar">{{ name|truncatechars:2 }}</div>
+                            <div>
+                                <div class="am-user-name">{{ name }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if a.reviewed_by %}
+                            <div class="am-user-cell">
+                                <div class="am-avatar">{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email|truncatechars:2 }}</div>
+                                <div>
+                                    <div class="am-user-name">{{ a.reviewed_by.profile.get_full_name|default:a.reviewed_by.email }}</div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <span class="am-metric-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="am-metric">{{ a.transects.count }}</span></td>
+                    <td>
+                        {% if a.overall_coral_cover %}
+                            <span class="am-metric"><strong>{{ a.overall_coral_cover }}</strong>%</span>
+                        {% else %}
+                            <span class="am-metric-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="am-status {{ a.status }}">
+                            {% if a.status == 'approved' %}<i class="fas fa-check-circle"></i>
+                            {% elif a.status == 'submitted' %}<i class="fas fa-clock"></i>
+                            {% else %}<i class="fas fa-times-circle"></i>{% endif %}
+                            {{ a.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="am-actions" style="justify-content:center;">
+                            <a href="{% url 'curator_assessment_detail' a.id %}" class="am-act-btn view" title="View assessment">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            {% if a.status == 'submitted' %}
+                            <a href="{% url 'curator_confirm_approval' a.id %}" class="am-act-btn review" title="Review & approve">
+                                <i class="fas fa-check"></i> Review
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% endwith %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8">
+                        <div class="am-empty">
+                            <i class="fas fa-clipboard"></i>
+                            <h5>No assessments found</h5>
+                            <p>{% if search_query or status_filter or municipality_filter or province_filter %}Try adjusting your search or filters.{% else %}Assessments will appear here once contributors submit them.{% endif %}</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="am-pagination">
+        {% with pl="status="|add:status_filter|add:"&search="|add:search_query|add:"&province="|add:province_filter|add:"&municipality="|add:municipality_filter|add:"&date_from="|add:date_from|add:"&date_to="|add:date_to|add:"&sort="|add:sort_by %}
+        {% if page_obj.has_previous %}
+        <a class="am-page-btn am-page" href="?{{ pl }}&page={{ page_obj.previous_page_number }}"><i class="fas fa-chevron-left"></i></a>
+        {% else %}
+        <span class="am-page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="am-page-btn active">{{ num }}</span>
+            {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+            <a class="am-page-btn am-page" href="?{{ pl }}&page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a class="am-page-btn am-page" href="?{{ pl }}&page={{ page_obj.next_page_number }}"><i class="fas fa-chevron-right"></i></a>
+        {% else %}
+        <span class="am-page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+        {% endif %}
+        {% endwith %}
+    </div>
+    {% endif %}
