@@ -1942,10 +1942,12 @@ def confirm_assessment(request):
         curators = User.objects.filter(profile__role__in=['curator', 'admin'])
         for curator in curators:
             if curator != assessment.uploaded_by:
+                uploaded_by_profile = getattr(assessment.uploaded_by, 'profile', None)
+                uploaded_by_name = uploaded_by_profile.get_full_name() if uploaded_by_profile else ''
                 create_assessment_notification(
                     curator, assessment, 'info',
                     f'New Assessment Submitted #{assessment.id}',
-                    f'Contributor {assessment.uploaded_by.get_full_name or assessment.uploaded_by.email} has submitted a new assessment for {assessment.barangay.name}, {assessment.municipality.name}.'
+                    f'Contributor {uploaded_by_name or assessment.uploaded_by.email} has submitted a new assessment for {assessment.barangay.name}, {assessment.municipality.name}.'
                 )
 
     # Add contributors
@@ -2701,7 +2703,7 @@ def admin_assessment_action(request, assessment_id):
                 create_assessment_notification(
                     assessment.uploaded_by, assessment, 'approved',
                     f'Assessment #{assessment.id} Approved',
-                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been approved by {request.user.profile.get_full_name or request.user.email}.'
+                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been approved by {request.user.profile.get_full_name() or request.user.email}.'
                 )
         elif action == 'reject':
             rejection_reason = request.POST.get('rejection_reason', '')
@@ -3797,7 +3799,7 @@ def curator_assessment_action(request, assessment_id):
                 create_assessment_notification(
                     assessment.uploaded_by, assessment, 'approved',
                     f'Assessment #{assessment.id} Approved',
-                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been approved by {request.user.profile.get_full_name or request.user.email}.'
+                    f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been approved by {request.user.profile.get_full_name() or request.user.email}.'
                 )
         elif action == 'reject':
             rejection_reason = request.POST.get('rejection_reason', '')
@@ -4075,7 +4077,7 @@ def public_dashboard_data(request):
             if profile:
                 uploader_name = profile.get_full_name()
             if not uploader_name:
-                uploader_name = a.uploaded_by.get_full_name() or a.uploaded_by.email
+                uploader_name = a.uploaded_by.email
 
         transects_list = []
         for t in a.transects.all():
@@ -4244,7 +4246,7 @@ def assessment_detail_api(request, assessment_id):
         if profile:
             uploader_name = profile.get_full_name()
         if not uploader_name:
-            uploader_name = a.uploaded_by.get_full_name() or a.uploaded_by.email
+            uploader_name = a.uploaded_by.email
 
     transects = []
     for t in a.transects.all():

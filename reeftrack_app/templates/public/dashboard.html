@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
 function init(){
   map=L.map('dashMap',{zoomControl:true}).setView([12.8797,121.7740],6);
-  var tl=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap',maxZoom:18}).addTo(map);
+  var tl=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',maxZoom:18}).addTo(map);
   var rmLd=function(){var el=document.getElementById('dashMap');if(el)el.classList.remove('rt-map-loading');};
   tl.on('load',rmLd);setTimeout(rmLd,4000);
   mCluster=L.markerClusterGroup({maxClusterRadius:40});

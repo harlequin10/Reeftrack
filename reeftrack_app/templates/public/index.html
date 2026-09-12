@@ -246,7 +246,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     var m=L.map('reef-map',{zoomControl:true,attributionControl:true}).setView([12.8797,121.7740],6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap',maxZoom:18}).addTo(m);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',maxZoom:18}).addTo(m);
     var latProv=null;
     fetch('{% url "public_location_options" %}').then(function(r){return r.json();}).then(function(f){latProv=f.latest_province_id;}).catch(function(){});
     fetch('{% url "public_dashboard_data" %}').then(function(r){return r.json();}).then(function(d){

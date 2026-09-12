@@ -389,9 +389,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var map = null;
     try {
         map = L.map('transectMap').setView([6.1164, 125.3125], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+		attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',
+		maxZoom: 18
+	}).addTo(map);
     } catch(err) {
         console.warn('Map not available:', err);
         document.getElementById('transectMap').innerHTML = '<div class="alert alert-warning m-2"><i class="fas fa-exclamation-triangle me-1"></i> Map could not be loaded. Coordinates can still be entered manually.</div>';
@@ -714,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (!mapEl.dataset.init) {
                                 mapEl.dataset.init = '1';
                                 var sugMap = L.map('sugMap' + idx);
-                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; OpenStreetMap'}).addTo(sugMap);
+                                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18}).addTo(sugMap);
                                 var sIcon = L.divIcon({className:'',html:'<div style="background:#0dcaf0;color:#000;font-weight:bold;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">S</div>',iconSize:[18,18],iconAnchor:[9,9]});
                                 var dIcon = L.divIcon({className:'',html:'<div style="background:#0d6efd;color:#fff;font-weight:bold;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">D</div>',iconSize:[18,18],iconAnchor:[9,9]});
                                 var b = [];
@@ -753,7 +754,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (!container.dataset.init) {
                             container.dataset.init = '1';
                             var allMap = L.map('allSugMap');
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; OpenStreetMap'}).addTo(allMap);
+                            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18}).addTo(allMap);
                             var colors = ['#0dcaf0','#0d6efd','#198754','#ffc107','#dc3545','#6f42c1'];
                             var bds = [];
                             allSuggestions.forEach(function(s, i) {
