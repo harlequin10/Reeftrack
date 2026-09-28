@@ -4578,7 +4578,7 @@ def profile_upload_photo(request):
     profile.profile_picture = picture
     profile.save()
     return JsonResponse({'ok': True, 'url': profile.profile_picture.url if profile.profile_picture else ''})
-#sda
+
 @login_required
 def profile_edit(request):
     """
