@@ -700,10 +700,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var mapEl = document.getElementById('transectMap');
     if (!mapEl) return;
-    var map = L.map(mapEl).setView([6.1164, 125.3125], 11);
+    var map = L.map(mapEl, {minZoom: 5, maxZoom: 18}).setView([6.1164, 125.3125], 11);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
 		attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',
-		maxZoom: 18
+		maxZoom: 18, maxNativeZoom: 16
 	}).addTo(map);
 
     function makeIcon(color, label) {

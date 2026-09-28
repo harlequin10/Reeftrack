@@ -95,7 +95,6 @@
             <div class="notif-message">{{ notif.message }}</div>
             <div class="notif-time">
                 <i class="fas fa-clock"></i> {{ notif.created_at|timesince }} ago
-                {% if notif.assessment %} — Assessment #{{ notif.assessment.id }}{% endif %}
             </div>
         </div>
         {% if not notif.is_read %}

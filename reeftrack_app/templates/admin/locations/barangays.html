@@ -384,8 +384,8 @@ function showSingleMap(brgyId, refId, refNum) {
         if (!singleEl.dataset.init) {
             singleEl.dataset.init = '1';
             waitForVisible(singleEl, function() {
-                var map = L.map('singleMap' + brgyId);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'&copy; OpenStreetMap'}).addTo(map);
+var map = L.map('singleMap' + brgyId, {minZoom: 5, maxZoom: 18});
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution:'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18, maxNativeZoom: 16}).addTo(map);
                 mapInstances['single_' + brgyId] = map;
                 var t = (transectData[brgyId] || []).filter(function(x) { return x.id === refId; });
                 drawTransectsOnMap(map, t, 1);
@@ -407,8 +407,8 @@ function toggleAllMap(brgyId) {
         if (!allEl.dataset.init) {
             allEl.dataset.init = '1';
             waitForVisible(allEl, function() {
-                var map = L.map('allMap' + brgyId);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'&copy; OpenStreetMap'}).addTo(map);
+var map = L.map('allMap' + brgyId, {minZoom: 5, maxZoom: 18});
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution:'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18, maxNativeZoom: 16}).addTo(map);
                 mapInstances['all_' + brgyId] = map;
                 drawTransectsOnMap(map, transectData[brgyId] || [], 1);
             });

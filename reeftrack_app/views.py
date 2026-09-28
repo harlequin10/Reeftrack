@@ -1,5 +1,7 @@
 import os
 import json
+import tempfile
+import shutil
 from decimal import Decimal
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
@@ -1260,22 +1262,22 @@ def check_duplicate_species(species_list, depth, pending_transects, barangay_id=
         if match_pct == 100 and len(species_set) == len(db_set):
             if assessment.barangay_id == int(barangay_id) if barangay_id else False:
                 warnings.append(
-                    f'EXACT DUPLICATE: This {depth} file matches 100% ({len(species_set)} sub categories) with assessment #{assessment.id} '
+                    f'EXACT DUPLICATE: This {depth} file matches 100% ({len(species_set)} sub categories) with a previous assessment '
                     f'({location}, {assessment.assessment_date}).'
                 )
             else:
                 warnings.append(
-                    f'EXACT DUPLICATE: This {depth} file matches 100% ({len(species_set)} sub categories) with assessment #{assessment.id} '
+                    f'EXACT DUPLICATE: This {depth} file matches 100% ({len(species_set)} sub categories) with a previous assessment '
                     f'at different location ({location}, {assessment.assessment_date}).'
                 )
         elif match_pct > 75:
             warnings.append(
-                f'High similarity ({match_pct:.0f}%) with assessment #{assessment.id} '
+                f'High similarity ({match_pct:.0f}%) with a previous assessment '
                 f'({location}, {assessment.assessment_date}): {len(overlap)}/{total} sub categories match exactly.'
             )
         elif match_pct > 50:
             warnings.append(
-                f'{match_pct:.0f}% similarity with assessment #{assessment.id} '
+                f'{match_pct:.0f}% similarity with a previous assessment '
                 f'({location}, {assessment.assessment_date}): {len(overlap)}/{total} sub categories match.'
             )
 
@@ -1946,7 +1948,7 @@ def confirm_assessment(request):
                 uploaded_by_name = uploaded_by_profile.get_full_name() if uploaded_by_profile else ''
                 create_assessment_notification(
                     curator, assessment, 'info',
-                    f'New Assessment Submitted #{assessment.id}',
+                    'New Assessment Submitted',
                     f'Contributor {uploaded_by_name or assessment.uploaded_by.email} has submitted a new assessment for {assessment.barangay.name}, {assessment.municipality.name}.'
                 )
 
@@ -2379,7 +2381,7 @@ def delete_assessment(request, assessment_id):
                     os.remove(path)
 
         assessment.delete()
-        messages.success(request, f'Assessment #{assessment_id} has been deleted.')
+        messages.success(request, f'Assessment has been deleted.')
         from .audit import log_security_event
         log_security_event('assessment_deleted', request=request, details={'assessment_id': assessment_id})
         notify_assessment_refresh('delete')
@@ -2388,6 +2390,675 @@ def delete_assessment(request, assessment_id):
     if user_role == 'curator':
         return redirect('curator_assessments')
     return redirect('my_assessments')
+
+
+@login_required
+@contributor_required
+def edit_assessment(request, assessment_id):
+    """Edit a rejected assessment and resubmit it for review. Only the
+    user who uploaded the assessment can edit it (owner-only, regardless of
+    role — contributor, curator, or admin), and only while its status is
+    'rejected' (so they can fix problems flagged by the reviewer)."""
+    assessment = get_object_or_404(
+        Assessment.objects.select_related('municipality__province', 'barangay'),
+        id=assessment_id,
+        uploaded_by=request.user,
+    )
+
+    # Only rejected assessments can be edited
+    if assessment.status != 'rejected':
+        messages.error(request, 'Only rejected assessments can be edited. Approved and pending review assessments are protected.')
+        return redirect('contributor_assessment_detail', assessment_id)
+
+    municipality = assessment.municipality
+    municipality_id = municipality.id
+    barangay_id = assessment.barangay.id
+
+    provinces = Province.objects.all().order_by('name')
+    municipalities = Municipality.objects.filter(province=municipality.province).order_by('name')
+    barangays = Barangay.objects.filter(municipality=municipality).order_by('name')
+    custom_methodologies = CustomMethodology.objects.all()
+    known_methods = set(v for v, _ in Assessment.METHODOLOGY_CHOICES) | set(
+        custom_methodologies.values_list('name', flat=True)
+    )
+
+    # ---- Collect current contributors for the tag widget ----
+    contributor_ids = []
+    contributor_names = []
+    for c in assessment.contributors.all():
+        contributor_ids.append(str(c.id))
+        contributor_names.append(c.get_full_name() or str(c.id))
+
+    transects = assessment.transects.prefetch_related('species_data', 'species_data__species').all()
+    max_num = max((t.transect_number for t in transects), default=0)
+
+    # Existing images with URLs (removal tracked client-side by id)
+    existing_images = []
+    for img in assessment.images.all():
+        try:
+            url = img.image.url
+            name = os.path.basename(img.image.name)
+        except Exception:
+            url, name = None, None
+        existing_images.append({'id': img.id, 'url': url, 'name': name})
+
+    thesis_url = assessment.thesis_pdf.url if assessment.thesis_pdf else None
+
+    # Display blocks derived from the DB (used on GET and as a base)
+    db_blocks = []
+    for t in transects:
+        block = {
+            'key': f't{t.id}', 'id': t.id, 'transect_number': t.transect_number,
+            'remove': False, 'existing': True, 'transect': t,
+            'shallow_start_lat': str(t.shallow_start_lat) if t.shallow_start_lat else '',
+            'shallow_start_lng': str(t.shallow_start_lng) if t.shallow_start_lng else '',
+            'shallow_end_lat': str(t.shallow_end_lat) if t.shallow_end_lat else '',
+            'shallow_end_lng': str(t.shallow_end_lng) if t.shallow_end_lng else '',
+            'deep_start_lat': str(t.deep_start_lat) if t.deep_start_lat else '',
+            'deep_start_lng': str(t.deep_start_lng) if t.deep_start_lng else '',
+            'deep_end_lat': str(t.deep_end_lat) if t.deep_end_lat else '',
+            'deep_end_lng': str(t.deep_end_lng) if t.deep_end_lng else '',
+            'shallow_depth': str(t.shallow_depth) if t.shallow_depth else '',
+            'deep_depth': str(t.deep_depth) if t.deep_depth else '',
+            'shallow_excel_name': os.path.basename(t.shallow_excel.name) if t.shallow_excel else '',
+            'deep_excel_name': os.path.basename(t.deep_excel.name) if t.deep_excel else '',
+        }
+        db_blocks.append(block)
+
+    errors = []
+    if request.method == 'POST':
+        municipality_id = request.POST.get('municipality', municipality_id)
+        barangay_id = request.POST.get('barangay', barangay_id)
+        assessment_date = request.POST.get('assessment_date', '').strip()
+        methodology = request.POST.get('methodology', 'photo_quadrat')
+        methodology_other = request.POST.get('methodology_other', '').strip()
+        is_custom_methodology = False
+        if methodology == 'other':
+            if not methodology_other:
+                errors.append('Please specify the methodology name.')
+            methodology = methodology_other
+            is_custom_methodology = True
+
+        if not all([municipality_id, barangay_id, assessment_date]):
+            errors.append('Please fill in all required fields (province, municipality, barangay, assessment date).')
+
+        try:
+            from datetime import datetime as _dt
+            parsed_date = _dt.strptime(assessment_date, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            errors.append('Invalid assessment date.')
+            parsed_date = None
+
+        description = request.POST.get('description', '').strip()
+        contributor_ids = [x.strip() for x in request.POST.get('contributors', '').split(',') if x.strip()]
+        contributor_names = [x.strip() for x in request.POST.get('contributor_names', '').split(',') if x.strip()]
+
+        meth_value = 'other' if request.POST.get('methodology') == 'other' else request.POST.get('methodology', 'photo_quadrat')
+        meth_other = methodology_other
+        if meth_value not in known_methods and not meth_other:
+            meth_value, meth_other = 'other', meth_value
+        sel_municipality_id = municipality_id
+        sel_barangay_id = barangay_id
+        try:
+            sel_province_id = Municipality.objects.get(id=municipality_id).province_id
+        except Exception:
+            sel_province_id = municipality.province_id
+
+        # ---------------- Thesis PDF ----------------
+        thesis_pdf = request.FILES.get('thesis_pdf')
+        remove_thesis = request.POST.get('remove_thesis') == '1'
+        if thesis_pdf:
+            if thesis_pdf.size > 20 * 1024 * 1024:
+                errors.append('Thesis PDF must be under 20 MB.')
+            if not thesis_pdf.name.lower().endswith('.pdf'):
+                errors.append('Thesis file must be a PDF.')
+            elif not errors_is_thesis_valid(thesis_pdf):
+                errors.append('Uploaded thesis is not a valid PDF file.')
+
+        # ---------------- Images ----------------
+        new_images = request.FILES.getlist('images')
+        removed_image_ids = [x.strip() for x in request.POST.get('removed_image_ids', '').split(',') if x.strip()]
+        for img in new_images:
+            if img.size > 10 * 1024 * 1024:
+                errors.append(f'Image "{img.name}" must be under 10 MB.')
+            if not img.content_type.startswith('image/'):
+                errors.append(f'File "{img.name}" is not a valid image.')
+
+        remaining_images = sum(1 for i in existing_images if str(i['id']) not in removed_image_ids) + len(new_images)
+        if remaining_images == 0:
+            errors.append('Please keep or upload at least one assessment photo.')
+
+        # ---------------- Transects ----------------
+        block_keys = [b for b in request.POST.getlist('transect_block') if b.strip()]
+        blocks = []
+        seen_ids = {t.id for t in transects}
+        next_new = max_num + 1
+        for key in block_keys:
+            remove = request.POST.get(f'{key}_remove') == '1'
+            # New transects added client-side are just removed from the DOM, so
+            # only existing ids need server-side deletion handling.
+            if key.startswith('t') and key[1:].isdigit():
+                t_id = int(key[1:])
+                if t_id not in seen_ids:
+                    continue
+                transect = next((t for t in transects if t.id == t_id), None)
+                if transect is None:
+                    continue
+                block = {
+                    'key': key, 'id': t_id, 'transect_number': transect.transect_number,
+                    'remove': remove, 'existing': True, 'transect': transect,
+                }
+            else:
+                block = {
+                    'key': key, 'id': None, 'transect_number': next_new,
+                    'remove': remove, 'existing': False, 'transect': None,
+                }
+                next_new += 1
+
+            if block['existing'] and block['transect']:
+                block['shallow_excel_name'] = os.path.basename(block['transect'].shallow_excel.name) if block['transect'].shallow_excel else ''
+                block['deep_excel_name'] = os.path.basename(block['transect'].deep_excel.name) if block['transect'].deep_excel else ''
+            else:
+                block['shallow_excel_name'] = ''
+                block['deep_excel_name'] = ''
+
+            for depth in ('shallow', 'deep'):
+                for part in ('start_lat', 'start_lng', 'end_lat', 'end_lng'):
+                    block[f'{depth}_{part}'] = request.POST.get(f'{key}_{depth}_{part}')
+                block[f'{depth}_depth'] = (request.POST.get(f'{key}_{depth}_depth') or '').strip()
+            blocks.append(block)
+
+        if not blocks:
+            errors.append('At least one transect is required.')
+        else:
+            for block in blocks:
+                if block['remove']:
+                    continue
+                # Coordinate validation (reuse add_transect rules)
+                coord_fields = [
+                    ('shallow_start_lat', -90, 90), ('shallow_start_lng', -180, 180),
+                    ('shallow_end_lat', -90, 90), ('shallow_end_lng', -180, 180),
+                    ('deep_start_lat', -90, 90), ('deep_start_lng', -180, 180),
+                    ('deep_end_lat', -90, 90), ('deep_end_lng', -180, 180),
+                ]
+                for field, min_v, max_v in coord_fields:
+                    val = (block.get(field) or '').strip()
+                    if not val:
+                        errors.append(f'Transect {block["transect_number"]}: {field.replace("_", " ").title()} is required.')
+                    else:
+                        try:
+                            num = float(val)
+                            if num < min_v or num > max_v:
+                                errors.append(f'Transect {block["transect_number"]}: {field.replace("_", " ").title()} must be between {min_v} and {max_v}.')
+                        except (TypeError, ValueError):
+                            errors.append(f'Transect {block["transect_number"]}: {field.replace("_", " ").title()} must be a valid number.')
+                for label, val in (('Shallow depth', block.get('shallow_depth')), ('Deep depth', block.get('deep_depth'))):
+                    if val and val.strip() != '':
+                        try:
+                            num = float(val)
+                            if num <= 0 or num > 500:
+                                errors.append(f'Transect {block["transect_number"]}: {label} must be between 0 and 500 meters.')
+                        except (TypeError, ValueError):
+                            errors.append(f'Transect {block["transect_number"]}: {label} must be a valid number.')
+                # Excel files (existing transects keep current file unless replaced;
+                # new transects require both shallow and deep files)
+                for depth in ('shallow', 'deep'):
+                    f = request.FILES.get(f'{block["key"]}_{depth}_excel')
+                    block[f'{depth}_excel_file'] = f
+                    if f:
+                        if f.size > 5 * 1024 * 1024:
+                            errors.append(f'Excel file "{f.name}" must be under 5 MB.')
+                        if not f.name.lower().endswith(('.xlsx', '.xls')):
+                            errors.append(f'File "{f.name}" is not a valid Excel file.')
+                        elif f.size <= 5 * 1024 * 1024:
+                            content_errors = _excel_content_errors(f)
+                            if content_errors:
+                                errors.append(f'Transect {block["transect_number"]}: Invalid {depth} Excel file - {" | ".join(content_errors)}.')
+                    elif not block['existing']:
+                        errors.append(f'Transect {block["transect_number"]}: Both shallow and deep Excel files are required for a new transect.')
+
+        if errors:
+            return render(request, 'contributor/edit_assessment.html', {
+                'assessment': assessment,
+                'provinces': provinces,
+                'municipalities': municipalities,
+                'barangays': barangays,
+                'methodology_choices': Assessment.METHODOLOGY_CHOICES,
+                'custom_methodologies': custom_methodologies,
+                'transects': transects,
+                'existing_images': existing_images,
+                'thesis_url': thesis_url,
+                'contributor_ids': ','.join(contributor_ids),
+                'contributor_names': ','.join(contributor_names),
+                'form': request.POST,
+                'blocks': blocks,
+                'errors': errors,
+                'meth_value': meth_value,
+                'meth_other': meth_other,
+                'sel_province_id': sel_province_id,
+                'sel_municipality_id': sel_municipality_id,
+                'sel_barangay_id': sel_barangay_id,
+            })
+
+        # ---------------- Step 1: stage changes + build preview ----------------
+        # Nothing is saved yet. Uploaded files are stashed on disk (they cannot
+        # survive a redirect inside request.FILES), the transect species are
+        # parsed, and duplicate detection runs before the final resubmission.
+
+        stash_dir = os.path.join(settings.MEDIA_ROOT, 'tmp_edit', str(assessment.id))
+        shutil.rmtree(stash_dir, ignore_errors=True)
+        os.makedirs(stash_dir, exist_ok=True)
+
+        new_image_paths = []
+        for idx, img in enumerate(new_images):
+            ext = os.path.splitext(img.name)[1]
+            dest = os.path.join(stash_dir, f'img_{idx}{ext}')
+            with open(dest, 'wb') as fh:
+                for chunk in img.chunks():
+                    fh.write(chunk)
+            new_image_paths.append(dest)
+
+        thesis_path = None
+        if thesis_pdf and errors_is_thesis_valid(thesis_pdf):
+            ext = os.path.splitext(thesis_pdf.name)[1]
+            thesis_path = os.path.join(stash_dir, f'thesis{ext}')
+            with open(thesis_path, 'wb') as fh:
+                for chunk in thesis_pdf.chunks():
+                    fh.write(chunk)
+
+        for block in blocks:
+            for depth in ('shallow', 'deep'):
+                f = block.get(f'{depth}_excel_file')
+                if f:
+                    ext = os.path.splitext(f.name)[1]
+                    p = os.path.join(stash_dir, f'{block["key"]}_{depth}{ext}')
+                    with open(p, 'wb') as fh:
+                        for chunk in f.chunks():
+                            fh.write(chunk)
+                    block[f'{depth}_stash_path'] = p
+                else:
+                    block[f'{depth}_stash_path'] = None
+
+        stash_blocks = []
+        for block in blocks:
+            stash_blocks.append({
+                'key': block['key'],
+                'id': block['id'],
+                'transect_number': block['transect_number'],
+                'remove': bool(block['remove']),
+                'existing': bool(block['existing']),
+                'shallow_excel_name': block.get('shallow_excel_name', ''),
+                'deep_excel_name': block.get('deep_excel_name', ''),
+                'shallow_start_lat': block.get('shallow_start_lat'),
+                'shallow_start_lng': block.get('shallow_start_lng'),
+                'shallow_end_lat': block.get('shallow_end_lat'),
+                'shallow_end_lng': block.get('shallow_end_lng'),
+                'deep_start_lat': block.get('deep_start_lat'),
+                'deep_start_lng': block.get('deep_start_lng'),
+                'deep_end_lat': block.get('deep_end_lat'),
+                'deep_end_lng': block.get('deep_end_lng'),
+                'shallow_depth': block.get('shallow_depth'),
+                'deep_depth': block.get('deep_depth'),
+                'shallow_stash_path': block.get('shallow_stash_path'),
+                'deep_stash_path': block.get('deep_stash_path'),
+            })
+
+        stash = {
+            'assessment_id': assessment.id,
+            'municipality_id': municipality_id,
+            'barangay_id': barangay_id,
+            'parsed_date': parsed_date.isoformat() if parsed_date else None,
+            'methodology': methodology,
+            'is_custom_methodology': is_custom_methodology,
+            'description': description,
+            'contributor_ids': contributor_ids,
+            'contributor_names': contributor_names,
+            'removed_image_ids': removed_image_ids,
+            'remove_thesis': remove_thesis,
+            'thesis_path': thesis_path,
+            'new_image_paths': new_image_paths,
+            'stash_dir': stash_dir,
+            'blocks': stash_blocks,
+        }
+
+        preview_blocks, dup_warnings, species_count = _build_edit_preview(assessment, stash)
+        request.session['edit_stash'] = stash
+
+        from . import context_processors as _cp
+        return render(request, 'contributor/edit_confirm.html', {
+            'assessment': assessment,
+            'blocks': preview_blocks,
+            'dup_warnings': dup_warnings,
+            'species_count': species_count,
+            'municipality': Municipality.objects.get(id=municipality_id),
+            'barangay': Barangay.objects.get(id=barangay_id),
+            'methodology': methodology,
+            'methodology_choices': Assessment.METHODOLOGY_CHOICES,
+            'methodology_display': dict(Assessment.METHODOLOGY_CHOICES).get(methodology, methodology),
+            'assessment_date': parsed_date or assessment.assessment_date,
+            'base_template': _cp.role_base_template(request)['base_template'],
+            'role_label': _cp.role_base_template(request)['role_label'],
+        })
+
+        
+
+    return render(request, 'contributor/edit_assessment.html', {
+        'assessment': assessment,
+        'provinces': provinces,
+        'municipalities': municipalities,
+        'barangays': barangays,
+        'methodology_choices': Assessment.METHODOLOGY_CHOICES,
+        'custom_methodologies': custom_methodologies,
+        'transects': transects,
+        'existing_images': existing_images,
+        'thesis_url': thesis_url,
+        'contributor_ids': ','.join(contributor_ids),
+        'contributor_names': ','.join(contributor_names),
+        'blocks': db_blocks,
+        'meth_value': 'other' if not known_methods or assessment.methodology not in known_methods else assessment.methodology,
+        'meth_other': '' if assessment.methodology in known_methods else assessment.methodology,
+        'sel_province_id': municipality.province_id,
+        'sel_municipality_id': municipality_id,
+        'sel_barangay_id': barangay_id,
+    })
+
+
+def _build_edit_preview(assessment, stash):
+    """Parse species for every transect in a stashed edit and run duplicate
+    detection. Returns (preview_blocks, dup_warnings, species_count)."""
+    def _parse_path(path):
+        try:
+            species, _ = parse_cpc_excel(path)
+            for _sp in species:
+                _sp['display_sub_category'] = Species._sentence_case(_sp['sub_category'])
+                _sp['display_major_category'] = Species._sentence_case(_sp['major_category'])
+            return species
+        except Exception:
+            return []
+
+    preview_blocks = []
+    for sb in stash['blocks']:
+        pb = dict(sb)
+        if pb['remove']:
+            pb['shallow_species'] = []
+            pb['deep_species'] = []
+        else:
+            for depth in ('shallow', 'deep'):
+                path = pb.get(f'{depth}_stash_path')
+                if not path and pb.get('id'):
+                    t_obj = Transect.objects.filter(id=pb['id']).first()
+                    if t_obj:
+                        fld = t_obj.shallow_excel if depth == 'shallow' else t_obj.deep_excel
+                        path = fld.path if (fld and hasattr(fld, 'path')) else None
+                if path and os.path.exists(path):
+                    species = _parse_path(path)
+                else:
+                    species = []
+                pb[f'{depth}_species'] = species
+                pb[f'{depth}_count'] = len(species)
+        preview_blocks.append(pb)
+
+    dup_warnings = []
+    for pb in preview_blocks:
+        if pb['remove']:
+            continue
+        others = [o for o in preview_blocks if o is not pb and not o['remove']]
+        for depth in ('shallow', 'deep'):
+            if pb.get(f'{depth}_species'):
+                dup_warnings.extend(check_duplicate_species(
+                    pb[f'{depth}_species'], depth, others,
+                    barangay_id=stash.get('barangay_id'),
+                    assessment_id=assessment.id))
+    dup_warnings = list(dict.fromkeys(dup_warnings))
+
+    species_count = sum(
+        pb.get('shallow_count', 0) + pb.get('deep_count', 0)
+        for pb in preview_blocks
+    )
+    return preview_blocks, dup_warnings, species_count
+
+
+def _finalize_edit_save(request, assessment, stash):
+    """Apply a stashed edit: persist staged files into MEDIA, clear review
+    fields, re-queue the assessment and notify curators/admins."""
+    from datetime import datetime as _dt
+    municipality = Municipality.objects.get(id=stash['municipality_id'])
+    barangay = Barangay.objects.get(id=stash['barangay_id'], municipality=municipality)
+    assessment.municipality = municipality
+    assessment.barangay = barangay
+    if stash.get('parsed_date'):
+        assessment.assessment_date = _dt.strptime(stash['parsed_date'], '%Y-%m-%d').date()
+    assessment.methodology = stash['methodology']
+    assessment.description = stash.get('description', '')
+    assessment.status = 'submitted'
+    assessment.reviewed_by = None
+    assessment.approved_at = None
+    assessment.notes = ''
+    assessment.condition = None
+    assessment.overall_coral_cover = None
+    assessment.save()
+
+    contributor_ids = stash.get('contributor_ids') or []
+    contributors = Contributor.objects.filter(id__in=contributor_ids) if contributor_ids else Contributor.objects.none()
+    assessment.contributors.set(contributors)
+
+    # Thesis PDF: replace or remove
+    thesis_path = stash.get('thesis_path')
+    if thesis_path and os.path.exists(thesis_path):
+        if assessment.thesis_pdf:
+            old_path = assessment.thesis_pdf.path if hasattr(assessment.thesis_pdf, 'path') else None
+            if old_path and os.path.exists(old_path):
+                os.remove(old_path)
+        dest_dir = os.path.join(settings.MEDIA_ROOT, 'assessments', 'thesis', str(assessment.id))
+        os.makedirs(dest_dir, exist_ok=True)
+        dest = os.path.join(dest_dir, 'thesis.pdf')
+        shutil.copyfile(thesis_path, dest)
+        assessment.thesis_pdf = os.path.join('assessments', 'thesis', str(assessment.id), 'thesis.pdf')
+        assessment.save()
+    elif stash.get('remove_thesis') in (True, '1', 'true') and assessment.thesis_pdf:
+        old_path = assessment.thesis_pdf.path if hasattr(assessment.thesis_pdf, 'path') else None
+        if old_path and os.path.exists(old_path):
+            os.remove(old_path)
+        assessment.thesis_pdf = None
+        assessment.save()
+
+    # Images: remove marked, add new
+    for img in assessment.images.all():
+        if str(img.id) in (stash.get('removed_image_ids') or []):
+            img_path = img.image.path if hasattr(img.image, 'path') else None
+            if img_path and os.path.exists(img_path):
+                os.remove(img_path)
+            img.delete()
+    for idx, img_path in enumerate(stash.get('new_image_paths') or []):
+        if not os.path.exists(img_path):
+            continue
+        dest_dir = os.path.join(settings.MEDIA_ROOT, 'assessments', 'images', str(assessment.id))
+        os.makedirs(dest_dir, exist_ok=True)
+        ext = os.path.splitext(img_path)[1]
+        dest = os.path.join(dest_dir, f'image_{idx}{ext}')
+        shutil.copyfile(img_path, dest)
+        AssessmentImage.objects.create(
+            assessment=assessment,
+            image=os.path.join('assessments', 'images', str(assessment.id), f'image_{idx}{ext}'),
+        )
+
+    # Transects: delete removed, update kept, create new
+    def _to_decimal(val):
+        if val is None or val == '':
+            return None
+        try:
+            d = Decimal(str(val))
+            return d.quantize(Decimal('0.00000001'), rounding='ROUND_HALF_UP')
+        except Exception:
+            return None
+
+    assessment_id_str = str(assessment.id)
+    for block in stash['blocks']:
+        if block['remove']:
+            t = Transect.objects.filter(id=block['id']).first() if block.get('id') else None
+            if t:
+                for fld in (t.shallow_excel, t.deep_excel):
+                    if fld:
+                        p = fld.path if hasattr(fld, 'path') else None
+                        if p and os.path.exists(p):
+                            os.remove(p)
+                t.delete()
+            continue
+        if block.get('id'):
+            t = Transect.objects.filter(id=block['id']).first()
+            if not t:
+                continue
+            t.shallow_start_lat = _to_decimal(block.get('shallow_start_lat'))
+            t.shallow_start_lng = _to_decimal(block.get('shallow_start_lng'))
+            t.shallow_end_lat = _to_decimal(block.get('shallow_end_lat'))
+            t.shallow_end_lng = _to_decimal(block.get('shallow_end_lng'))
+            t.deep_start_lat = _to_decimal(block.get('deep_start_lat'))
+            t.deep_start_lng = _to_decimal(block.get('deep_start_lng'))
+            t.deep_end_lat = _to_decimal(block.get('deep_end_lat'))
+            t.deep_end_lng = _to_decimal(block.get('deep_end_lng'))
+            t.shallow_depth = _to_decimal(block.get('shallow_depth'))
+            t.deep_depth = _to_decimal(block.get('deep_depth'))
+            t.save()
+        else:
+            t = Transect.objects.create(
+                assessment=assessment,
+                transect_number=block['transect_number'],
+                shallow_start_lat=_to_decimal(block.get('shallow_start_lat')),
+                shallow_start_lng=_to_decimal(block.get('shallow_start_lng')),
+                shallow_end_lat=_to_decimal(block.get('shallow_end_lat')),
+                shallow_end_lng=_to_decimal(block.get('shallow_end_lng')),
+                deep_start_lat=_to_decimal(block.get('deep_start_lat')),
+                deep_start_lng=_to_decimal(block.get('deep_start_lng')),
+                deep_end_lat=_to_decimal(block.get('deep_end_lat')),
+                deep_end_lng=_to_decimal(block.get('deep_end_lng')),
+                shallow_depth=_to_decimal(block.get('shallow_depth')),
+                deep_depth=_to_decimal(block.get('deep_depth')),
+            )
+        for depth in ('shallow', 'deep'):
+            src = block.get(f'{depth}_stash_path')
+            if src and os.path.exists(src):
+                dest_dir = os.path.join(settings.MEDIA_ROOT, 'assessments', 'transect_excel', assessment_id_str)
+                os.makedirs(dest_dir, exist_ok=True)
+                ext = os.path.splitext(src)[1]
+                dest = os.path.join(dest_dir, f't{block["transect_number"]}_{depth}{ext}')
+                shutil.copyfile(src, dest)
+                rel = os.path.join('assessments', 'transect_excel', assessment_id_str, f't{block["transect_number"]}_{depth}{ext}')
+                if depth == 'shallow':
+                    t.shallow_excel = rel
+                else:
+                    t.deep_excel = rel
+                t.save()
+
+    # Clear stale species; they are re-parsed at approval time
+    TransectSpecies.objects.filter(transect__assessment=assessment).delete()
+
+    if stash.get('is_custom_methodology'):
+        CustomMethodology.objects.get_or_create(name=stash['methodology'])
+
+    curators = User.objects.filter(profile__role__in=['curator', 'admin'])
+    for curator in curators:
+        if curator != assessment.uploaded_by:
+            uploaded_by_profile = getattr(assessment.uploaded_by, 'profile', None)
+            uploaded_by_name = uploaded_by_profile.get_full_name() if uploaded_by_profile else ''
+            create_assessment_notification(
+                curator, assessment, 'info',
+                'Assessment Resubmitted',
+                f'Contributor {uploaded_by_name or assessment.uploaded_by.email} has resubmitted the assessment for {assessment.barangay.name}, {assessment.municipality.name} after being rejected.'
+            )
+    from .audit import log_security_event
+    log_security_event('assessment_edited', request=request, details={'assessment_id': assessment.id})
+    notify_assessment_refresh('submit')
+
+
+@login_required
+def edit_confirm(request, assessment_id):
+    assessment = get_object_or_404(Assessment, id=assessment_id, uploaded_by=request.user)
+    stash = request.session.get('edit_stash')
+    if not stash or int(stash.get('assessment_id', 0)) != assessment.id:
+        messages.error(request, 'Your edit preview has expired. Please review your changes again.')
+        return redirect('edit_assessment', assessment_id=assessment.id)
+    if assessment.status != 'rejected':
+        shutil.rmtree(stash.get('stash_dir', ''), ignore_errors=True)
+        request.session.pop('edit_stash', None)
+        messages.error(request, 'This assessment can no longer be edited.')
+        return redirect('my_assessments')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'confirm':
+            _finalize_edit_save(request, assessment, stash)
+            shutil.rmtree(stash.get('stash_dir', ''), ignore_errors=True)
+            request.session.pop('edit_stash', None)
+            messages.success(request, 'Assessment has been updated and resubmitted for review.')
+            return redirect('my_assessments')
+        shutil.rmtree(stash.get('stash_dir', ''), ignore_errors=True)
+        request.session.pop('edit_stash', None)
+        messages.info(request, 'Changes discarded. Nothing was saved.')
+        return redirect('edit_assessment', assessment_id=assessment.id)
+
+    preview_blocks, dup_warnings, species_count = _build_edit_preview(assessment, stash)
+    from . import context_processors as _cp
+    from datetime import datetime as _dt
+    try:
+        preview_date = _dt.strptime(stash.get('parsed_date'), '%Y-%m-%d').date() if stash.get('parsed_date') else assessment.assessment_date
+    except Exception:
+        preview_date = assessment.assessment_date
+    return render(request, 'contributor/edit_confirm.html', {
+        'assessment': assessment,
+        'blocks': preview_blocks,
+        'dup_warnings': dup_warnings,
+        'species_count': species_count,
+        'municipality': Municipality.objects.get(id=stash['municipality_id']),
+        'barangay': Barangay.objects.get(id=stash['barangay_id']),
+        'methodology': stash['methodology'],
+        'methodology_choices': Assessment.METHODOLOGY_CHOICES,
+        'methodology_display': dict(Assessment.METHODOLOGY_CHOICES).get(stash['methodology'], stash['methodology']),
+        'assessment_date': preview_date,
+        'base_template': _cp.role_base_template(request)['base_template'],
+        'role_label': _cp.role_base_template(request)['role_label'],
+    })
+
+
+def errors_is_thesis_valid(thesis_pdf):
+    """Validate a thesis PDF file; returns True if valid."""
+    try:
+        thesis_pdf.seek(0)
+        header = thesis_pdf.read(5)
+        thesis_pdf.seek(0)
+        return header.startswith(b'%PDF')
+    except Exception:
+        thesis_pdf.seek(0)
+        return True
+
+
+def _excel_content_errors(f):
+    """Parse an uploaded CPCe Excel file and return human-readable content errors.
+
+    Mirrors the upload flow so edited/uploaded JD Excel files get the same
+    format warnings (Sub Category, Major Category, Mean) before saving."""
+    ext = os.path.splitext(f.name)[1]
+    fd, tmp_path = tempfile.mkstemp(suffix=ext)
+    try:
+        with os.fdopen(fd, 'wb') as tmp:
+            for chunk in f.chunks():
+                tmp.write(chunk)
+        # File is fully closed here so openpyxl/pandas can reopen it safely on
+        # Windows (reopening an open NamedTemporaryFile raises Errno 13).
+        try:
+            species, parse_errors = parse_cpc_excel(tmp_path)
+        except Exception as e:
+            parse_errors = [str(e)]
+            species = []
+    finally:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+    if species:
+        return []
+    if parse_errors:
+        return parse_errors
+    return ['No valid sub category data (Sub Category, Major Category, Mean)']
 
 
 # ==================== ADMIN ASSESSMENT REVIEW VIEWS ====================
@@ -2548,15 +3219,15 @@ def admin_bulk_delete_assessments(request):
             except Assessment.DoesNotExist:
                 continue
             if a.status in ('submitted', 'approved'):
-                skipped.append(f'#{a.id} ({a.get_status_display()})')
+                skipped.append(a.get_status_display())
             else:
-                deleted.append(f'#{a.id} ({a.get_status_display()})')
+                deleted.append(a.get_status_display())
                 a.delete()
         if deleted:
-            messages.success(request, f'Deleted {len(deleted)} assessment(s): {", ".join(deleted)}.')
+            messages.success(request, f'Deleted {len(deleted)} assessment(s) ({", ".join(deleted)}).')
             notify_assessment_refresh('bulk_delete')
         if skipped:
-            messages.warning(request, f'Skipped {len(skipped)} (pending or approved): {", ".join(skipped)}.')
+            messages.warning(request, f'Skipped {len(skipped)} assessment(s) pending or approved ({", ".join(skipped)}).')
     return redirect('admin_assessments')
 
 
@@ -2618,12 +3289,12 @@ def admin_confirm_approval(request, assessment_id):
             'municipality', 'barangay', 'uploaded_by'
         ).get(id=assessment_id)
     except Assessment.DoesNotExist:
-        messages.error(request, f'Assessment #{assessment_id} does not exist anymore. It may have been deleted by another user.')
+        messages.error(request, f'Assessment does not exist anymore. It may have been deleted by another user.')
         return redirect('admin_assessments')
 
     if assessment.status != 'submitted':
         status_display = assessment.get_status_display()
-        messages.warning(request, f'Assessment #{assessment.id} is no longer pending review. It was already {status_display} by another user.')
+        messages.warning(request, f'Assessment is no longer pending review. It was already {status_display} by another user.')
         return redirect('admin_assessments')
 
     transects = assessment.transects.all()
@@ -2672,7 +3343,7 @@ def admin_assessment_action(request, assessment_id):
         try:
             assessment = Assessment.objects.select_for_update().get(id=assessment_id)
         except Assessment.DoesNotExist:
-            messages.error(request, f'Assessment #{assessment_id} does not exist anymore. It may have been deleted by another user.')
+            messages.error(request, f'Assessment does not exist anymore. It may have been deleted by another user.')
             return redirect('admin_assessments')
 
         action = request.POST.get('action')
@@ -2680,12 +3351,12 @@ def admin_assessment_action(request, assessment_id):
 
         if action in ('approve', 'reject') and assessment.status != 'submitted':
             status_display = assessment.get_status_display()
-            messages.warning(request, f'Assessment #{assessment.id} is no longer pending review. It was already {status_display} by another user. Please refresh the page.')
+            messages.warning(request, f'Assessment is no longer pending review. It was already {status_display} by another user. Please refresh the page.')
             return redirect('admin_assessments')
 
         if action == 'return_to_pending' and assessment.status not in ('approved', 'rejected'):
             status_display = assessment.get_status_display()
-            messages.warning(request, f'Assessment #{assessment.id} cannot be returned to pending. Current status: {status_display}. Please refresh the page.')
+            messages.warning(request, f'Assessment cannot be returned to pending. Current status: {status_display}. Please refresh the page.')
             return redirect('admin_assessments')
 
         if action == 'approve':
@@ -2697,12 +3368,12 @@ def admin_assessment_action(request, assessment_id):
             save_barangay_transect_coords(assessment)
             if assessment.methodology not in built_in:
                 CustomMethodology.objects.get_or_create(name=assessment.methodology)
-            messages.success(request, f'Assessment #{assessment.id} approved. {species_count} sub category record(s) created.')
+            messages.success(request, f'Assessment approved. {species_count} sub category record(s) created.')
             log_security_event('assessment_approved', request=request, details={'assessment_id': assessment.id})
             if assessment.uploaded_by != request.user:
                 create_assessment_notification(
                     assessment.uploaded_by, assessment, 'approved',
-                    f'Assessment #{assessment.id} Approved',
+                    f'Assessment Approved',
                     f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been approved by {request.user.profile.get_full_name() or request.user.email}.'
                 )
         elif action == 'reject':
@@ -2712,12 +3383,12 @@ def admin_assessment_action(request, assessment_id):
             assessment.approved_at = None
             assessment.notes = rejection_reason
             assessment.save()
-            messages.info(request, f'Assessment #{assessment.id} has been rejected.')
+            messages.info(request, f'Assessment has been rejected.')
             log_security_event('assessment_rejected', request=request, details={'assessment_id': assessment.id, 'reason': rejection_reason})
             if assessment.uploaded_by != request.user:
                 create_assessment_notification(
                     assessment.uploaded_by, assessment, 'rejected',
-                    f'Assessment #{assessment.id} Rejected',
+                    f'Assessment Rejected',
                     f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been rejected. Reason: {rejection_reason or "No reason provided."}'
                 )
         elif action == 'return_to_pending':
@@ -2730,7 +3401,7 @@ def admin_assessment_action(request, assessment_id):
             if assessment.uploaded_by != request.user:
                 create_assessment_notification(
                     assessment.uploaded_by, assessment, 'returned',
-                    f'Assessment #{assessment.id} Returned to Pending',
+                    f'Assessment Returned to Pending',
                     f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been returned to pending review.'
                 )
             if assessment.methodology not in built_in:
@@ -2752,7 +3423,7 @@ def admin_assessment_action(request, assessment_id):
                 orphan_ids = set(species_ids) - other_approved_species
                 if orphan_ids:
                     Species.objects.filter(id__in=orphan_ids, source=Species.SOURCE_ASSESSMENT).delete()
-            messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} sub category record(s) removed.')
+            messages.success(request, f'Assessment returned to pending. {deleted} sub category record(s) removed.')
         else:
             messages.error(request, 'Invalid action.')
 
@@ -3715,12 +4386,12 @@ def curator_confirm_approval(request, assessment_id):
             'municipality', 'barangay', 'uploaded_by'
         ).get(id=assessment_id)
     except Assessment.DoesNotExist:
-        messages.error(request, f'Assessment #{assessment_id} does not exist anymore. It may have been deleted by another user.')
+        messages.error(request, f'Assessment does not exist anymore. It may have been deleted by another user.')
         return redirect('curator_assessments')
 
     if assessment.status != 'submitted':
         status_display = assessment.get_status_display()
-        messages.warning(request, f'Assessment #{assessment.id} is no longer pending review. It was already {status_display} by another user.')
+        messages.warning(request, f'Assessment is no longer pending review. It was already {status_display} by another user.')
         return redirect('curator_assessments')
 
     transects = assessment.transects.all()
@@ -3768,7 +4439,7 @@ def curator_assessment_action(request, assessment_id):
         try:
             assessment = Assessment.objects.select_for_update().get(id=assessment_id)
         except Assessment.DoesNotExist:
-            messages.error(request, f'Assessment #{assessment_id} does not exist anymore. It may have been deleted by another user.')
+            messages.error(request, f'Assessment does not exist anymore. It may have been deleted by another user.')
             return redirect('curator_assessments')
 
         action = request.POST.get('action')
@@ -3776,12 +4447,12 @@ def curator_assessment_action(request, assessment_id):
 
         if action in ('approve', 'reject') and assessment.status != 'submitted':
             status_display = assessment.get_status_display()
-            messages.warning(request, f'Assessment #{assessment.id} is no longer pending review. It was already {status_display} by another user. Please refresh the page.')
+            messages.warning(request, f'Assessment is no longer pending review. It was already {status_display} by another user. Please refresh the page.')
             return redirect('curator_assessments')
 
         if action == 'return_to_pending' and assessment.status not in ('approved', 'rejected'):
             status_display = assessment.get_status_display()
-            messages.warning(request, f'Assessment #{assessment.id} cannot be returned to pending. Current status: {status_display}. Please refresh the page.')
+            messages.warning(request, f'Assessment cannot be returned to pending. Current status: {status_display}. Please refresh the page.')
             return redirect('curator_assessments')
 
         if action == 'approve':
@@ -3793,12 +4464,12 @@ def curator_assessment_action(request, assessment_id):
             save_barangay_transect_coords(assessment)
             if assessment.methodology not in built_in:
                 CustomMethodology.objects.get_or_create(name=assessment.methodology)
-            messages.success(request, f'Assessment #{assessment.id} approved. {species_count} sub category record(s) created.')
+            messages.success(request, f'Assessment approved. {species_count} sub category record(s) created.')
             log_security_event('assessment_approved', request=request, details={'assessment_id': assessment.id})
             if assessment.uploaded_by != request.user:
                 create_assessment_notification(
                     assessment.uploaded_by, assessment, 'approved',
-                    f'Assessment #{assessment.id} Approved',
+                    f'Assessment Approved',
                     f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been approved by {request.user.profile.get_full_name() or request.user.email}.'
                 )
         elif action == 'reject':
@@ -3808,12 +4479,12 @@ def curator_assessment_action(request, assessment_id):
             assessment.approved_at = None
             assessment.notes = rejection_reason
             assessment.save()
-            messages.info(request, f'Assessment #{assessment.id} has been rejected.')
+            messages.info(request, f'Assessment has been rejected.')
             log_security_event('assessment_rejected', request=request, details={'assessment_id': assessment.id, 'reason': rejection_reason})
             if assessment.uploaded_by != request.user:
                 create_assessment_notification(
                     assessment.uploaded_by, assessment, 'rejected',
-                    f'Assessment #{assessment.id} Rejected',
+                    f'Assessment Rejected',
                     f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been rejected. Reason: {rejection_reason or "No reason provided."}'
                 )
         elif action == 'return_to_pending':
@@ -3825,7 +4496,7 @@ def curator_assessment_action(request, assessment_id):
             if assessment.uploaded_by != request.user:
                 create_assessment_notification(
                     assessment.uploaded_by, assessment, 'returned',
-                    f'Assessment #{assessment.id} Returned to Pending',
+                    f'Assessment Returned to Pending',
                     f'Your assessment for {assessment.barangay.name}, {assessment.municipality.name} has been returned to pending review.'
                 )
             if assessment.methodology not in built_in:
@@ -3847,7 +4518,7 @@ def curator_assessment_action(request, assessment_id):
                 orphan_ids = set(species_ids) - other_approved_species
                 if orphan_ids:
                     Species.objects.filter(id__in=orphan_ids, source=Species.SOURCE_ASSESSMENT).delete()
-            messages.success(request, f'Assessment #{assessment.id} returned to pending. {deleted} sub category record(s) removed.')
+            messages.success(request, f'Assessment returned to pending. {deleted} sub category record(s) removed.')
         else:
             messages.error(request, 'Invalid action.')
 

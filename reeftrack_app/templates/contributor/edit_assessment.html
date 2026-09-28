@@ -1,0 +1,1193 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Edit Assessment - ReefTrack{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+
+<style>
+.rt-page-meta{color:#cbd5e1;font-size:.85rem;}
+.rt-page-meta i{color:#7dd3fc;}
+
+.rt-hero{background:linear-gradient(135deg,#032f35 0%,var(--rt-navy) 55%,#0e5c6b 100%);color:#fff;border:0;overflow:hidden;position:relative;}
+.rt-hero::before{content:'';position:absolute;left:-80px;bottom:-120px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(125,212,192,.18),transparent 65%);}
+.rt-hero::after{content:'';position:absolute;right:-70px;top:-70px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.06);}
+.rt-hero .card-body{position:relative;z-index:1;}
+.rt-hero h3{font-weight:700;margin:0;color:#fff;}
+.rt-hero .btn-back{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:50rem;padding:.4rem .9rem;font-size:.8rem;transition:.15s;}
+.rt-hero .btn-back:hover{background:rgba(255,255,255,.24);color:#fff;transform:translateY(-1px);}
+.status-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:50rem;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:rgba(220,38,38,.18);border:1px solid rgba(220,38,38,.45);color:#fff;}
+
+.rt-steps{display:inline-flex;gap:.4rem;flex-wrap:wrap;}
+.rt-step{display:inline-flex;align-items:center;gap:.45rem;padding:.35rem .8rem;border-radius:50rem;font-size:.72rem;font-weight:600;letter-spacing:.03em;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#cbd5e1;}
+.rt-step i{background:rgba(255,255,255,.14);width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;}
+.rt-step.rt-step-active{background:rgba(14,124,134,.35);border-color:rgba(125,212,192,.55);color:#fff;}
+
+.rt-section-header{background:linear-gradient(135deg,var(--rt-navy) 0%,#064e5c 70%,var(--rt-teal) 100%);color:#fff;border:0;padding:.8rem 1.25rem;}
+.rt-section-header h6{margin:0;font-weight:600;color:#fff;}
+.rt-section-header .step-chip{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);font-size:.8rem;font-weight:700;margin-right:.6rem;color:#fff;}
+
+.rt-legend{display:flex;gap:1.25rem;flex-wrap:wrap;}
+.rt-legend small{color:#475569;font-size:.75rem;font-weight:500;}
+.rt-legend .swatch{display:inline-block;width:16px;height:4px;border-radius:3px;vertical-align:middle;margin-right:.35rem;}
+
+.rt-form-card{background:#fff;border:1px solid #eef0f4;border-radius:16px;box-shadow:0 1px 3px rgba(15,23,42,.06);overflow:hidden;margin-bottom:1.4rem;}
+
+.rt-label{font-size:.72rem;color:#475569;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:.35rem;display:block;}
+.rt-field .form-control,.rt-field .form-select{border:1px solid #dde2e9;border-radius:9px;font-size:.88rem;padding:.5rem .7rem;background:#fbfcfe;transition:border-color .15s,box-shadow .15s,background .15s;}
+.rt-field .form-control:focus,.rt-field .form-select:focus{border-color:var(--rt-teal);box-shadow:0 0 0 3px rgba(14,124,134,.12);background:#fff;}
+.rt-field .form-control.is-invalid{border-color:#dc3545;box-shadow:0 0 0 3px rgba(220,53,69,.1);}
+
+.rt-upload-tile{border:1.5px dashed #c3cbd6;border-radius:12px;background:#f8fafc;transition:.15s;}
+.rt-upload-tile:hover{border-color:var(--rt-teal);background:#f3fbfc;}
+.rt-upload-tile::-webkit-file-upload-button{visibility:hidden;}
+.rt-upload-tile::before{content:'\f0ee';font-family:'Font Awesome 6 Free';font-weight:900;margin-right:.55rem;color:var(--rt-teal);}
+.rt-file-name{display:inline-flex;align-items:center;gap:.4rem;background:#eff9f6;border:1px solid #cdeee5;color:#0b6b5f;border-radius:8px;padding:.3rem .6rem;font-size:.78rem;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.transect-block{background:#fff;border:1px solid #edf0f4;border-radius:16px;overflow:hidden;margin-bottom:1.3rem;box-shadow:0 1px 4px rgba(15,23,42,.07);transition:box-shadow .2s;}
+.transect-block:hover{box-shadow:0 6px 20px rgba(15,23,42,.1);}
+.transect-block .transect-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.85rem 1.1rem;border-bottom:1px solid #edf0f4;background:linear-gradient(90deg,#f4f7fa,#fafbfd);}
+.transect-block .transect-head strong{color:var(--rt-navy);font-size:.95rem;display:inline-flex;align-items:center;gap:.5rem;}
+.transect-block .transect-head .tnum-pill{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--rt-navy);color:#fff;font-size:.82rem;font-weight:700;}
+.transect-block .form-label{font-size:.72rem;color:#475569;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
+.transect-block .card.border-info,.transect-block .card.border-primary{border:0!important;border-left:4px solid;border-radius:12px;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+.transect-block .card.border-info{background:#f6fbfd;border-left-color:#0dcaf0;}
+.transect-block .card.border-primary{background:#f6f8ff;border-left-color:#0d6efd;}
+.transect-block .depth-title{display:flex;align-items:center;justify-content:space-between;}
+.transect-block .depth-title h6{margin:0;font-weight:700;}
+.transect-block .depth-title .badge-pill{font-size:.7rem;font-weight:700;padding:.3rem .65rem;border-radius:50rem;background:#fff;border:1px solid;}
+
+.btn-remove-image{position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:#dc2626;color:#fff;border:2px solid #fff;font-size:.65rem;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 1px 4px rgba(0,0,0,0.25);transition:background 0.15s,transform .15s;z-index:2;}
+.btn-remove-image:hover{background:#b91c1c;transform:scale(1.08);}
+#imagePreview .new-image-thumb{position:relative;}
+#imagePreview .new-image-thumb .btn-remove-image{top:-6px;right:-6px;}
+.uploaded-image img,.new-image-thumb img{border-radius:10px!important;box-shadow:var(--rt-shadow);}
+.uploaded-image{transition:transform .15s;}
+.uploaded-image:hover{transform:translateY(-2px);}
+
+.rt-btn-teal{background:linear-gradient(135deg,var(--rt-teal),var(--rt-teal-light));border:none;color:#fff;border-radius:10px;font-weight:600;padding:.55rem 1.4rem;transition:.15s;box-shadow:0 4px 12px rgba(14,124,134,.28);}
+.rt-btn-teal:hover{color:#fff;transform:translateY(-1px);box-shadow:0 6px 16px rgba(14,124,134,.34);}
+.rt-btn-ghost{border:1px solid #d6dbe3;color:#334155;background:#fff;border-radius:10px;font-weight:600;padding:.55rem 1.4rem;transition:.15s;}
+.rt-btn-ghost:hover{background:#f1f5f9;color:#0f172a;border-color:#c3cad4;}
+.rt-btn-success{background:linear-gradient(135deg,#059669,#10b981);border:none;color:#fff;border-radius:10px;font-weight:700;padding:.6rem 1.5rem;transition:.15s;box-shadow:0 4px 14px rgba(16,185,129,.32);}
+.rt-btn-success:hover{color:#fff;transform:translateY(-1px);box-shadow:0 6px 18px rgba(16,185,129,.4);}
+
+.rt-actionbar{position:sticky;bottom:1rem;border-top:3px solid var(--rt-teal);border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.18);background:rgba(255,255,255,.92);backdrop-filter:blur(6px);z-index:5;}
+.rt-actionbar .btn{border-radius:10px;font-weight:600;}
+@media(max-width:575.98px){.rt-actionbar .btn{width:100%;}}
+
+.ref-match-alert{border-radius:12px;}
+#transectMap{border-radius:12px!important;}
+#contributor-tags-wrapper{position:relative;}
+#contributor-dropdown{max-height:250px;overflow-y:auto;}
+.rt-no-transects{border:1.5px dashed #b6c2cd;border-radius:12px;background:#f8fafc;color:#64748b;padding:1.6rem;text-align:center;}
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-10">
+        <!-- Header -->
+        <div class="card rt-hero border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <a href="{% url assessment_detail_url assessment.id %}" class="btn btn-back btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Back to assessment details
+                    </a>
+                    <span class="status-pill"><i class="fas fa-circle-xmark"></i> {{ assessment.get_status_display }}</span>
+                </div>
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h3 class="mb-0"><i class="fas fa-edit me-2"></i> Edit Assessment</h3>
+                        </div>
+                        <p class="rt-page-meta mb-0">
+                            <i class="fas fa-calendar-day me-1"></i> {{ assessment.assessment_date|date:'F j, Y' }}
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-map-pin me-1"></i> {{ assessment.barangay.name }}, {{ assessment.barangay.municipality.name }}
+                        </p>
+                    </div>
+                    <div class="rt-steps">
+                        <span class="rt-step rt-step-active"><i class="fas fa-check"></i> Step 1 · Edit Details</span>
+                        <span class="rt-step"><i class="fas fa-clipboard-list"></i> Step 2 · Preview &amp; Submit</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if assessment.notes %}
+        <div class="alert alert-danger d-flex gap-3 align-items-start mb-4" style="border-radius:14px;border:1px solid #fecaca;box-shadow:0 4px 14px rgba(220,38,38,.08);">
+            <span class="mt-1" style="color:#dc2626;"><i class="fas fa-circle-exclamation fa-lg"></i></span>
+            <div>
+                <div class="fw-bold" style="color:#991b1b;">This assessment was rejected</div>
+                <div style="color:#7f1d1d;font-size:.9rem;">{{ assessment.notes }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if errors %}
+        <div class="alert alert-danger mb-4" role="alert" style="border-radius:14px;border:1px solid #fecaca;box-shadow:0 4px 14px rgba(220,38,38,.08);">
+            <div class="d-flex align-items-center gap-2 fw-bold" style="color:#991b1b;">
+                <i class="fas fa-exclamation-triangle"></i> Please fix the following before continuing:
+            </div>
+            <ul class="mb-0 mt-2 ps-4" style="color:#7f1d1d;">
+                {% for e in errors %}<li style="font-size:.9rem;">{{ e }}</li>{% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data" id="editForm">
+            {% csrf_token %}
+
+            <!-- Assessment Info -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header rt-section-header">
+                    <h6><span class="step-chip">1</span><i class="fas fa-info-circle me-2"></i>Assessment Info</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Assessment Date *</label>
+                            <input type="date" class="form-control" name="assessment_date" id="assessment_date"
+                                   onfocus="this.showPicker()" onkeydown="return false" style="cursor:pointer;"
+                                   value="{% if form.assessment_date %}{{ form.assessment_date }}{% else %}{{ assessment.assessment_date|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Methodology</label>
+                            <select class="form-select" name="methodology" id="methodology_select">
+                                {% for val, label in methodology_choices %}
+                                <option value="{{ val }}" {% if meth_value == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                                {% for cm in custom_methodologies %}
+                                <option value="{{ cm.name }}" {% if meth_value == cm.name %}selected{% endif %}>{{ cm.name }}</option>
+                                {% endfor %}
+                                <option value="other" {% if meth_value == 'other' %}selected{% endif %}>Other</option>
+                            </select>
+                            <input type="text" class="form-control mt-2" name="methodology_other" id="methodology_other"
+                                   placeholder="Specify methodology..." style="{% if meth_value != 'other' %}display:none;{% endif %}" maxlength="100" value="{{ meth_other }}">
+                            <script>
+                                document.getElementById('methodology_select').addEventListener('change', function() {
+                                    document.getElementById('methodology_other').style.display = this.value === 'other' ? 'block' : 'none';
+                                });
+                            </script>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Province *</label>
+                            <select class="form-select" id="province" name="province">
+                                <option value="">-- Select Province --</option>
+                                {% for p in provinces %}
+                                <option value="{{ p.id }}" {% if sel_province_id|stringformat:'s' == p.id|stringformat:'s' %}selected{% endif %}>{{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Municipality *</label>
+                            <select class="form-select" id="municipality" name="municipality">
+                                <option value="">-- Select Municipality --</option>
+                                {% for m in municipalities %}
+                                <option value="{{ m.id }}" {% if sel_municipality_id|stringformat:'s' == m.id|stringformat:'s' %}selected{% endif %}>{{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Barangay *</label>
+                            <select class="form-select" id="barangay" name="barangay">
+                                <option value="">-- Select Barangay --</option>
+                                {% for b in barangays %}
+                                <option value="{{ b.id }}" {% if sel_barangay_id|stringformat:'s' == b.id|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Contributors</label>
+                            <div id="contributor-tags-wrapper">
+                                <div id="contributor-tags" class="d-flex flex-wrap gap-2 mb-2"></div>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="contributor-input"
+                                           placeholder="Type a name to search or add..." autocomplete="off">
+                                    <button class="btn btn-outline-secondary" type="button" id="add-contributor-btn">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div id="contributor-dropdown" class="list-group mt-1" style="display:none; position:absolute; z-index:100; width:100%;"></div>
+                                <input type="hidden" name="contributors" id="contributor-ids" value="{{ contributor_ids }}">
+                                <input type="hidden" name="contributor_names" id="contributor-names" value="{{ contributor_names }}">
+                            </div>
+                            <div class="form-text">Type a name to search system users, or type a full name to add an external contributor.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Description</label>
+                            <textarea class="form-control" name="description" rows="3"
+                                      placeholder="Brief description of the assessment (optional)">{% if form.description %}{{ form.description }}{% else %}{{ assessment.description|default:'' }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Uploads -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header rt-section-header">
+                    <h6><span class="step-chip">2</span><i class="fas fa-file-upload me-2"></i>Files &amp; Photos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card h-100 border-danger">
+                                <div class="card-body">
+                                    <label for="thesis_pdf" class="form-label fw-bold">
+                                        <i class="fas fa-file-pdf text-danger"></i> Assessment Thesis (PDF)
+                                    </label>
+                                    {% if thesis_url %}
+                                    <div class="d-flex align-items-center gap-2 p-2 mb-2 rounded" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+                                        <i class="fas fa-file-pdf text-danger fa-lg"></i>
+                                        <span class="flex-grow-1 small fw-medium">{{ thesis_url|cut:"/media/" }}</span>
+                                        <a href="{{ thesis_url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View PDF">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" name="remove_thesis" id="remove_thesis" value="1">
+                                        <label class="form-check-label" for="remove_thesis">Remove this PDF</label>
+                                    </div>
+                                    <div class="form-text mb-1">Upload a new file to replace it.</div>
+                                    {% else %}
+                                    <div class="form-text mb-1">No thesis PDF attached yet.</div>
+                                    {% endif %}
+                                    <input type="file" class="form-control" id="thesis_pdf" name="thesis_pdf" accept=".pdf">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-success">
+                                <div class="card-body">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-camera text-success"></i> Assessment Images *
+                                    </label>
+                                    <div id="uploadedImages" class="d-flex flex-wrap gap-2 mb-3">
+                                        {% for img in existing_images %}
+                                        <div class="position-relative uploaded-image" data-id="{{ img.id }}">
+                                            {% if img.url %}
+                                            <img src="{{ img.url }}" alt="{{ img.name }}" class="rounded shadow-sm"
+                                                 style="width:110px;height:110px;object-fit:cover;border:2px solid #e5e7eb;">
+                                            {% else %}
+                                            <div class="rounded d-flex align-items-center justify-content-center" style="width:110px;height:110px;background:#f1f5f9;color:#94a3b8;">
+                                                <i class="fas fa-image"></i>
+                                            </div>
+                                            {% endif %}
+                                            <button type="button" class="btn-remove-image position-absolute" onclick="removeExistingImage(this)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <div class="text-truncate small text-muted mt-1" style="max-width:110px;font-size:0.7rem;">{{ img.name }}</div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <input type="file" class="form-control" id="images" name="images" accept="image/*" multiple>
+                                    <div class="form-text">Add more underwater photos if needed (hold Ctrl to select multiple)</div>
+                                    <input type="hidden" name="removed_image_ids" id="removed_image_ids" value="">
+                                    <div id="imagePreview" class="d-flex flex-wrap gap-2 mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transects -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header rt-section-header d-flex justify-content-between align-items-center">
+                    <h6 class="d-flex align-items-center"><span class="step-chip">3</span><i class="fas fa-ruler-horizontal me-2"></i>Transects <span class="badge bg-light text-dark ms-2" id="transectCount">{{ blocks|length }}</span></h6>
+                    <button type="button" class="btn btn-sm btn-light fw-semibold" id="addTransectBtn" style="color:var(--rt-teal);border:1px solid rgba(14,124,134,.35);">
+                        <i class="fas fa-plus me-1"></i> Add Transect
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><i class="fas fa-map"></i> Transect Overview Map</label>
+                        <div id="transectMap" style="height:320px; border-radius:8px; border:1px solid #dee2e6;"></div>
+                        <div class="rt-legend mt-2">
+                            <small><span class="swatch" style="background:#0dcaf0;"></span><i class="fas fa-water me-1"></i> Shallow transect</small>
+                            <small><span class="swatch" style="background:#0d6efd;"></span><i class="fas fa-water me-1"></i> Deep transect</small>
+                            <small><span class="swatch" style="background:#334155;"></span> Estimated length shown live per transect</small>
+                        </div>
+                    </div>
+
+                    <div id="transectsContainer">
+                        {% for block in blocks %}
+                        <div class="transect-block" data-key="{{ block.key }}">
+                            <div class="transect-head">
+                                <strong><span class="tset-num tnum-pill">{{ block.transect_number }}</span> Transect {{ block.transect_number }}</strong>
+                                <label class="text-danger mb-0 d-flex align-items-center gap-1" style="font-size:.8rem;font-weight:600;">
+                                    <input type="checkbox" class="form-check-input m-0" name="{{ block.key }}_remove" value="1" onchange="toggleRemove(this)">
+                                    Remove transect
+                                </label>
+                            </div>
+                            <input type="hidden" name="transect_block" value="{{ block.key }}">
+                            <div id="{{ block.key }}_refMatchAlert" class="alert alert-warning d-none mb-3 ref-match-alert small" role="alert">
+                                <i class="fas fa-triangle-exclamation me-1"></i>
+                                <strong id="{{ block.key }}_refMatchText"></strong>
+                                <span id="{{ block.key }}_refMatchSource" class="badge bg-info ms-1" style="display:none;"></span>
+                                <div class="mt-2 d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-warning ref-match-use-btn" id="{{ block.key }}_refMatchUseBtn" style="display:none;">Use these coordinates</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ref-match-dismiss-btn" id="{{ block.key }}_refMatchDismissBtn" style="display:none;">Dismiss</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="card h-100 border-info">
+                                            <div class="card-body">
+<h6 class="text-info depth-title"><span><i class="fas fa-water me-1"></i> Shallow</span> <span id="{{ block.key }}_shallow_len" class="badge-pill" style="display:none;"></span></h6>
+                                                <div class="row g-2 mb-2">
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold">Start Latitude</label>
+                                                        <input type="number" step="any" min="-90" max="90" class="form-control form-control-sm coord-input" required
+                                                               name="{{ block.key }}_shallow_start_lat" value="{{ block.shallow_start_lat }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold">Start Longitude</label>
+                                                        <input type="number" step="any" min="-180" max="180" class="form-control form-control-sm coord-input" required
+                                                               name="{{ block.key }}_shallow_start_lng" value="{{ block.shallow_start_lng }}">
+                                                    </div>
+                                                </div>
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold">End Latitude</label>
+                                                        <input type="number" step="any" min="-90" max="90" class="form-control form-control-sm coord-input" required
+                                                               name="{{ block.key }}_shallow_end_lat" value="{{ block.shallow_end_lat }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold">End Longitude</label>
+                                                        <input type="number" step="any" min="-180" max="180" class="form-control form-control-sm coord-input" required
+                                                               name="{{ block.key }}_shallow_end_lng" value="{{ block.shallow_end_lng }}">
+                                                    </div>
+                                                </div>
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold"><i class="fas fa-arrows-up-down text-info"></i> Est. Depth (m)</label>
+                                                        <input type="number" step="any" min="0" max="500" class="form-control form-control-sm"
+                                                               name="{{ block.key }}_shallow_depth" placeholder="e.g. 5" value="{{ block.shallow_depth }}">
+                                                    </div>
+                                                </div>
+                                                <label class="form-label small fw-bold"><i class="fas fa-file-excel text-success me-1"></i>CPCe Excel File</label>
+                                                {% if block.shallow_excel_name %}
+                                                <div class="rt-file-name mb-1"><i class="fas fa-check-circle"></i> {{ block.shallow_excel_name }}</div>
+                                                <div class="form-text mb-1">Upload a new file to replace it.</div>
+                                                {% endif %}
+                                                <input type="file" class="form-control form-control-sm rt-upload-tile" name="{{ block.key }}_shallow_excel" accept=".xlsx,.xls">
+                                                <a href="/static/files/sample_cpc_format.xlsx" download class="text-success fw-bold" style="font-size:0.8rem;">
+                                                    <i class="fas fa-download"></i> Download sample CPCe format
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card h-100 border-primary">
+                                            <div class="card-body">
+                                                <h6 class="text-primary depth-title"><span><i class="fas fa-water me-1"></i> Deep</span> <span id="{{ block.key }}_deep_len" class="badge-pill" style="display:none;"></span></h6>
+                                                <div class="row g-2 mb-2">
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold">Start Latitude</label>
+                                                        <input type="number" step="any" min="-90" max="90" class="form-control form-control-sm coord-input" required
+                                                               name="{{ block.key }}_deep_start_lat" value="{{ block.deep_start_lat }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold">Start Longitude</label>
+                                                        <input type="number" step="any" min="-180" max="180" class="form-control form-control-sm coord-input" required
+                                                               name="{{ block.key }}_deep_start_lng" value="{{ block.deep_start_lng }}">
+                                                    </div>
+                                                </div>
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold">End Latitude</label>
+                                                        <input type="number" step="any" min="-90" max="90" class="form-control form-control-sm coord-input" required
+                                                               name="{{ block.key }}_deep_end_lat" value="{{ block.deep_end_lat }}">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold">End Longitude</label>
+                                                        <input type="number" step="any" min="-180" max="180" class="form-control form-control-sm coord-input" required
+                                                               name="{{ block.key }}_deep_end_lng" value="{{ block.deep_end_lng }}">
+                                                    </div>
+                                                </div>
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold"><i class="fas fa-arrows-up-down text-primary"></i> Est. Depth (m)</label>
+                                                        <input type="number" step="any" min="0" max="500" class="form-control form-control-sm"
+                                                               name="{{ block.key }}_deep_depth" placeholder="e.g. 10" value="{{ block.deep_depth }}">
+                                                    </div>
+                                                </div>
+                                                <label class="form-label small fw-bold"><i class="fas fa-file-excel text-success me-1"></i>CPCe Excel File</label>
+                                                {% if block.deep_excel_name %}
+                                                <div class="rt-file-name mb-1"><i class="fas fa-check-circle"></i> {{ block.deep_excel_name }}</div>
+                                                <div class="form-text mb-1">Upload a new file to replace it.</div>
+                                                {% endif %}
+                                                <input type="file" class="form-control form-control-sm rt-upload-tile" name="{{ block.key }}_deep_excel" accept=".xlsx,.xls">
+                                                <a href="/static/files/sample_cpc_format.xlsx" download class="text-success fw-bold" style="font-size:0.8rem;">
+                                                    <i class="fas fa-download"></i> Download sample CPCe format
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="rt-no-transects" id="noTransectsMsg">
+                            <i class="fas fa-ruler-horizontal" style="font-size:1.6rem;color:#94a3b8;margin-bottom:8px;"></i>
+                            <div class="fw-semibold" style="color:#475569;">No transects yet</div>
+                            <div class="small">Click <strong>Add Transect</strong> below to add your first one.</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <script type="text/html" id="transectTemplate">
+                <div class="transect-block" data-key="__KEY__">
+                    <div class="transect-head">
+                        <strong><span class="tset-num tnum-pill">__NUM__</span> Transect __NUM__</strong>
+                        <label class="text-danger mb-0 d-flex align-items-center gap-1" style="font-size:.8rem;font-weight:600;">
+                            <input type="checkbox" class="form-check-input m-0" name="__KEY___remove" value="1" onchange="toggleRemove(this)">
+                            Remove transect
+                        </label>
+                    </div>
+                    <input type="hidden" name="transect_block" value="__KEY__">
+                    <div id="__KEY___refMatchAlert" class="alert alert-warning d-none mb-3 ref-match-alert small" role="alert">
+                        <i class="fas fa-triangle-exclamation me-1"></i>
+                        <strong id="__KEY___refMatchText"></strong>
+                        <span id="__KEY___refMatchSource" class="badge bg-info ms-1" style="display:none;"></span>
+                        <div class="mt-2 d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-warning ref-match-use-btn" id="__KEY___refMatchUseBtn" style="display:none;">Use these coordinates</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ref-match-dismiss-btn" id="__KEY___refMatchDismissBtn" style="display:none;">Dismiss</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card h-100 border-info">
+                                    <div class="card-body">
+                                        <h6 class="text-info depth-title"><span><i class="fas fa-water me-1"></i> Shallow</span> <span id="__KEY___shallow_len" class="badge-pill" style="display:none;"></span></h6>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold">Start Latitude</label>
+                                                <input type="number" step="any" min="-90" max="90" class="form-control form-control-sm coord-input" required
+                                                       name="__KEY___shallow_start_lat">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold">Start Longitude</label>
+                                                <input type="number" step="any" min="-180" max="180" class="form-control form-control-sm coord-input" required
+                                                       name="__KEY___shallow_start_lng">
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold">End Latitude</label>
+                                                <input type="number" step="any" min="-90" max="90" class="form-control form-control-sm coord-input" required
+                                                       name="__KEY___shallow_end_lat">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold">End Longitude</label>
+                                                <input type="number" step="any" min="-180" max="180" class="form-control form-control-sm coord-input" required
+                                                       name="__KEY___shallow_end_lng">
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold"><i class="fas fa-arrows-up-down text-info"></i> Est. Depth (m)</label>
+                                                <input type="number" step="any" min="0" max="500" class="form-control form-control-sm"
+                                                       name="__KEY___shallow_depth" placeholder="e.g. 5">
+                                            </div>
+                                        </div>
+                                        <label class="form-label small fw-bold"><i class="fas fa-file-excel text-success me-1"></i>CPCe Excel File *</label>
+                                        <input type="file" class="form-control form-control-sm rt-upload-tile" name="__KEY___shallow_excel" accept=".xlsx,.xls">
+                                        <a href="/static/files/sample_cpc_format.xlsx" download class="text-success fw-bold" style="font-size:0.8rem;">
+                                            <i class="fas fa-download"></i> Download sample CPCe format
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-body">
+                                        <h6 class="text-primary depth-title"><span><i class="fas fa-water me-1"></i> Deep</span> <span id="__KEY___deep_len" class="badge-pill" style="display:none;"></span></h6>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold">Start Latitude</label>
+                                                <input type="number" step="any" min="-90" max="90" class="form-control form-control-sm coord-input" required
+                                                       name="__KEY___deep_start_lat">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold">Start Longitude</label>
+                                                <input type="number" step="any" min="-180" max="180" class="form-control form-control-sm coord-input" required
+                                                       name="__KEY___deep_start_lng">
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold">End Latitude</label>
+                                                <input type="number" step="any" min="-90" max="90" class="form-control form-control-sm coord-input" required
+                                                       name="__KEY___deep_end_lat">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold">End Longitude</label>
+                                                <input type="number" step="any" min="-180" max="180" class="form-control form-control-sm coord-input" required
+                                                       name="__KEY___deep_end_lng">
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold"><i class="fas fa-arrows-up-down text-primary"></i> Est. Depth (m)</label>
+                                                <input type="number" step="any" min="0" max="500" class="form-control form-control-sm"
+                                                       name="__KEY___deep_depth" placeholder="e.g. 10">
+                                            </div>
+                                        </div>
+                                        <label class="form-label small fw-bold"><i class="fas fa-file-excel text-success me-1"></i>CPCe Excel File *</label>
+                                        <input type="file" class="form-control form-control-sm rt-upload-tile" name="__KEY___deep_excel" accept=".xlsx,.xls">
+                                        <a href="/static/files/sample_cpc_format.xlsx" download class="text-success fw-bold" style="font-size:0.8rem;">
+                                            <i class="fas fa-download"></i> Download sample CPCe format
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </script>
+
+            <div class="card rt-actionbar mt-4">
+                <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="small text-muted">
+                        <i class="fas fa-circle-info me-1 text-info"></i>
+                        Changes aren't saved yet. Continue to review your edits and confirm resubmission.
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url assessment_detail_url assessment.id %}" class="btn rt-btn-ghost px-4">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn rt-btn-success px-4">
+                            <i class="fas fa-arrow-right me-1"></i> Preview &amp; Resubmit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script>
+(function() {
+// ==================== NEW TRANSECT BLOCK ====================
+var newKeyCounter = 0;
+var tpl = document.getElementById('transectTemplate').innerHTML;
+var container = document.getElementById('transectsContainer');
+var countBadge = document.getElementById('transectCount');
+var noMsg = document.getElementById('noTransectsMsg');
+
+// If blocks keyed new_N came back from a validation-error re-render, start the
+// counter past them so we never create duplicate keys.
+Array.prototype.forEach.call(
+    document.querySelectorAll('.transect-block[data-key^="new_"]'),
+    function(el) {
+        var m = el.getAttribute('data-key').match(/^new_(\d+)$/);
+        if (m) newKeyCounter = Math.max(newKeyCounter, parseInt(m[1], 10));
+    }
+);
+
+function nextNum() {
+    var nums = document.querySelectorAll('.tset-num');
+    var max = 0;
+    nums.forEach(function(el) {
+        var v = parseInt(el.textContent, 10);
+        if (!isNaN(v) && v > max) max = v;
+    });
+    return max + 1;
+}
+
+function updateCount() {
+    var blocks = document.querySelectorAll('#transectsContainer .transect-block');
+    countBadge.textContent = blocks.length;
+    if (noMsg) noMsg.style.display = blocks.length ? 'none' : 'block';
+}
+
+window.addNewTransect = function() {
+    newKeyCounter++;
+    var key = 'new_' + newKeyCounter;
+    var html = tpl.split('__KEY__').join(key).split('__NUM__').join(nextNum());
+    container.insertAdjacentHTML('beforeend', html);
+    updateCount();
+    refreshMap();
+    updateLengths();
+};
+
+window.toggleRemove = function(cb) {
+    var block = cb.closest('.transect-block');
+    if (block && !block.dataset.key) return;
+    if (cb.checked) {
+        block.style.opacity = '0.45';
+        block.style.pointerEvents = 'none';
+    } else {
+        block.style.opacity = '';
+        block.style.pointerEvents = '';
+    }
+};
+
+document.getElementById('addTransectBtn').addEventListener('click', function() {
+    addNewTransect();
+});
+
+// ==================== REFERENCE MATCH DETECTION (per transect) ====================
+var refMatchTimers = {};
+var lastMatched = {};
+
+function collectBlockCoords(block) {
+    var key = block.dataset.key;
+    var fields = ['shallow_start_lat','shallow_start_lng','shallow_end_lat','shallow_end_lng',
+                  'deep_start_lat','deep_start_lng','deep_end_lat','deep_end_lng'];
+    var vals = {};
+    fields.forEach(function(f) {
+        var el = document.querySelector('[name="' + key + '_' + f + '"]');
+        vals[f] = el ? el.value : '';
+    });
+    return vals;
+}
+
+function checkReferenceMatchForBlock(block) {
+    var key = block.dataset.key;
+    var alertEl = document.getElementById(key + '_refMatchAlert');
+    if (!alertEl) return;
+    var vals = collectBlockCoords(block);
+    var filled = Object.keys(vals).filter(function(f) { return vals[f] !== ''; }).length;
+    if (filled < 2) {
+        alertEl.classList.add('d-none');
+        return;
+    }
+    var barangayId = document.getElementById('barangay').value || '{{ sel_barangay_id }}';
+    if (!barangayId) return;
+    var params = new URLSearchParams({ barangay_id: barangayId });
+    Object.keys(vals).forEach(function(f) { params.set(f, vals[f]); });
+    fetch('/api/check-reference-match/?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.match) {
+                lastMatched[key] = data;
+                document.getElementById(key + '_refMatchText').textContent =
+                    'These coordinates match a reference from ' + data.date + ' for {{ assessment.barangay.name|default:"this barangay" }}.';
+                var src = document.getElementById(key + '_refMatchSource');
+                src.textContent = data.source === 'assessment' ? 'Assessment-sourced' : 'Manually added';
+                src.style.display = 'inline';
+                alertEl.classList.remove('alert-success');
+                alertEl.classList.add('alert-warning');
+                alertEl.classList.remove('d-none');
+                document.getElementById(key + '_refMatchUseBtn').style.display = '';
+                document.getElementById(key + '_refMatchDismissBtn').style.display = '';
+            } else {
+                delete lastMatched[key];
+                alertEl.classList.add('d-none');
+            }
+        });
+}
+
+document.addEventListener('input', function(e) {
+    if (e.target.classList && e.target.classList.contains('coord-input')) {
+        var block = e.target.closest('.transect-block');
+        if (!block) return;
+        var key = block.dataset.key;
+        clearTimeout(refMatchTimers[key]);
+        refMatchTimers[key] = setTimeout(function() { checkReferenceMatchForBlock(block); }, 600);
+    }
+});
+
+document.addEventListener('click', function(e) {
+    var useBtn = e.target.closest('.ref-match-use-btn');
+    if (useBtn) {
+        var block = useBtn.closest('.transect-block');
+        var key = block.dataset.key;
+        var ref = lastMatched[key];
+        if (!ref) return;
+        var fields = ['shallow_start_lat','shallow_start_lng','shallow_end_lat','shallow_end_lng',
+                      'deep_start_lat','deep_start_lng','deep_end_lat','deep_end_lng'];
+        fields.forEach(function(f) {
+            var el = document.querySelector('[name="' + key + '_' + f + '"]');
+            if (el && ref[f]) el.value = ref[f];
+        });
+        refreshMap();
+        updateLengths();
+        var alertEl = document.getElementById(key + '_refMatchAlert');
+        alertEl.classList.remove('alert-warning');
+        alertEl.classList.add('alert-success');
+        document.getElementById(key + '_refMatchText').textContent =
+            'Reference from ' + ref.date + ' coordinates applied. Will be linked upon approval.';
+        document.getElementById(key + '_refMatchSource').style.display = 'none';
+        useBtn.style.display = 'none';
+        document.getElementById(key + '_refMatchDismissBtn').style.display = 'none';
+        return;
+    }
+    var dismissBtn = e.target.closest('.ref-match-dismiss-btn');
+    if (dismissBtn) {
+        var block = dismissBtn.closest('.transect-block');
+        var key = block.dataset.key;
+        document.getElementById(key + '_refMatchAlert').classList.add('d-none');
+        delete lastMatched[key];
+    }
+});
+
+document.getElementById('barangay').addEventListener('change', function() {
+    var blocks = document.querySelectorAll('.transect-block');
+    blocks.forEach(function(block) {
+        var key = block.dataset.key;
+        var alertEl = document.getElementById(key + '_refMatchAlert');
+        if (alertEl) alertEl.classList.add('d-none');
+        document.getElementById(key + '_refMatchDismissBtn').style.display = 'none';
+        document.getElementById(key + '_refMatchUseBtn').style.display = 'none';
+        delete lastMatched[key];
+    });
+});
+
+// ==================== CLIENT-SIDE COORD VALIDATION (like new upload) ====================
+var editForm = document.getElementById('editForm');
+if (editForm) {
+    editForm.addEventListener('submit', function(e) {
+        var errors = [];
+        document.querySelectorAll('#editForm .coord-input').forEach(function(el) {
+            el.classList.remove('is-invalid');
+            var val = el.value.trim();
+            var labelWrap = el.closest('.col-6') || el.parentElement;
+            var labelEl = labelWrap ? labelWrap.querySelector('.form-label') : null;
+            var labelText = labelEl ? labelEl.textContent.trim() : el.getAttribute('name');
+            var min = parseFloat(el.min), max = parseFloat(el.max);
+            if (val === '') {
+                errors.push(labelText + ' is required.');
+                el.classList.add('is-invalid');
+            } else {
+                var num = parseFloat(val);
+                if (isNaN(num)) {
+                    errors.push(labelText + ' must be a valid number.');
+                    el.classList.add('is-invalid');
+                } else if (num < min || num > max) {
+                    errors.push(labelText + ' must be between ' + min + ' and ' + max + '.');
+                    el.classList.add('is-invalid');
+                }
+            }
+        });
+        if (errors.length > 0) {
+            e.preventDefault();
+            var existingAlert = document.getElementById('editCoordAlert');
+            if (existingAlert) existingAlert.remove();
+            var alertDiv = document.createElement('div');
+            alertDiv.id = 'editCoordAlert';
+            alertDiv.className = 'alert alert-danger mt-1 mb-3';
+            alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> <strong>Invalid coordinates:</strong><ul class="mb-0 mt-1">' +
+                errors.map(function(err) { return '<li>' + err + '</li>'; }).join('') + '</ul>';
+            editForm.insertAdjacentElement('afterend', alertDiv);
+            alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+    editForm.addEventListener('input', function(e) {
+        if (e.target.classList && e.target.classList.contains('coord-input')) {
+            e.target.classList.remove('is-invalid');
+            var alertEl = document.getElementById('editCoordAlert');
+            if (alertEl) alertEl.remove();
+        }
+    });
+}
+
+// ==================== LOCATION CASCADE ====================
+function fillMunicipalities(provinceId, selectedId) {
+    var muniSelect = document.getElementById('municipality');
+    muniSelect.innerHTML = '<option value="">Loading...</option>';
+    if (!provinceId) {
+        muniSelect.innerHTML = '<option value="">-- Select Province first --</option>';
+        return;
+    }
+    fetch('/api/municipalities/?province_id=' + provinceId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            muniSelect.innerHTML = '<option value="">-- Select Municipality --</option>';
+            data.municipalities.forEach(function(m) {
+                var opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.name;
+                muniSelect.appendChild(opt);
+            });
+            if (selectedId) {
+                for (var i = 0; i < muniSelect.options.length; i++) {
+                    if (String(muniSelect.options[i].value) === String(selectedId)) {
+                        muniSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            document.getElementById('municipality').dispatchEvent(new Event('change'));
+        });
+}
+
+function fillBarangays(muniId, selectedId) {
+    var brgySelect = document.getElementById('barangay');
+    brgySelect.innerHTML = '<option value="">Loading...</option>';
+    if (!muniId) {
+        brgySelect.innerHTML = '<option value="">-- Select Municipality first --</option>';
+        return;
+    }
+    fetch('/api/barangays/?municipality_id=' + muniId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            brgySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+            data.barangays.forEach(function(b) {
+                var opt = document.createElement('option');
+                opt.value = b.id;
+                opt.textContent = b.name;
+                brgySelect.appendChild(opt);
+            });
+            if (selectedId) {
+                for (var i = 0; i < brgySelect.options.length; i++) {
+                    if (String(brgySelect.options[i].value) === String(selectedId)) {
+                        brgySelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        });
+}
+
+document.getElementById('province').addEventListener('change', function() {
+    fillMunicipalities(this.value, null);
+});
+document.getElementById('municipality').addEventListener('change', function() {
+    fillBarangays(this.value, null);
+});
+
+(function() {
+    var province = document.getElementById('province');
+    var initialMun = '{{ sel_municipality_id }}';
+    var initialBrgy = '{{ sel_barangay_id }}';
+    if (province.value) {
+        fillMunicipalities(province.value, initialMun);
+        setTimeout(function() {
+            var brgy = document.getElementById('barangay');
+            if (initialBrgy) {
+                for (var i = 0; i < brgy.options.length; i++) {
+                    if (String(brgy.options[i].value) === String(initialBrgy)) {
+                        brgy.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }, 400);
+    }
+})();
+
+// ==================== IMAGE REMOVAL + NEW PREVIEW ====================
+var removedIds = document.getElementById('removed_image_ids');
+window.removeExistingImage = function(btn) {
+    var thumb = btn.closest('.uploaded-image');
+    var id = thumb.getAttribute('data-id');
+    var current = removedIds.value ? removedIds.value.split(',') : [];
+    if (current.indexOf(id) === -1) current.push(id);
+    removedIds.value = current.join(',');
+    thumb.style.opacity = '0.35';
+    thumb.style.pointerEvents = 'none';
+    thumb.querySelector('.btn-remove-image').style.display = 'none';
+    updateImageRequired();
+};
+
+var preview = document.getElementById('imagePreview');
+document.getElementById('images').addEventListener('change', function(e) {
+    preview.innerHTML = '';
+    Array.from(e.target.files).forEach(function(file, idx) {
+        if (!file.type.startsWith('image/')) return;
+        var wrapper = document.createElement('div');
+        wrapper.className = 'new-image-thumb position-relative';
+        var img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.className = 'rounded shadow-sm';
+        img.style.cssText = 'width:110px;height:110px;object-fit:cover;border:2px solid #bbf7d0;';
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn-remove-image';
+        removeBtn.title = 'Remove image';
+        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        removeBtn.addEventListener('click', function() {
+            wrapper.remove();
+            updateImageRequired();
+        });
+        var name = document.createElement('div');
+        name.className = 'small text-muted mt-1 text-truncate';
+        name.style.cssText = 'max-width:110px;font-size:0.7rem;';
+        name.textContent = file.name;
+        wrapper.appendChild(removeBtn);
+        wrapper.appendChild(img);
+        wrapper.appendChild(name);
+        preview.appendChild(wrapper);
+    });
+    updateImageRequired();
+});
+
+function updateImageRequired() {
+    var remaining = document.querySelectorAll('.uploaded-image').length;
+    var removed = removedIds.value ? removedIds.value.split(',').length : 0;
+    var newFiles = document.getElementById('images').files.length;
+    document.getElementById('images').required = (remaining - removed + newFiles) === 0;
+}
+updateImageRequired();
+
+// ==================== CONTRIBUTOR TAG INPUT ====================
+(function() {
+    var contributors = [];
+    var input = document.getElementById('contributor-input');
+    var tagsContainer = document.getElementById('contributor-tags');
+    var dropdown = document.getElementById('contributor-dropdown');
+    var hiddenInput = document.getElementById('contributor-ids');
+    var hiddenNames = document.getElementById('contributor-names');
+    var addBtn = document.getElementById('add-contributor-btn');
+    var searchTimeout = null;
+
+    function updateHidden() {
+        hiddenInput.value = contributors.map(function(c) { return c.id; }).join(',');
+        hiddenNames.value = contributors.map(function(c) { return c.name; }).join(',');
+    }
+
+    function renderTags() {
+        tagsContainer.innerHTML = '';
+        contributors.forEach(function(c, idx) {
+            var badge = document.createElement('span');
+            badge.className = 'badge bg-success d-flex align-items-center gap-1 mt-2';
+            badge.style.fontSize = '0.9rem';
+            badge.style.padding = '6px 10px';
+            badge.innerHTML = '<i class="fas fa-user"></i> ' + c.name;
+            if (c.is_user) {
+                badge.innerHTML += ' <small class="ms-1">(system)</small>';
+            }
+            var removeBtn = document.createElement('span');
+            removeBtn.style.cursor = 'pointer';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.style.fontSize = '1.1rem';
+            removeBtn.style.fontWeight = 'bold';
+            removeBtn.addEventListener('click', function() {
+                contributors.splice(idx, 1);
+                renderTags();
+                updateHidden();
+            });
+            badge.appendChild(removeBtn);
+            tagsContainer.appendChild(badge);
+        });
+    }
+
+    function addContributor(c) {
+        for (var i = 0; i < contributors.length; i++) {
+            if (contributors[i].id === c.id) return;
+        }
+        contributors.push(c);
+        renderTags();
+        updateHidden();
+        input.value = '';
+        dropdown.style.display = 'none';
+    }
+
+    (function() {
+        var savedIds = (hiddenInput.value || '').split(',').filter(function(v) { return v.trim(); });
+        var savedNames = (hiddenNames.value || '').split(',').filter(function(v) { return v.trim(); });
+        for (var i = 0; i < savedIds.length; i++) {
+            contributors.push({id: savedIds[i], name: savedNames[i] || savedIds[i], is_user: false});
+        }
+        if (contributors.length > 0) renderTags();
+    })();
+
+    function showDropdown(results) {
+        dropdown.innerHTML = '';
+        if (results.length === 0) {
+            dropdown.style.display = 'none';
+            return;
+        }
+        results.forEach(function(r) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+            item.innerHTML = '<span><i class="fas fa-user me-2"></i>' + r.name + '</span>';
+            if (r.is_user) {
+                item.innerHTML += '<span class="badge bg-primary">System User</span>';
+            } else {
+                item.innerHTML += '<span class="badge bg-secondary">Contributor</span>';
+            }
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                addContributor({id: r.id, name: r.name, is_user: r.is_user});
+            });
+            dropdown.appendChild(item);
+        });
+        dropdown.style.display = 'block';
+    }
+
+    function searchContributors(q) {
+        fetch('/api/contributors/search/?q=' + encodeURIComponent(q))
+            .then(function(r) { return r.json(); })
+            .then(function(data) { showDropdown(data.results || []); });
+    }
+
+    function addAsExternal(name) {
+        var parts = name.trim().split(/\s+/);
+        var firstName = parts[0] || '';
+        var lastName = parts.length > 1 ? parts[parts.length - 1] : '';
+        var middleInitial = parts.length > 2 ? parts[1].replace('.', '') : '';
+        fetch('/api/contributors/create/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+            body: JSON.stringify({first_name: firstName, last_name: lastName, middle_initial: middleInitial})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.id) {
+                addContributor({id: data.id, name: data.name, is_user: false});
+            }
+        });
+    }
+
+    input.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        var val = input.value.trim();
+        if (val.length < 1) { dropdown.style.display = 'none'; return; }
+        searchTimeout = setTimeout(function() { searchContributors(val); }, 250);
+    });
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            var val = input.value.trim();
+            if (val.length > 0) {
+                if (dropdown.style.display === 'block' && dropdown.children.length > 0) {
+                    dropdown.children[0].click();
+                } else {
+                    addAsExternal(val);
+                }
+            }
+        }
+        if (e.key === 'Escape') dropdown.style.display = 'none';
+    });
+
+    addBtn.addEventListener('click', function() {
+        var val = input.value.trim();
+        if (val.length > 0) {
+            if (dropdown.style.display === 'block' && dropdown.children.length > 0) {
+                dropdown.children[0].click();
+            } else {
+                addAsExternal(val);
+            }
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!document.getElementById('contributor-tags-wrapper').contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+})();
+
+// ==================== TRANsECT OVERVIEW MAP ====================
+var map = null;
+var layerGroup = null;
+
+function getTransectData() {
+    var blocks = container.querySelectorAll('.transect-block');
+    var data = [];
+    blocks.forEach(function(block) {
+        var key = block.getAttribute('data-key');
+        if (!key) return;
+        function num(name) {
+            var v = block.querySelector('[name="' + name + '"]');
+            if (!v || !v.value) return null;
+            return parseFloat(v.value);
+        }
+        data.push({
+            sLat: num(key + '_shallow_start_lat'),
+            sLng: num(key + '_shallow_start_lng'),
+            eLat: num(key + '_shallow_end_lat'),
+            eLng: num(key + '_shallow_end_lng'),
+            dSLat: num(key + '_deep_start_lat'),
+            dSLng: num(key + '_deep_start_lng'),
+            dELat: num(key + '_deep_end_lat'),
+            dELng: num(key + '_deep_end_lng')
+        });
+    });
+    return data;
+}
+
+function updateLengths() {
+    container.querySelectorAll('.transect-block').forEach(function(block) {
+        var key = block.getAttribute('data-key');
+        if (!key) return;
+        ['shallow', 'deep'].forEach(function(depth) {
+            var el = block.querySelector('[id="' + key + '_' + depth + '_len"]');
+            if (!el) return;
+            function num(name) {
+                var input = block.querySelector('[name="' + name + '"]');
+                if (!input || input.value === '' || isNaN(input.value)) return null;
+                return parseFloat(input.value);
+            }
+            var lat1 = num(key + '_' + depth + '_start_lat');
+            var lng1 = num(key + '_' + depth + '_start_lng');
+            var lat2 = num(key + '_' + depth + '_end_lat');
+            var lng2 = num(key + '_' + depth + '_end_lng');
+            if (lat1 !== null && lng1 !== null && lat2 !== null && lng2 !== null) {
+                var R = 6371000;
+                var phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
+                var dphi = (lat2 - lat1) * Math.PI / 180;
+                var dlam = (lng2 - lng1) * Math.PI / 180;
+                var a = Math.sin(dphi / 2) * Math.sin(dphi / 2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dlam / 2) * Math.sin(dlam / 2);
+                var v = (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
+                var parts = v.split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                el.textContent = parts.join('.') + ' m';
+                el.style.display = '';
+            } else {
+                el.textContent = '';
+                el.style.display = 'none';
+            }
+        });
+    });
+}
+
+window.refreshMap = function() {
+    var mapEl = document.getElementById('transectMap');
+    if (!mapEl) return;
+    var PH = [6.1164, 125.3125];
+    if (!map) {
+        map = L.map(mapEl, {minZoom: 5, maxZoom: 18}).setView(PH, 11);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',
+            maxZoom: 18, maxNativeZoom: 16
+        }).addTo(map);
+        layerGroup = L.layerGroup().addTo(map);
+    }
+    layerGroup.clearLayers();
+    var bounds = [];
+    getTransectData().forEach(function(t) {
+        if (t.sLat && t.sLng && t.eLat && t.eLng) {
+            L.polyline([[t.sLat, t.sLng], [t.eLat, t.eLng]], {color: '#0dcaf0', weight: 4, opacity: 0.9}).addTo(layerGroup);
+            L.marker([t.sLat, t.sLng], {icon: L.divIcon({className: '', html: '<div style="width:18px;height:18px;border-radius:50%;background:#0dcaf0;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;">S</div>', iconSize: [18, 18], iconAnchor: [9, 9]})}).addTo(layerGroup);
+            bounds.push([t.sLat, t.sLng], [t.eLat, t.eLng]);
+        }
+        if (t.dSLat && t.dSLng && t.dELat && t.dELng) {
+            L.polyline([[t.dSLat, t.dSLng], [t.dELat, t.dELng]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(layerGroup);
+            L.marker([t.dSLat, t.dSLng], {icon: L.divIcon({className: '', html: '<div style="width:18px;height:18px;border-radius:50%;background:#0d6efd;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;">D</div>', iconSize: [18, 18], iconAnchor: [9, 9]})}).addTo(layerGroup);
+            bounds.push([t.dSLat, t.dSLng], [t.dELat, t.dELng]);
+        }
+    });
+    if (bounds.length === 1) {
+        map.setView(bounds[0], 16);
+    } else if (bounds.length > 0) {
+        map.fitBounds(bounds, {padding: [40, 40], maxZoom: 15});
+    }
+};
+
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('coord-input')) {
+        updateLengths();
+        clearTimeout(e.target._rtTimer);
+        e.target._rtTimer = setTimeout(refreshMap, 400);
+    }
+});
+
+refreshMap();
+updateCount();
+updateLengths();
+})();
+</script>
+{% endblock %}

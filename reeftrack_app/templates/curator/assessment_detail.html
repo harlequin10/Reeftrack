@@ -601,11 +601,16 @@
 <!-- Return to Pending -->
 {% if assessment.status == 'approved' or assessment.status == 'rejected' %}
 <div class="dam-actions" style="text-align:center;">
+    {% if assessment.status == 'rejected' and assessment.uploaded_by == request.user %}
+    <a href="{% url 'edit_assessment' assessment.id %}" class="dam-btn-approve" style="display:flex;justify-content:center;align-items:center;gap:0.5rem;margin-bottom:0.75rem;text-decoration:none;">
+        <i class="fas fa-edit"></i> Edit &amp; Resubmit
+    </a>
+    {% endif %}
     <form method="POST" action="{% url 'curator_assessment_action' assessment.id %}">
         {% csrf_token %}
         <input type="hidden" name="action" value="return_to_pending">
         <button type="submit" class="dam-btn-return" style="display:inline-flex;"
-                onclick="return confirm('Return Assessment #{{ assessment.id }} to pending review?')">
+                onclick="return confirm('Return Assessment to pending review?')">
             <i class="fas fa-undo"></i> Return to Pending Review
         </button>
     </form>
@@ -637,10 +642,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var mapEl = document.getElementById('transectMap');
     if (!mapEl) return;
-    var map = L.map(mapEl).setView([6.1164, 125.3125], 11);
+    var map = L.map(mapEl, {minZoom: 5, maxZoom: 18}).setView([6.1164, 125.3125], 11);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
 		attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',
-		maxZoom: 18
+		maxZoom: 18, maxNativeZoom: 16
 	}).addTo(map);
 
     function makeIcon(color, label) {

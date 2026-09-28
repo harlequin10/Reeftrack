@@ -388,10 +388,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── Leaflet map (gracefully degrades if CDN fails) ──
     var map = null;
     try {
-        map = L.map('transectMap').setView([6.1164, 125.3125], 11);
+        map = L.map('transectMap', {minZoom: 5, maxZoom: 18}).setView([6.1164, 125.3125], 11);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
 		attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',
-		maxZoom: 18
+		maxZoom: 18, maxNativeZoom: 16
 	}).addTo(map);
     } catch(err) {
         console.warn('Map not available:', err);
@@ -507,7 +507,9 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_M
             deepLine = L.polyline([[dLat1, dLng1], [dLat2, dLng2]], {color: '#0d6efd', weight: 4, opacity: 0.9}).addTo(map).bindPopup('<b>Transect Type:</b> Deep Transect<br><b>Transect Length:</b> ' + formatLength(haversine(dLat1, dLng1, dLat2, dLng2)) + dDepthText);
         }
 
-        if (bounds.length > 0) {
+        if (bounds.length === 1) {
+            map.setView(bounds[0], 16);
+        } else if (bounds.length > 0) {
             map.fitBounds(bounds, {padding: [40, 40], maxZoom: 15});
         }
         updateLengthDisplay();
@@ -714,8 +716,8 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_M
                             mapEl.style.display = 'block';
                             if (!mapEl.dataset.init) {
                                 mapEl.dataset.init = '1';
-                                var sugMap = L.map('sugMap' + idx);
-                                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18}).addTo(sugMap);
+                                var sugMap = L.map('sugMap' + idx, {minZoom: 5, maxZoom: 18});
+                                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18, maxNativeZoom: 16}).addTo(sugMap);
                                 var sIcon = L.divIcon({className:'',html:'<div style="background:#0dcaf0;color:#000;font-weight:bold;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">S</div>',iconSize:[18,18],iconAnchor:[9,9]});
                                 var dIcon = L.divIcon({className:'',html:'<div style="background:#0d6efd;color:#fff;font-weight:bold;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">D</div>',iconSize:[18,18],iconAnchor:[9,9]});
                                 var b = [];
@@ -723,7 +725,7 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_M
                                 if (s.shallow_end_lat && s.shallow_end_lng) { L.marker([s.shallow_end_lat,s.shallow_end_lng],{icon:sIcon}).addTo(sugMap); b.push([s.shallow_end_lat,s.shallow_end_lng]); if(s.shallow_start_lat&&s.shallow_start_lng) L.polyline([[s.shallow_start_lat,s.shallow_start_lng],[s.shallow_end_lat,s.shallow_end_lng]],{color:'#0dcaf0',weight:3}).addTo(sugMap); }
                                 if (s.deep_start_lat && s.deep_start_lng) { L.marker([s.deep_start_lat,s.deep_start_lng],{icon:dIcon}).addTo(sugMap); b.push([s.deep_start_lat,s.deep_start_lng]); }
                                 if (s.deep_end_lat && s.deep_end_lng) { L.marker([s.deep_end_lat,s.deep_end_lng],{icon:dIcon}).addTo(sugMap); b.push([s.deep_end_lat,s.deep_end_lng]); if(s.deep_start_lat&&s.deep_start_lng) L.polyline([[s.deep_start_lat,s.deep_start_lng],[s.deep_end_lat,s.deep_end_lng]],{color:'#0d6efd',weight:3}).addTo(sugMap); }
-                                if(b.length>0) sugMap.fitBounds(b,{padding:[20,20]});
+                                if(b.length>0) sugMap.fitBounds(b,{padding:[20,20],maxZoom:15});
                                 else sugMap.setView([6.0,125.0],10);
                             }
                         } else {
@@ -753,8 +755,8 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_M
                         container.style.display = 'block';
                         if (!container.dataset.init) {
                             container.dataset.init = '1';
-                            var allMap = L.map('allSugMap');
-                            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18}).addTo(allMap);
+                            var allMap = L.map('allSugMap', {minZoom: 5, maxZoom: 18});
+                            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18, maxNativeZoom: 16}).addTo(allMap);
                             var colors = ['#0dcaf0','#0d6efd','#198754','#ffc107','#dc3545','#6f42c1'];
                             var bds = [];
                             allSuggestions.forEach(function(s, i) {
@@ -768,7 +770,7 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_M
                                 if(s.deep_start_lat&&s.deep_start_lng){L.marker([s.deep_start_lat,s.deep_start_lng],{icon:tIcon(shortLabel)}).addTo(allMap).bindPopup(s.date+' Deep Start');bds.push([s.deep_start_lat,s.deep_start_lng]);}
                                 if(s.deep_end_lat&&s.deep_end_lng){L.marker([s.deep_end_lat,s.deep_end_lng],{icon:tIcon(shortLabel)}).addTo(allMap).bindPopup(s.date+' Deep End');bds.push([s.deep_end_lat,s.deep_end_lng]);if(s.deep_start_lat&&s.deep_start_lng)L.polyline([[s.deep_start_lat,s.deep_start_lng],[s.deep_end_lat,s.deep_end_lng]],{color:c,weight:3,dashArray:'6,4'}).addTo(allMap);}
                             });
-                            if(bds.length>0) allMap.fitBounds(bds,{padding:[30,30]});
+                            if(bds.length>0) allMap.fitBounds(bds,{padding:[30,30],maxZoom:15});
                             else allMap.setView([6.0,125.0],10);
                         }
                     } else {
