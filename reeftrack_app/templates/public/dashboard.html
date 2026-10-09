@@ -79,9 +79,16 @@ body{visibility:visible!important;opacity:1!important;overflow:hidden!important;
 .rt-dash-pop button:hover{background:var(--rt-navy-light);}
 .rt-dash-mm{width:36px;height:36px;border-radius:50%;background:var(--rt-teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;box-shadow:0 2px 8px rgba(14,124,134,.4);border:2px solid rgba(255,255,255,.6);}
 .rt-dash-bm{width:26px;height:26px;border-radius:50%;background:var(--rt-white);border:3px solid;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:var(--rt-navy);box-shadow:0 1px 4px rgba(0,0,0,.15);}
+.rt-dash-bc{min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--rt-teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.64rem;font-weight:800;box-shadow:0 1px 5px rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.85);cursor:pointer;}
 .rt-dash-ttl{background:rgba(15,23,42,.9)!important;border:none!important;box-shadow:0 2px 10px rgba(0,0,0,.4)!important;border-radius:8px!important;padding:4px 10px!important;font-size:.7rem;font-weight:600;color:#fff!important;white-space:nowrap;pointer-events:none;}
 .rt-dash-ttl-s{font-style:normal;}
 .rt-dash-ttl-d{font-style:italic;}
+.rt-glow-marker{position:relative;width:26px;height:26px;}
+.rt-glow-marker .rt-glow-dot{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#f472b6;border:2px solid #fff;box-shadow:0 0 0 3px rgba(244,114,182,.35);}
+.rt-glow-marker .rt-glow-ring{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:3px solid #f472b6;animation:rtGlowPulse 1.6s ease-out infinite;}
+.rt-glow-marker.rt-glow-teal .rt-glow-dot{background:#0E7C86;box-shadow:0 0 0 3px rgba(14,124,134,.35);}
+.rt-glow-marker.rt-glow-teal .rt-glow-ring{border-color:#0E7C86;}
+@keyframes rtGlowPulse{0%{transform:scale(.55);opacity:.9}75%{transform:scale(2.3);opacity:0}100%{transform:scale(2.3);opacity:0}}
 .rt-dash-tc{margin-bottom:.5rem;}
 .rt-dash-tch{display:flex;justify-content:space-between;align-items:center;padding:.4rem .5rem;border-radius:var(--rt-radius-sm);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--rt-navy);transition:background .15s;}
 .rt-dash-tch:hover{background:var(--rt-sand-light);}
@@ -334,15 +341,27 @@ body{display:grid!important;grid-template-rows:auto 1fr!important;min-height:100
 <script>
 (function(){
 try{
-var map,chart,mCluster,tLayer,bLayer;
+var map,chart,mCluster,tLayer,bLayer,bdLayer,hlLayer,lblLayer;
 var D={m:[],s:{},t:[]};
 var showT=false;
 var selMuni=null,selBrgy=null;
+var muniPin={},_hiddenMuniPin=null;
 var _firstLoc=true;
 var _aPage=0,_aFiltered=null,_aPP=10;
 var _tlPage=0,_tlFiltered=null,_tlPP=10;
 var _latestProv=null;
 var _provsWithData={};
+var _provData=[];
+var _geoM={},_geoB={},_geoBLoaded={};
+function cacheGeoMunis(ms){if(!ms)return;ms.forEach(function(m){if(m&&m.id!=null)_geoM[String(m.id)]={id:m.id,name:m.name,province_id:m.province_id,lat:m.latitude,lng:m.longitude,boundary:m.boundary};});}
+function cacheGeoBrgys(bs){if(!bs)return;bs.forEach(function(b){if(b&&b.id!=null)_geoB[String(b.id)]={id:b.id,name:b.name,municipality_id:b.municipality_id,lat:b.latitude,lng:b.longitude,boundary:b.boundary};});}
+function ensureBrgyGeo(mid,cb){
+  if(_geoBLoaded[String(mid)]){cb();return;}
+  fetch('{% url "public_location_options" %}?municipality_id='+encodeURIComponent(mid))
+    .then(function(r){return r.json();})
+    .then(function(d){cacheGeoBrgys(d.barangays);_geoBLoaded[String(mid)]=true;cb();})
+    .catch(function(){_geoBLoaded[String(mid)]=true;cb();});
+}
 var HC={excellent:'#16a34a',good:'#2563eb',fair:'#d97706',poor:'#dc2626'};
 
 document.addEventListener('DOMContentLoaded',function(){
@@ -354,10 +373,16 @@ function init(){
   var tl=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',maxZoom:18,maxNativeZoom:16}).addTo(map);
   var rmLd=function(){var el=document.getElementById('dashMap');if(el)el.classList.remove('rt-map-loading');};
   tl.on('load',rmLd);setTimeout(rmLd,4000);
+  bdLayer=L.layerGroup();
+  map.addLayer(bdLayer);
   mCluster=L.markerClusterGroup({maxClusterRadius:40});
   map.addLayer(mCluster);
   tLayer=L.layerGroup();
   bLayer=L.layerGroup();
+  hlLayer=L.layerGroup();
+  map.addLayer(hlLayer);
+  lblLayer=L.layerGroup();
+  map.addLayer(lblLayer);
 
   document.getElementById('btnTransects').onclick=function(){
     showT=!showT;
@@ -393,12 +418,25 @@ function loadLocOpts(){
   if(pv!=='all')p.set('province_id',pv);
   if(m!=='all')p.set('municipality_id',m);
   fetch('{% url "public_location_options" %}?'+p).then(function(r){return r.json();}).then(function(d){
+    _provData=d.provinces||[];
+    cacheGeoMunis(d.municipalities);
+    cacheGeoBrgys(d.barangays);
+    if(d.province_barangays){
+      cacheGeoBrgys(d.province_barangays);
+      var seen={};
+      d.province_barangays.forEach(function(x){if(x.municipality_id!=null&&!seen[x.municipality_id]){seen[x.municipality_id]=1;_geoBLoaded[String(x.municipality_id)]=true;}});
+    }
+    if(m&&m!=='all')_geoBLoaded[String(m)]=true;
+    drawBds();
     if(d.latest_province_id)_latestProv=d.latest_province_id;
-    if(_firstLoc){
-      var want=d.latest_province_id||((d.provinces&&d.provinces[0])?d.provinces[0].id:null);
-      if(want){
-        document.getElementById('fProv').value=want;
-        p.set('province_id',want);
+    if(_firstLoc && pv==='all'){
+      popProvSel(d.provinces||[],d.latest_province_id);
+      var sel=document.getElementById('fProv').value;
+      if(sel && sel!=='all'){
+        _firstLoc=false;
+        loadLocOpts();
+        load(gf());
+        return;
       }
     }
     popProvSel(d.provinces||[],d.latest_province_id);
@@ -440,9 +478,11 @@ function load(f){
   fetch('{% url "public_dashboard_data" %}?'+p).then(function(r){return r.json();}).then(function(d){
     D=d;
     selMuni=null;selBrgy=null;
+    if(hlLayer)hlLayer.clearLayers();
     document.getElementById('backToMuniBtn').style.display='none';
     document.getElementById('timelineCard').style.display='none';
     dispMarkers(d);
+    drawBds();
     updStats(d.s);
     updChart(d.t);
     updHealth(d.m);
@@ -473,6 +513,197 @@ function load(f){
     document.getElementById('sTotalSpecies').textContent='—';
     document.getElementById('trendInfo').innerHTML='<i class="fas fa-exclamation-triangle"></i> Failed to load data. Please reload.';
   });
+}
+
+function drawBds(scp){
+  if(!scp)scp={};
+  var bdEl=document.getElementById('fBrgy');
+  var mnEl=document.getElementById('fMuni');
+  var pvEl=document.getElementById('fProv');
+  var brgy=scp.barangay_id||(bdEl?bdEl.value:'all');
+  var muni=scp.municipality_id||(mnEl?mnEl.value:'all');
+  var prov=scp.province_id||(pvEl?pvEl.value:'all');
+  bdLayer.clearLayers();
+  if(lblLayer)lblLayer.clearLayers();
+  var styleThin={color:'#0E7C86',weight:1.3,opacity:.55,fillColor:'#0E7C86',fillOpacity:.03};
+  var styleMuni={color:'#0E7C86',weight:1.5,opacity:.7,fillColor:'#0E7C86',fillOpacity:.05};
+  var styleBrgy={color:'#f472b6',weight:2.2,opacity:.95,fillColor:'#f472b6',fillOpacity:.08};
+  function drawGeom(geom,name,style,onClick){
+    if(!geom)return;
+    try{
+      var lyr=L.geoJSON(geom,{style:style,interactive:!!onClick});
+      if(onClick)lyr.on('click',function(){onClick();});
+      lyr.addTo(bdLayer);
+    }catch(e){}
+  }
+  function muniGeom(id){
+    var g=_geoM[String(id)];
+    if(g&&g.boundary)return g;
+    var r=null;D.m.forEach(function(mx){if(String(mx.id)===String(id))r=mx;});
+    return r;
+  }
+  function brgyGeom(id){
+    var g=_geoB[String(id)];
+    if(g&&g.boundary)return g;
+    var r=null;D.m.forEach(function(mx){mx.b.forEach(function(bx){if(String(bx.id)===String(id))r=bx;});});
+    return r;
+  }
+  function drawBrgy(bx,weight){
+    if(!bx||!bx.boundary)return;
+    var hit=findBrgyInD(bx.id);
+    var col=(hit&&hit.b.lc&&HC[hit.b.lc])?HC[hit.b.lc]:'#0E7C86';
+    var hasData=!!(hit&&hit.b.ac>0);
+    var st={color:col,weight:weight,opacity:.9,fillColor:col,fillOpacity:hasData?0.16:0.05};
+    drawGeom(bx.boundary,bx.name,st,function(){clickBrgy(bx.id);});
+  }
+  if(brgy&&brgy!=='all'){
+    var bd=brgyGeom(brgy);
+    if(bd)drawGeom(bd.boundary,bd.name,styleBrgy,function(){clickBrgy(bd.id);});
+  }else if(muni&&muni!=='all'){
+    var md=muniGeom(muni);
+    if(md)drawGeom(md.boundary,md.name,styleMuni,function(){clickMuni(md.id);});
+    Object.keys(_geoB).forEach(function(k){
+      var bx=_geoB[k];
+      if(bx.municipality_id&&String(bx.municipality_id)!==String(muni))return;
+      drawBrgy(bx,2);
+    });
+  }else if(prov&&prov!=='all'){
+    Object.keys(_geoM).forEach(function(k){
+      var mx=_geoM[k];
+      if(String(mx.province_id)===String(prov))drawGeom(mx.boundary,mx.name,styleMuni,function(){clickMuni(mx.id);});
+    });
+    Object.keys(_geoB).forEach(function(k){
+      var bx=_geoB[k];
+      var mm=_geoM[String(bx.municipality_id)];
+      if(!mm||String(mm.province_id)!==String(prov))return;
+      drawBrgy(bx,1.6);
+    });
+  }else{
+    (_provData||[]).forEach(function(p){if(p.boundary)drawGeom(p.boundary,p.name,styleThin);});
+    Object.keys(_geoM).forEach(function(k){drawGeom(_geoM[k].boundary,_geoM[k].name,styleThin,function(){clickMuni(_geoM[k].id);});});
+  }
+  refreshBrgyLabels();
+}
+
+function refreshBrgyLabels(){
+  if(!lblLayer)return;
+  lblLayer.clearLayers();
+  if(!selBrgy)return;
+  var hit=findBrgyInD(selBrgy.id);
+  if(!hit||!(hit.b.ac>0))return;
+  var bnd=brgyBoundary(hit.b);
+  if(!bnd)return;
+  var col=(hit.b.lc&&HC[hit.b.lc])?HC[hit.b.lc]:'#0E7C86';
+  var ctr=(hit.b.lat&&hit.b.lng)?[hit.b.lat,hit.b.lng]:geomCenter(bnd);
+  addCountLabel(ctr,hit.b.ac,col,hit.b.id);
+}
+
+function glowGeom(geom,color){
+  if(!geom)return false;
+  try{
+    hlLayer.clearLayers();
+    L.geoJSON(geom,{interactive:false,style:{color:color,weight:14,opacity:.16,fill:false,lineJoin:'round',lineCap:'round'}}).addTo(hlLayer);
+    L.geoJSON(geom,{interactive:false,style:{color:color,weight:4,opacity:.95,fillColor:color,fillOpacity:.06,lineJoin:'round'}}).addTo(hlLayer);
+    return true;
+  }catch(e){return false;}
+}
+
+function glowAt(latlng,color,altClass){
+  hlLayer.clearLayers();
+  var cls='rt-glow-marker'+(altClass?' '+altClass:'');
+  var ic=L.divIcon({className:'',html:'<div class="'+cls+'"><span class="rt-glow-ring"></span><span class="rt-glow-dot"></span></div>',iconSize:[26,26],iconAnchor:[13,13]});
+  L.marker(latlng,{icon:ic,interactive:false,zIndexOffset:1000}).addTo(hlLayer);
+}
+
+function highlightLocation(kind,id){
+  if(!hlLayer)return;
+  hlLayer.clearLayers();
+  var color='#f472b6',geom=null,center=null,g=null;
+  if(kind==='barangay'){
+    g=_geoB[String(id)];
+    if(g){geom=g.boundary||null;if(g.lat&&g.lng)center=[g.lat,g.lng];}
+    if(!geom&&!center){
+      D.m.forEach(function(mx){mx.b.forEach(function(bx){
+        if(String(bx.id)===String(id)){geom=bx.boundary||null;if(bx.lat&&bx.lng)center=[bx.lat,bx.lng];}
+      });});
+    }
+  }else if(kind==='municipality'){
+    color='#0E7C86';
+    g=_geoM[String(id)];
+    if(g){geom=g.boundary||null;if(g.lat&&g.lng)center=[g.lat,g.lng];}
+    if(!geom&&!center){
+      D.m.forEach(function(mx){if(String(mx.id)===String(id)){geom=mx.boundary||null;if(mx.lat&&mx.lng)center=[mx.lat,mx.lng];}});
+    }
+  }else if(kind==='province'){
+    color='#0E7C86';
+    (_provData||[]).forEach(function(p){if(String(p.id)===String(id))geom=p.boundary||null;});
+  }
+  if(geom){glowGeom(geom,color);}
+  else if(center){glowAt(center,color,color==='#0E7C86'?'rt-glow-teal':'');}
+}
+
+function clickMuni(id){
+  selBrgy=null;refreshBrgyLabels();
+  var has=false;D.m.forEach(function(mx){if(String(mx.id)===String(id))has=true;});
+  if(has){window.ZM(id);}else{highlightLocation('municipality',id);}
+}
+
+function clickBrgy(id){
+  var b=null,m=null;
+  D.m.forEach(function(mx){mx.b.forEach(function(bx){if(String(bx.id)===String(id)){b=bx;m=mx;}});});
+  if(b&&m){
+    selBrgy=b;
+    if(!selMuni&&mCluster){
+      if(_hiddenMuniPin!=null&&muniPin[_hiddenMuniPin]&&!mCluster.hasLayer(muniPin[_hiddenMuniPin]))mCluster.addLayer(muniPin[_hiddenMuniPin]);
+      _hiddenMuniPin=null;
+      if(muniPin[m.id]){mCluster.removeLayer(muniPin[m.id]);_hiddenMuniPin=m.id;}
+    }
+    refreshBrgyLabels();
+    showBDetails(b,m);buildTimeline(b);
+    highlightLocation('barangay',b.id);
+    if(b.lat&&b.lng)map.setView([b.lat,b.lng],15);
+    if(window.innerWidth<=1024&&window.openSheet)window.openSheet();
+  }else{
+    highlightLocation('barangay',id);
+  }
+}
+
+function brgyBoundary(b){
+  if(!b)return null;
+  var g=_geoB[String(b.id)];
+  if(g&&g.boundary)return g.boundary;
+  return b.boundary||null;
+}
+
+function findBrgyInD(id){
+  var r=null;
+  D.m.forEach(function(mx){mx.b.forEach(function(bx){if(String(bx.id)===String(id))r={b:bx,m:mx};});});
+  return r;
+}
+
+function flattenCoords(arr,out){
+  if(!arr)return out;
+  if(typeof arr[0]==='number'&&typeof arr[1]==='number'){out.push(arr);return out;}
+  arr.forEach(function(x){flattenCoords(x,out);});
+  return out;
+}
+
+function geomCenter(geom){
+  try{
+    var pts=flattenCoords(geom.coordinates,[]);
+    if(!pts.length)return null;
+    var sx=0,sy=0;
+    pts.forEach(function(p){sx+=p[0];sy+=p[1];});
+    return [sy/pts.length,sx/pts.length];
+  }catch(e){return null;}
+}
+
+function addCountLabel(center,count,color,id){
+  if(!center)return;
+  var ic=L.divIcon({className:'',html:'<div class="rt-dash-bc" style="background:'+color+'"><span>'+count+'</span></div>',iconSize:[24,24],iconAnchor:[12,12]});
+  var mk=L.marker(center,{icon:ic,zIndexOffset:600});
+  mk.on('click',function(){clickBrgy(id);});
+  lblLayer.addLayer(mk);
 }
 
 function popProvSel(ps,defId){
@@ -512,14 +743,15 @@ function popBrgySel(bs){
 function dispMarkers(d){
   mCluster.clearLayers();bLayer.clearLayers();
   if(map.hasLayer(bLayer))map.removeLayer(bLayer);
+  muniPin={};_hiddenMuniPin=null;
   d.m.forEach(function(m){
     if(!m.lat||!m.lng)return;
     var ta=0;m.b.forEach(function(b){ta+=b.ac;});
     var ic=L.divIcon({className:'',html:'<div class="rt-dash-mm"><span>'+ta+'</span></div>',iconSize:[36,36],iconAnchor:[18,18]});
     var mk=L.marker([m.lat,m.lng],{icon:ic});
-    mk.bindTooltip('<b>'+m.name+'</b><br>'+m.province+'<br>'+m.b.length+' barangays · '+ta+' assessments',{direction:'top',offset:[0,-10],className:'rt-dash-ttl'});
     mk.on('click',function(){window.ZM(m.id);});
     mCluster.addLayer(mk);
+    muniPin[m.id]=mk;
   });
   if(showT)showLines();
 }
@@ -542,6 +774,8 @@ function autoDrillBrgy(bid){
       selBrgy=bb;
       showBDetails(bb,m);
       buildTimeline(bb);
+      drawBds({barangay_id:bb.id});
+      highlightLocation('barangay',bb.id);
       if(bb.lat&&bb.lng)map.setView([bb.lat,bb.lng],15);
       if(showT)showBLines(bb);
     },250);
@@ -551,24 +785,31 @@ function autoDrillBrgy(bid){
 window.ZM=function(mid){
   var m=null;D.m.forEach(function(x){if(x.id===mid)m=x;});
   if(!m)return;
-  selMuni=m;map.closePopup();
+  selMuni=m;selBrgy=null;map.closePopup();
   document.getElementById('backToMuniBtn').style.display='';
-  var vb=m.b.filter(function(b){return b.lat&&b.lng;});
-  if(!vb.length)return;
-  map.fitBounds(L.latLngBounds(vb.map(function(b){return[b.lat,b.lng];})),{padding:[40,40],maxZoom:14});
-  mCluster.clearLayers();bLayer.clearLayers();map.addLayer(bLayer);
-  vb.forEach(function(b){
-    var c=HC[b.lc]||'#6b7280';
-    var ic=L.divIcon({className:'',html:'<div class="rt-dash-bm" style="border-color:'+c+'"><i class="fas fa-water"></i></div>',iconSize:[26,26],iconAnchor:[13,13]});
-    var mk=L.marker([b.lat,b.lng],{icon:ic});
-    var ct=b.lc!==null?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A';
-    mk.bindPopup('<div class="rt-dash-pop"><b>'+b.name+'</b><br><small>'+m.name+', '+m.province+'</small><br><span style="color:'+c+';font-weight:700">'+(b.lcv!==null?b.lcv+'%':'No data')+'</span> '+ct+'<br><small>'+b.ac+' assessment(s)</small></div>');
-    mk.on('click',function(){selBrgy=b;showBDetails(b,m);buildTimeline(b);if(b.lat&&b.lng)map.setView([b.lat,b.lng],15);if(window.innerWidth<=1024&&window.openSheet)window.openSheet();});
-    bLayer.addLayer(mk);
+  ensureBrgyGeo(mid,function(){
+    drawBds({municipality_id:mid});
+    highlightLocation('municipality',mid);
+    var pts=[];
+    m.b.forEach(function(b){
+      if(b.lat&&b.lng)pts.push([b.lat,b.lng]);
+      else{var bnd=brgyBoundary(b);if(bnd){var c=geomCenter(bnd);if(c)pts.push(c);}}
+    });
+    mCluster.clearLayers();bLayer.clearLayers();map.addLayer(bLayer);
+    if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:14});
+    m.b.forEach(function(b){
+      if(brgyBoundary(b))return;
+      if(!b.lat||!b.lng)return;
+      var c=HC[b.lc]||'#6b7280';
+      var ic=L.divIcon({className:'',html:'<div class="rt-dash-bm" style="border-color:'+c+'"><i class="fas fa-water"></i></div>',iconSize:[26,26],iconAnchor:[13,13]});
+      var mk=L.marker([b.lat,b.lng],{icon:ic});
+      mk.on('click',function(){selBrgy=b;showBDetails(b,m);buildTimeline(b);highlightLocation('barangay',b.id);if(b.lat&&b.lng)map.setView([b.lat,b.lng],15);if(window.innerWidth<=1024&&window.openSheet)window.openSheet();});
+      bLayer.addLayer(mk);
+    });
+    updChartM(m);
+    updScopeStats([m]);
+    updHealth([m]);
   });
-  updChartM(m);
-  updScopeStats([m]);
-  updHealth([m]);
 };
 
 function renderAList(){
@@ -815,33 +1056,41 @@ function backToMuni(){
   if(map.hasLayer(tLayer))map.removeLayer(tLayer);
   mCluster.clearLayers();
   if(selMuni){
-    var vb=selMuni.b.filter(function(b){return b.lat&&b.lng;});
     map.addLayer(bLayer);
-    vb.forEach(function(b){
+    selMuni.b.forEach(function(b){
+      if(brgyBoundary(b))return;
+      if(!b.lat||!b.lng)return;
       var c=HC[b.lc]||'#6b7280';
       var ic=L.divIcon({className:'',html:'<div class="rt-dash-bm" style="border-color:'+c+'"><i class="fas fa-water"></i></div>',iconSize:[26,26],iconAnchor:[13,13]});
       var mk=L.marker([b.lat,b.lng],{icon:ic});
-      var ct=b.lc!==null?b.lc.charAt(0).toUpperCase()+b.lc.slice(1):'N/A';
-      mk.bindPopup('<div class="rt-dash-pop"><b>'+b.name+'</b><br><small>'+selMuni.name+', '+selMuni.province+'</small><br><span style="color:'+c+';font-weight:700">'+(b.lcv!==null?b.lcv+'%':'No data')+'</span> '+ct+'<br><small>'+b.ac+' assessment(s)</small></div>');
-      mk.on('click',function(){selBrgy=b;showBDetails(b,selMuni);buildTimeline(b);if(window.innerWidth<=1024&&window.openSheet)window.openSheet();});
+      mk.on('click',function(){selBrgy=b;showBDetails(b,selMuni);buildTimeline(b);highlightLocation('barangay',b.id);if(window.innerWidth<=1024&&window.openSheet)window.openSheet();});
       bLayer.addLayer(mk);
     });
     document.getElementById('backToMuniBtn').style.display='';
-    if(vb.length)map.fitBounds(L.latLngBounds(vb.map(function(b){return[b.lat,b.lng];})),{padding:[40,40],maxZoom:14});
+    var pts=[];
+    selMuni.b.forEach(function(b){
+      if(b.lat&&b.lng)pts.push([b.lat,b.lng]);
+      else{var bnd=brgyBoundary(b);if(bnd){var cc=geomCenter(bnd);if(cc)pts.push(cc);}}
+    });
+    if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:14});
     else if(selMuni.lat&&selMuni.lng)map.setView([selMuni.lat,selMuni.lng],12);
   }else{
+    muniPin={};_hiddenMuniPin=null;
     D.m.forEach(function(m){
       if(!m.lat||!m.lng)return;
       var ta=0;m.b.forEach(function(b){ta+=b.ac;});
       var ic=L.divIcon({className:'',html:'<div class="rt-dash-mm"><span>'+ta+'</span></div>',iconSize:[36,36],iconAnchor:[18,18]});
       var mk=L.marker([m.lat,m.lng],{icon:ic});
-      mk.bindTooltip('<b>'+m.name+'</b><br>'+m.province+'<br>'+m.b.length+' barangays · '+ta+' assessments',{direction:'top',offset:[0,-10],className:'rt-dash-ttl'});
       mk.on('click',function(){window.ZM(m.id);});
       mCluster.addLayer(mk);
+      muniPin[m.id]=mk;
     });
     document.getElementById('backToMuniBtn').style.display='none';
     map.setView([12.8797,121.7740],6);
   }
+  drawBds(selMuni?{municipality_id:selMuni.id}:null);
+  if(selMuni)highlightLocation('municipality',selMuni.id);
+  else if(hlLayer)hlLayer.clearLayers();
   document.getElementById('pDetails').innerHTML='<div class="rt-dash-empty"><i class="fas fa-map-marker-alt"></i><p>Click a marker on the map to view barangay details</p></div>';
   updChart(D.t);
   updStats(D.s);
@@ -866,6 +1115,28 @@ function resetFilters(){
   loadLocOpts();
   load(gf());
 }
+
+var _locStamp='';
+function locStampOf(d){
+  var provs=(d.provinces||[]).map(function(x){return x.id+':'+x.name;}).join(',');
+  var munis=(d.municipalities||[]).map(function(x){return x.id+':'+x.name;}).join(',');
+  return (d.latest_province_id||'')+'|'+provs+'|'+munis;
+}
+function refreshIfChanged(){
+  if(document.hidden)return;
+  fetch('{% url "public_location_options" %}').then(function(r){return r.json();}).then(function(d){
+    var s=locStampOf(d);
+    if(_locStamp!=='' && s!==_locStamp){
+      _locStamp=s;
+      loadLocOpts();
+      load(gf());
+    }else if(_locStamp===''){
+      _locStamp=s;
+    }
+  }).catch(function(){});
+}
+window.addEventListener('focus',refreshIfChanged);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)refreshIfChanged();});
 
 function updStats(s){
   document.getElementById('sTotalAssess').textContent=s.total_assessments;

@@ -1,6 +1,11 @@
 {% extends 'admin/base_admin.html' %}
+{% load geo_tags %}
 
 {% block title %}Locations - Admin - ReefTrack{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -57,6 +62,9 @@
                         <td>{{ p.barangay_count }}</td>
                         <td>{{ p.approved_assessment_count }}</td>
                         <td>
+                            <a href="{% url 'admin_location_map' 'province' p.id %}" class="btn btn-sm btn-outline-success" title="View on Map">
+                                <i class="fas fa-map"></i>
+                            </a>
                             <a href="{% url 'admin_manage_municipalities' p.id %}" class="btn btn-sm btn-outline-info" title="Manage Municipalities">
                                 <i class="fas fa-map-pin"></i>
                             </a>
@@ -118,7 +126,7 @@
 <div class="modal fade" id="editProv{{ p.id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'admin_edit_province' p.id %}">
+            <form method="POST" action="{% url 'admin_edit_province' p.id %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Province</h5>
@@ -127,6 +135,40 @@
                 <div class="modal-body">
                     <label class="form-label fw-bold">Name</label>
                     <input type="text" class="form-control" name="name" value="{{ p.name }}" required>
+                    <hr>
+                    {% if p.boundary %}<script type="application/json" id="gbnd_bmap_edit_prov_{{ p.id }}">{{ p.boundary|tojson }}</script>{% endif %}
+                    <label class="form-label fw-bold"><i class="fas fa-draw-polygon"></i> Draw Boundary (optional)</label>
+                    <div class="rt-geo-editor"
+                         data-map="bmap_edit_prov_{{ p.id }}"
+                         data-draw="bdraw_edit_prov_{{ p.id }}"
+                         data-undo="bund_edit_prov_{{ p.id }}"
+                         data-clear="bclear_edit_prov_{{ p.id }}"
+                         data-out="bjs_edit_prov_{{ p.id }}"
+                         data-clearflag="bclr_edit_prov_{{ p.id }}"
+                         data-status="bstatus_edit_prov_{{ p.id }}"
+                         data-name="Province">
+                        <div class="d-flex gap-2 mb-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="bdraw_edit_prov_{{ p.id }}"><i class="fas fa-pen"></i> Draw / Add Point</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="bund_edit_prov_{{ p.id }}">Undo</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="bclear_edit_prov_{{ p.id }}">Clear</button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-dark rt-manual-btn mb-2" id="bmanual_edit_prov_{{ p.id }}"><i class="fas fa-keyboard"></i> Type Coordinates</button>
+                        <div class="rt-manual-wrap d-none mb-2" id="bmanualwrap_edit_prov_{{ p.id }}">
+                            <textarea class="form-control form-control-sm rt-manual-area" id="barea_edit_prov_{{ p.id }}" rows="4" placeholder="One point per line: latitude, longitude&#10;6.9214, 125.0810&#10;6.9300, 125.0900&#10;&#10;(Alternatively, paste a GeoJSON Polygon/MultiPolygon)"></textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-primary rt-manual-apply" id="bapply_edit_prov_{{ p.id }}">Apply to Map</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rt-manual-cancel" id="bcancel_edit_prov_{{ p.id }}">Cancel</button>
+                            </div>
+                            <p class="form-text text-danger mb-0 rt-manual-err" id="berr_edit_prov_{{ p.id }}" style="display:none"></p>
+                        </div>
+                        <div id="bmap_edit_prov_{{ p.id }}" class="rt-geo-map rounded border mb-2" style="height:240px"></div>
+                        <p class="form-text" id="bstatus_edit_prov_{{ p.id }}"></p>
+                        <input type="hidden" name="boundary_json" id="bjs_edit_prov_{{ p.id }}">
+                        <input type="hidden" name="boundary_clear" id="bclr_edit_prov_{{ p.id }}" value="">
+                    </div>
+                    <label class="form-label fw-bold mt-2">Boundary File (optional)</label>
+                    <input type="file" class="form-control" name="geometry_file" accept=".geojson,.json,application/geo+json,application/json">
+                    <div class="form-text">Draw the boundary on the map above, or upload a GeoJSON file (Polygon / MultiPolygon / Point).</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -172,7 +214,7 @@
 <div class="modal fade" id="addProvinceModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'admin_add_province' %}">
+            <form method="POST" action="{% url 'admin_add_province' %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">Add Province</h5>
@@ -181,6 +223,39 @@
                 <div class="modal-body">
                     <label class="form-label fw-bold">Province Name</label>
                     <input type="text" class="form-control" name="name" required placeholder="e.g. Sarangani">
+                    <hr>
+                    <label class="form-label fw-bold"><i class="fas fa-draw-polygon"></i> Draw Boundary (optional)</label>
+                    <div class="rt-geo-editor"
+                         data-map="bmap_add_prov"
+                         data-draw="bdraw_add_prov"
+                         data-undo="bund_add_prov"
+                         data-clear="bclear_add_prov"
+                         data-out="bjs_add_prov"
+                         data-clearflag="bclr_add_prov"
+                         data-status="bstatus_add_prov"
+                         data-name="Province">
+                        <div class="d-flex gap-2 mb-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="bdraw_add_prov"><i class="fas fa-pen"></i> Draw / Add Point</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="bund_add_prov">Undo</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="bclear_add_prov">Clear</button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-dark rt-manual-btn mb-2" id="bmanual_add_prov"><i class="fas fa-keyboard"></i> Type Coordinates</button>
+                        <div class="rt-manual-wrap d-none mb-2" id="bmanualwrap_add_prov">
+                            <textarea class="form-control form-control-sm rt-manual-area" id="barea_add_prov" rows="4" placeholder="One point per line: latitude, longitude&#10;6.9214, 125.0810&#10;6.9300, 125.0900&#10;&#10;(Alternatively, paste a GeoJSON Polygon/MultiPolygon)"></textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-primary rt-manual-apply" id="bapply_add_prov">Apply to Map</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rt-manual-cancel" id="bcancel_add_prov">Cancel</button>
+                            </div>
+                            <p class="form-text text-danger mb-0 rt-manual-err" id="berr_add_prov" style="display:none"></p>
+                        </div>
+                        <div id="bmap_add_prov" class="rt-geo-map rounded border mb-2" style="height:240px"></div>
+                        <p class="form-text" id="bstatus_add_prov"></p>
+                        <input type="hidden" name="boundary_json" id="bjs_add_prov">
+                        <input type="hidden" name="boundary_clear" id="bclr_add_prov" value="">
+                    </div>
+                    <label class="form-label fw-bold mt-2">Boundary File (optional)</label>
+                    <input type="file" class="form-control" name="geometry_file" accept=".geojson,.json,application/geo+json,application/json">
+                    <div class="form-text">Draw the boundary on the map above, or upload a GeoJSON file (Polygon / MultiPolygon / Point).</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -265,5 +340,41 @@ function confirmBulkDelete() {
 
     new bootstrap.Modal(document.getElementById('bulkDeleteModal')).show();
 }
+</script>
+
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/js/geo_draw.js"></script>
+<script>
+(function() {
+    var editors = document.querySelectorAll('.rt-geo-editor');
+    for (var i = 0; i < editors.length; i++) {
+        (function(ed) {
+            var mapId = ed.getAttribute('data-map');
+            var initial = null;
+            var sc = document.getElementById('gbnd_' + mapId);
+            if (sc) {
+                try { initial = JSON.parse(sc.textContent); } catch (e) { initial = null; }
+            }
+            var suffix = mapId.replace('bmap_', '');
+            RTGeoDraw.init({
+                mapEl: mapId,
+                drawBtn: 'bdraw_' + suffix,
+                undoBtn: 'bund_' + suffix,
+                clearBtn: 'bclear_' + suffix,
+                input: 'bjs_' + suffix,
+                clearFlag: 'bclr_' + suffix,
+                status: 'bstatus_' + suffix,
+                manualBtn: 'bmanual_' + suffix,
+                manualWrap: 'bmanualwrap_' + suffix,
+                manualArea: 'barea_' + suffix,
+                manualApply: 'bapply_' + suffix,
+                manualCancel: 'bcancel_' + suffix,
+                manualErr: 'berr_' + suffix,
+                name: ed.getAttribute('data-name') || 'Location',
+                initial: initial
+            });
+        })(editors[i]);
+    }
+})();
 </script>
 {% endblock %}

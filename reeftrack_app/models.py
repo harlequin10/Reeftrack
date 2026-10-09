@@ -51,6 +51,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class Province(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    latitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    boundary = models.JSONField(null=True, blank=True, help_text="GeoJSON geometry (Polygon / MultiPolygon / Point)")
 
     def __str__(self):
         return self.name
@@ -63,6 +66,9 @@ class Province(models.Model):
 class Municipality(models.Model):
     name = models.CharField(max_length=100)
     province = models.ForeignKey(Province, on_delete=models.CASCADE, related_name='municipalities')
+    latitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    boundary = models.JSONField(null=True, blank=True, help_text="GeoJSON geometry (Polygon / MultiPolygon / Point)")
 
     def __str__(self):
         return self.name
@@ -76,6 +82,9 @@ class Municipality(models.Model):
 class Barangay(models.Model):
     name = models.CharField(max_length=100)
     municipality = models.ForeignKey(Municipality, on_delete=models.CASCADE, related_name='barangays')
+    latitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    boundary = models.JSONField(null=True, blank=True, help_text="GeoJSON geometry (Polygon / MultiPolygon / Point)")
 
     def __str__(self):
         return f"{self.name}, {self.municipality.name}"

@@ -71,14 +71,10 @@
                             <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editTransect{{ tc.id }}" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <form method="POST" class="d-inline" onsubmit="return confirm('Delete reference coordinates from {{ barangay.name }}?')">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="transect_id" value="{{ tc.id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                            <button class="btn btn-sm btn-outline-danger" title="Delete"
+                                    data-bs-toggle="modal" data-bs-target="#deleteTransect{{ tc.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </td>
                     </tr>
 
@@ -143,6 +139,38 @@
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                         <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delete Modal -->
+                    <div class="modal fade" id="deleteTransect{{ tc.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="transect_id" value="{{ tc.id }}">
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title"><i class="fas fa-trash"></i> Delete Reference</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Are you sure you want to delete these reference coordinates from <strong>{{ barangay.name }}</strong>?</p>
+                                        {% if tc.source == 'assessment' or tc.assessment_id or tc.used_in_assessment %}
+                                        <div class="alert alert-danger py-2 mb-0">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            This reference is linked to an assessment and cannot be deleted.
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        {% if tc.source != 'assessment' and not tc.assessment_id and not tc.used_in_assessment %}
+                                        <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+                                        {% endif %}
                                     </div>
                                 </form>
                             </div>

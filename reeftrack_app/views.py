@@ -5,17 +5,19 @@ import shutil
 from decimal import Decimal
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import Http404
 from django.contrib.auth import login, authenticate, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_GET
-from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_protect
 from django_ratelimit.decorators import ratelimit
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from django.db.models import Count, Q, Prefetch, Case, When, Value
+from django.db.models import Count, Q, Prefetch, Case, When, Value, Exists, OuterRef
 from django.db import transaction
+from django.core.cache import cache
+from .geoutils import centroid_of, parse_geometry_file, parse_manual_polygon, parse_decimal as _parse_decimal
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
@@ -1113,6 +1115,22 @@ def cleanup_barangay_transect_coords(assessment):
             rec.delete()
 
 
+def reference_used_in_any_assessment(btc):
+    """Return True if a BarangayTransect reference's exact coordinates were used
+    in any assessment (any status) for the same barangay."""
+    return Transect.objects.filter(
+        assessment__barangay=btc.barangay,
+        shallow_start_lat=btc.shallow_start_lat,
+        shallow_start_lng=btc.shallow_start_lng,
+        shallow_end_lat=btc.shallow_end_lat,
+        shallow_end_lng=btc.shallow_end_lng,
+        deep_start_lat=btc.deep_start_lat,
+        deep_start_lng=btc.deep_start_lng,
+        deep_end_lat=btc.deep_end_lat,
+        deep_end_lng=btc.deep_end_lng,
+    ).exists()
+
+
 def get_or_create_species(sub_category, major_category, source=None):
     """
     Case-insensitive get_or_create for Species.
@@ -1805,11 +1823,16 @@ def add_transect(request):
             return redirect('preview_assessment')
 
     # GET: show form with existing transects
+    barangay = None
+    if pending.get('barangay_id'):
+        barangay = Barangay.objects.filter(id=pending['barangay_id']).first()
     return render(request, 'contributor/add_transect.html', {
         'pending': pending,
         'transects': pending['transects'],
         'municipalities': Municipality.objects.all(),
         'pending_transect': request.session.get('pending_transect', {}),
+        'barangay': barangay,
+        'barangay_boundary': (barangay.boundary if barangay else None),
     })
 
 
@@ -3451,7 +3474,21 @@ def admin_manage_transect_coords(request):
 def admin_barangay_transect_coords(request, barangay_id):
     """Admin: View and manage transect coordinates for a specific barangay."""
     barangay = get_object_or_404(Barangay, id=barangay_id)
-    transect_coords = BarangayTransect.objects.filter(barangay=barangay).order_by('pk')
+    transect_coords = BarangayTransect.objects.filter(barangay=barangay).annotate(
+        used_in_assessment=Exists(
+            Transect.objects.filter(
+                assessment__barangay=OuterRef('barangay'),
+                shallow_start_lat=OuterRef('shallow_start_lat'),
+                shallow_start_lng=OuterRef('shallow_start_lng'),
+                shallow_end_lat=OuterRef('shallow_end_lat'),
+                shallow_end_lng=OuterRef('shallow_end_lng'),
+                deep_start_lat=OuterRef('deep_start_lat'),
+                deep_start_lng=OuterRef('deep_start_lng'),
+                deep_end_lat=OuterRef('deep_end_lat'),
+                deep_end_lng=OuterRef('deep_end_lng'),
+            )
+        )
+    ).order_by('pk')
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -3569,8 +3606,8 @@ def admin_barangay_transect_coords(request, barangay_id):
         elif action == 'delete':
             btc_id = request.POST.get('transect_id')
             btc = get_object_or_404(BarangayTransect, id=btc_id, barangay=barangay)
-            if btc.source == 'assessment':
-                messages.error(request, 'This reference is from an approved assessment and cannot be deleted.')
+            if btc.source == 'assessment' or btc.assessment_id or reference_used_in_any_assessment(btc):
+                messages.error(request, 'This reference is linked to an assessment and cannot be deleted.')
             else:
                 btc.delete()
                 messages.success(request, f'Transect {btc.transect_number} deleted from {barangay.name}.')
@@ -3584,6 +3621,69 @@ def admin_barangay_transect_coords(request, barangay_id):
 
 # ==================== ADMIN LOCATION MANAGEMENT VIEWS ====================
 
+def _apply_location_geometry(request, obj):
+    """Read optional boundary geometry from an admin form onto `obj`.
+
+    Sources, in priority order:
+      1. `geometry_file`  — an uploaded GeoJSON file.
+      2. `boundary_json` — a Polygon/MultiPolygon drawn (or pasted) on the map.
+      3. `latitude`/`longitude` — a manual marker point.
+    `boundary_clear` explicitly removes any existing geometry. If the admin
+    provides nothing new, existing geometry is left untouched (so a plain name
+    edit never wipes coordinates/boundary). Returns an error string on
+    failure, or None on success.
+    """
+    boundary_json = request.POST.get('boundary_json', '').strip()
+    boundary_clear = request.POST.get('boundary_clear', '').strip()
+    lat_raw = request.POST.get('latitude', '').strip()
+    lng_raw = request.POST.get('longitude', '').strip()
+    geometry_file = request.FILES.get('geometry_file')
+
+    if boundary_clear:
+        obj.latitude = None
+        obj.longitude = None
+        obj.boundary = None
+
+    if geometry_file:
+        try:
+            boundary, lat, lng = parse_geometry_file(geometry_file)
+        except ValueError as exc:
+            return f'Invalid GeoJSON file: {exc}'
+        obj.boundary = boundary
+        obj.latitude = lat
+        obj.longitude = lng
+        return None
+
+    if boundary_json:
+        try:
+            geom = parse_manual_polygon(boundary_json)
+        except ValueError as exc:
+            return f'Invalid boundary: {exc}'
+        lat, lng = centroid_of(geom)
+        obj.boundary = geom
+        obj.latitude = lat
+        obj.longitude = lng
+        return None
+
+    if lat_raw or lng_raw:
+        if not lat_raw or not lng_raw:
+            return 'Both latitude and longitude must be provided together.'
+        try:
+            lat = float(_parse_decimal(lat_raw, 'Latitude'))
+            lng = float(_parse_decimal(lng_raw, 'Longitude'))
+        except ValueError as exc:
+            return str(exc)
+        if not (-90 <= lat <= 90):
+            return 'Latitude must be between -90 and 90.'
+        if not (-180 <= lng <= 180):
+            return 'Longitude must be between -180 and 180.'
+        obj.latitude = lat
+        obj.longitude = lng
+        return None
+
+    return None
+
+
 @login_required
 @admin_required
 def admin_manage_municipalities(request, province_id):
@@ -3594,9 +3694,11 @@ def admin_manage_municipalities(request, province_id):
         approved_assessment_count=Count('barangays__assessments', filter=Q(barangays__assessments__status='approved'), distinct=True),
         total_assessment_count=Count('barangays__assessments', distinct=True),
     ).order_by('name')
+    provinces = Province.objects.order_by('name')
     return render(request, 'admin/locations/municipalities.html', {
         'province': province,
         'municipalities': municipalities,
+        'provinces': provinces,
     })
 
 
@@ -3611,7 +3713,13 @@ def admin_add_province(request):
         if Province.objects.filter(name__iexact=name).exists():
             messages.error(request, f'Province "{name}" already exists.')
             return redirect('admin_manage_locations')
-        Province.objects.create(name=name)
+        province = Province(name=name)
+        geo_error = _apply_location_geometry(request, province)
+        if geo_error:
+            messages.error(request, geo_error)
+            return redirect('admin_manage_locations')
+        province.save()
+        cache.clear()
         messages.success(request, f'Province "{name}" added successfully.')
     return redirect('admin_manage_locations')
 
@@ -3629,7 +3737,12 @@ def admin_edit_province(request, province_id):
             messages.error(request, f'Province "{name}" already exists.')
             return redirect('admin_manage_locations')
         province.name = name
+        geo_error = _apply_location_geometry(request, province)
+        if geo_error:
+            messages.error(request, geo_error)
+            return redirect('admin_manage_locations')
         province.save()
+        cache.clear()
         messages.success(request, f'Province updated to "{name}".')
     return redirect('admin_manage_locations')
 
@@ -3644,6 +3757,7 @@ def admin_delete_province(request, province_id):
             messages.error(request, f'Cannot delete "{name}" — it contains municipalities.')
             return redirect('admin_manage_locations')
         province.delete()
+        cache.clear()
         messages.success(request, f'Province "{name}" deleted.')
     return redirect('admin_manage_locations')
 
@@ -3669,6 +3783,7 @@ def admin_bulk_delete_provinces(request):
                 deleted.append(p.name)
                 p.delete()
         if deleted:
+            cache.clear()
             messages.success(request, f'Deleted {len(deleted)} province(s): {", ".join(deleted)}.')
         if skipped:
             messages.warning(request, f'Skipped {len(skipped)} (contain municipalities): {", ".join(skipped)}.')
@@ -3703,7 +3818,13 @@ def admin_add_municipality(request, province_id):
         if Municipality.objects.filter(name__iexact=name, province=province).exists():
             messages.error(request, f'Municipality "{name}" already exists in {province.name}.')
             return redirect('admin_manage_municipalities', province_id=province_id)
-        Municipality.objects.create(name=name, province=province)
+        municipality = Municipality(name=name, province=province)
+        geo_error = _apply_location_geometry(request, municipality)
+        if geo_error:
+            messages.error(request, geo_error)
+            return redirect('admin_manage_municipalities', province_id=province_id)
+        municipality.save()
+        cache.clear()
         messages.success(request, f'Municipality "{name}" added successfully.')
         return redirect('admin_manage_municipalities', province_id=province_id)
     return redirect('admin_manage_municipalities', province_id=province_id)
@@ -3723,7 +3844,12 @@ def admin_edit_municipality(request, municipality_id):
             messages.error(request, f'Municipality "{name}" already exists in {municipality.province.name}.')
             return redirect('admin_manage_municipalities', province_id=municipality.province_id)
         municipality.name = name
+        geo_error = _apply_location_geometry(request, municipality)
+        if geo_error:
+            messages.error(request, geo_error)
+            return redirect('admin_manage_municipalities', province_id=municipality.province_id)
         municipality.save()
+        cache.clear()
         messages.success(request, f'Municipality updated to "{name}".')
         return redirect('admin_manage_municipalities', province_id=municipality.province_id)
     return redirect('admin_manage_municipalities', province_id=municipality.province_id)
@@ -3741,6 +3867,7 @@ def admin_delete_municipality(request, municipality_id):
             messages.error(request, f'Cannot delete "{name}" — it is used in existing assessments.')
             return redirect('admin_manage_municipalities', province_id=province_id)
         municipality.delete()
+        cache.clear()
         messages.success(request, f'Municipality "{name}" deleted.')
     return redirect('admin_manage_municipalities', province_id=province_id)
 
@@ -3768,6 +3895,7 @@ def admin_bulk_delete_municipalities(request):
                 deleted.append(m.name)
                 m.delete()
         if deleted:
+            cache.clear()
             messages.success(request, f'Deleted {len(deleted)} municipality: {", ".join(deleted)}.')
         if skipped:
             messages.warning(request, f'Skipped {len(skipped)} (used in assessments): {", ".join(skipped)}.')
@@ -3780,18 +3908,65 @@ def admin_bulk_delete_municipalities(request):
 
 @login_required
 @admin_required
+def admin_move_municipality(request, municipality_id):
+    """Admin: Move a municipality (and everything under it) to a different province.
+
+    Since assessments never store their own province (it is always derived via
+    municipality.province), simply re-pointing the municipality's province FK
+    makes every barangay and assessment follow automatically.
+    """
+    municipality = get_object_or_404(Municipality, id=municipality_id)
+    old_province_id = municipality.province_id
+    if request.method == 'POST':
+        new_province_id = request.POST.get('new_province_id')
+        if not new_province_id:
+            messages.error(request, 'Please select a province.')
+            return redirect('admin_manage_municipalities', province_id=old_province_id)
+        if int(new_province_id) == old_province_id:
+            messages.error(request, f'{municipality.name} is already in {municipality.province.name}.')
+            return redirect('admin_manage_municipalities', province_id=old_province_id)
+        new_province = get_object_or_404(Province, id=new_province_id)
+        if Municipality.objects.filter(name__iexact=municipality.name, province=new_province).exists():
+            messages.error(request, f'A municipality named "{municipality.name}" already exists in {new_province.name}.')
+            return redirect('admin_manage_municipalities', province_id=old_province_id)
+        old_province_name = municipality.province.name
+        with transaction.atomic():
+            municipality.province = new_province
+            municipality.save()
+        cache.clear()
+        messages.success(request, f'Municipality "{municipality.name}" moved from {old_province_name} to {new_province.name} with all its barangays and assessments.')
+        return redirect('admin_manage_municipalities', province_id=new_province.id)
+    return redirect('admin_manage_municipalities', province_id=old_province_id)
+
+
+@login_required
+@admin_required
 def admin_manage_barangays(request, municipality_id):
     """Admin: List and manage barangays for a municipality, with transect coordinate management."""
     municipality = get_object_or_404(Municipality, id=municipality_id)
     barangays = municipality.barangays.annotate(
-        coord_count=Count('barangay_transects'),
-        approved_assessment_count=Count('assessments', filter=Q(assessments__status='approved')),
-        total_assessment_count=Count('assessments'),
+        coord_count=Count('barangay_transects', distinct=True),
+        approved_assessment_count=Count('assessments', filter=Q(assessments__status='approved'), distinct=True),
+        total_assessment_count=Count('assessments', distinct=True),
     ).order_by('name')
 
     # Pre-fetch transect coords for each barangay
     all_transects = list(BarangayTransect.objects.filter(
         barangay__municipality=municipality
+    ).annotate(
+        used_in_assessment=Exists(
+            Transect.objects.filter(
+                assessment__barangay=OuterRef('barangay'),
+                shallow_start_lat=OuterRef('shallow_start_lat'),
+                shallow_start_lng=OuterRef('shallow_start_lng'),
+                shallow_end_lat=OuterRef('shallow_end_lat'),
+                shallow_end_lng=OuterRef('shallow_end_lng'),
+                deep_start_lat=OuterRef('deep_start_lat'),
+                deep_start_lng=OuterRef('deep_start_lng'),
+                deep_end_lat=OuterRef('deep_end_lat'),
+                deep_end_lng=OuterRef('deep_end_lng'),
+            )
+        )
     ).order_by('pk'))
     transect_coords = {}
     for btc in all_transects:
@@ -3944,8 +4119,8 @@ def admin_manage_barangays(request, municipality_id):
         elif post_action == 'delete_transect':
             btc_id = request.POST.get('transect_id')
             btc = get_object_or_404(BarangayTransect, id=btc_id, barangay__municipality=municipality)
-            if btc.source == 'assessment':
-                messages.error(request, 'This reference is from an approved assessment and cannot be deleted.')
+            if btc.source == 'assessment' or btc.assessment_id or reference_used_in_any_assessment(btc):
+                messages.error(request, 'This reference is linked to an assessment and cannot be deleted.')
                 return redirect('admin_manage_barangays', municipality_id=municipality_id)
             btc.delete()
             messages.success(request, f'Reference coordinates deleted from {btc.barangay.name}.')
@@ -3957,6 +4132,171 @@ def admin_manage_barangays(request, municipality_id):
         'barangay_data': barangay_data,
         'all_transects': all_transects,
         'transect_data_json': transect_data_json,
+        'municipalities': Municipality.objects.select_related('province').exclude(id=municipality.id).order_by('province__name', 'name'),
+    })
+
+
+@login_required
+@admin_required
+def admin_location_map(request, loc_type, loc_id):
+    """Admin: map view of a single location (province / municipality / barangay).
+
+    Shows the location's stored boundary polygon and coordinates, plus its
+    child locations and (for a barangay) its reference transect lines.
+    """
+    loc_type = str(loc_type).lower()
+    model = {
+        'province': Province,
+        'municipality': Municipality,
+        'barangay': Barangay,
+    }.get(loc_type)
+    if model is None:
+        raise Http404
+    obj = get_object_or_404(model, id=loc_id)
+
+    def point(o):
+        if o.latitude is not None and o.longitude is not None:
+            return [float(o.latitude), float(o.longitude)]
+        return None
+
+    def crumb(label, url_name=None, *args):
+        return {
+            'label': label,
+            'href': reverse(url_name, args=args) if url_name else '',
+        }
+
+    breadcrumb = []
+    if loc_type == 'province':
+        breadcrumb = [crumb('Locations', 'admin_manage_locations'), crumb(obj.name)]
+    elif loc_type == 'municipality':
+        breadcrumb = [
+            crumb('Locations', 'admin_manage_locations'),
+            crumb(obj.province.name, 'admin_manage_municipalities', obj.province_id),
+            crumb(obj.name),
+        ]
+    else:
+        breadcrumb = [
+            crumb('Locations', 'admin_manage_locations'),
+            crumb(obj.municipality.province.name, 'admin_manage_municipalities', obj.municipality.province_id),
+            crumb(obj.municipality.name, 'admin_manage_barangays', obj.municipality_id),
+            crumb(obj.name),
+        ]
+
+    # Children for the info panel + map markers
+    children = []
+    if loc_type == 'province':
+        for m in obj.municipalities.annotate(
+            barangay_count=Count('barangays', distinct=True),
+            approved_assessment_count=Count('barangays__assessments', filter=Q(barangays__assessments__status='approved'), distinct=True),
+        ).order_by('name'):
+            children.append({
+                'id': m.id,
+                'name': m.name,
+                'lat_lng': point(m),
+                'boundary': m.boundary,
+                'label': 'Municipality',
+                'barangay_count': m.barangay_count,
+                'approved': m.approved_assessment_count,
+                'manage_url': reverse('admin_manage_barangays', args=[m.id]),
+                'view_url': reverse('admin_location_map', args=['municipality', m.id]),
+            })
+    elif loc_type == 'municipality':
+        for b in obj.barangays.annotate(
+            coord_count=Count('barangay_transects', distinct=True),
+            approved_assessment_count=Count('assessments', filter=Q(assessments__status='approved'), distinct=True),
+        ).order_by('name'):
+            children.append({
+                'id': b.id,
+                'name': b.name,
+                'lat_lng': point(b),
+                'boundary': b.boundary,
+                'label': 'Barangay',
+                'coord_count': b.coord_count,
+                'approved': b.approved_assessment_count,
+                'manage_url': reverse('admin_manage_barangays', args=[obj.id]),
+                'view_url': reverse('admin_location_map', args=['barangay', b.id]),
+            })
+
+    # Reference transect lines for a barangay
+    refs = []
+    if loc_type == 'barangay':
+        for t in obj.barangay_transects.order_by('pk'):
+            refs.append({
+                'sLat': float(t.shallow_start_lat) if t.shallow_start_lat else None,
+                'sLng': float(t.shallow_start_lng) if t.shallow_start_lng else None,
+                'eLat': float(t.shallow_end_lat) if t.shallow_end_lat else None,
+                'eLng': float(t.shallow_end_lng) if t.shallow_end_lng else None,
+                'dSLat': float(t.deep_start_lat) if t.deep_start_lat else None,
+                'dSLng': float(t.deep_start_lng) if t.deep_start_lng else None,
+                'dELat': float(t.deep_end_lat) if t.deep_end_lat else None,
+                'dELng': float(t.deep_end_lng) if t.deep_end_lng else None,
+            })
+
+    # Fallback center: this location's point, else average of children points
+    center = point(obj)
+    if not center:
+        pts = [c['lat_lng'] for c in children if c['lat_lng']]
+        if pts:
+            center = [round(sum(p[0] for p in pts) / len(pts), 6), round(sum(p[1] for p in pts) / len(pts), 6)]
+
+    boundary_type = ''
+    if obj.boundary:
+        boundary_type = obj.boundary.get('type', '')
+
+    map_data = {
+        'type': loc_type,
+        'name': obj.name,
+        'boundary': obj.boundary,
+        'center': center,
+        'children': [
+            {
+                'id': c['id'],
+                'name': c['name'],
+                'label': c['label'],
+                'countLabel': ('%d barangays' % c['barangay_count']) if loc_type == 'province' else ('%d refs' % c['coord_count']),
+                'approved': c['approved'],
+                'lat': c['lat_lng'][0] if c['lat_lng'] else None,
+                'lng': c['lat_lng'][1] if c['lat_lng'] else None,
+                'boundary': c['boundary'],
+                'manageUrl': c.get('manage_url', ''),
+                'viewUrl': c.get('view_url', ''),
+            }
+            for c in children
+        ],
+        'refs': refs,
+    }
+
+    if loc_type == 'province':
+        stats = {
+            'first': f'{len(children)} municipalities',
+            'second': f"{sum(c['barangay_count'] for c in children)} barangays",
+        }
+    elif loc_type == 'municipality':
+        stats = {
+            'first': f'{len(children)} barangays',
+            'second': f"{sum(c['coord_count'] for c in children)} reference coordinates",
+        }
+    else:
+        stats = {
+            'first': f"{len(refs)} reference coordinate{'s' if len(refs) != 1 else ''}",
+            'second': '',
+        }
+    stats['approved'] = sum(c['approved'] for c in children)
+    stats['boundary_type'] = boundary_type
+    stats['has_center'] = point(obj) is not None
+
+    return render(request, 'admin/locations/location_map.html', {
+        'loc_type': loc_type,
+        'obj': obj,
+        'boundary_type': boundary_type,
+        'center': center,
+        'children': children,
+        'refs': refs,
+        'breadcrumb': breadcrumb,
+        'map_data': map_data,
+        'stats': stats,
+        'kind_label': {'province': 'Province', 'municipality': 'Municipality', 'barangay': 'Barangay'}[loc_type],
+        'child_label': {'province': 'Municipalities', 'municipality': 'Barangays', 'barangay': 'Reference Coordinates'}[loc_type],
     })
 
 
@@ -3973,7 +4313,13 @@ def admin_add_barangay(request, municipality_id):
         if Barangay.objects.filter(name__iexact=name, municipality=municipality).exists():
             messages.error(request, f'Barangay "{name}" already exists in {municipality.name}.')
             return redirect('admin_manage_barangays', municipality_id=municipality_id)
-        Barangay.objects.create(name=name, municipality=municipality)
+        barangay = Barangay(name=name, municipality=municipality)
+        geo_error = _apply_location_geometry(request, barangay)
+        if geo_error:
+            messages.error(request, geo_error)
+            return redirect('admin_manage_barangays', municipality_id=municipality_id)
+        barangay.save()
+        cache.clear()
         messages.success(request, f'Barangay "{name}" added to {municipality.name}.')
     return redirect('admin_manage_barangays', municipality_id=municipality_id)
 
@@ -3993,7 +4339,12 @@ def admin_edit_barangay(request, barangay_id):
             messages.error(request, f'Barangay "{name}" already exists in {barangay.municipality.name}.')
             return redirect('admin_manage_barangays', municipality_id=municipality_id)
         barangay.name = name
+        geo_error = _apply_location_geometry(request, barangay)
+        if geo_error:
+            messages.error(request, geo_error)
+            return redirect('admin_manage_barangays', municipality_id=municipality_id)
         barangay.save()
+        cache.clear()
         messages.success(request, f'Barangay updated to "{name}".')
     return redirect('admin_manage_barangays', municipality_id=municipality_id)
 
@@ -4010,6 +4361,7 @@ def admin_delete_barangay(request, barangay_id):
             messages.error(request, f'Cannot delete "{name}" — it is used in existing assessments.')
             return redirect('admin_manage_barangays', municipality_id=municipality_id)
         barangay.delete()
+        cache.clear()
         messages.success(request, f'Barangay "{name}" deleted.')
     return redirect('admin_manage_barangays', municipality_id=municipality_id)
 
@@ -4036,10 +4388,48 @@ def admin_bulk_delete_barangays(request, municipality_id):
                 deleted.append(b.name)
                 b.delete()
         if deleted:
+            cache.clear()
             messages.success(request, f'Deleted {len(deleted)} barangay(s): {", ".join(deleted)}.')
         if skipped:
             messages.warning(request, f'Skipped {len(skipped)} (used in assessments): {", ".join(skipped)}.')
     return redirect('admin_manage_barangays', municipality_id=municipality_id)
+
+
+@login_required
+@admin_required
+def admin_move_barangay(request, barangay_id):
+    """Admin: Move a barangay to a different municipality.
+
+    The barangay's municipality FK is re-pointed, and every assessment tied to
+    that barangay is re-pointed to the new municipality too (the assessment
+    stores its municipality directly, so it must be kept in sync). The province
+    follows automatically since it derives from municipality.province.
+    """
+    barangay = get_object_or_404(Barangay, id=barangay_id)
+    old_municipality_id = barangay.municipality_id
+    if request.method == 'POST':
+        new_municipality_id = request.POST.get('new_municipality_id')
+        if not new_municipality_id:
+            messages.error(request, 'Please select a municipality.')
+            return redirect('admin_manage_barangays', municipality_id=old_municipality_id)
+        if int(new_municipality_id) == old_municipality_id:
+            messages.error(request, f'{barangay.name} is already in {barangay.municipality.name}.')
+            return redirect('admin_manage_barangays', municipality_id=old_municipality_id)
+        new_municipality = get_object_or_404(Municipality, id=new_municipality_id)
+        if Barangay.objects.filter(name__iexact=barangay.name, municipality=new_municipality).exists():
+            messages.error(request, f'A barangay named "{barangay.name}" already exists in {new_municipality.name}.')
+            return redirect('admin_manage_barangays', municipality_id=old_municipality_id)
+        old_municipality_name = barangay.municipality.name
+        with transaction.atomic():
+            barangay.municipality = new_municipality
+            barangay.save()
+            assessment_count = Assessment.objects.filter(barangay=barangay).update(municipality=new_municipality)
+        cache.clear()
+        messages.success(request,
+            f'Barangay "{barangay.name}" moved from {old_municipality_name} to {new_municipality.name} '
+            f'({new_municipality.province.name}). {assessment_count} assessment(s) updated to follow it.')
+        return redirect('admin_manage_barangays', municipality_id=old_municipality_id)
+    return redirect('admin_manage_barangays', municipality_id=old_municipality_id)
 
 
 # ==================== ADMIN SPECIES MANAGEMENT VIEWS ====================
@@ -4633,11 +5023,12 @@ def profile_change_password(request):
 
 def public_dashboard(request):
     """Public interactive map dashboard page (no login required)."""
-    return render(request, 'public/dashboard.html', {'active_page': 'explore'})
+    response = render(request, 'public/dashboard.html', {'active_page': 'explore'})
+    response['Cache-Control'] = 'no-store'
+    return response
 
 
 @require_GET
-@cache_page(60 * 3)  # cache API response for 3 minutes
 def public_location_options(request):
     """Public API: Return filter options (all provinces, and cascading municipalities/barangays)."""
     province_id = request.GET.get('province_id')
@@ -4649,33 +5040,77 @@ def public_location_options(request):
         latest_province_id = latest.municipality.province_id
 
     response = {
-        'provinces': list(
-            Province.objects.order_by('name').values('id', 'name')
-        ),
+        'provinces': [
+            {
+                'id': p['id'],
+                'name': p['name'],
+                'latitude': float(p['latitude']) if p['latitude'] is not None else None,
+                'longitude': float(p['longitude']) if p['longitude'] is not None else None,
+                'boundary': p.get('boundary'),
+            }
+            for p in Province.objects.order_by('name').values('id', 'name', 'latitude', 'longitude', 'boundary')
+        ],
         'latest_province_id': latest_province_id,
     }
 
     if municipality_id:
-        response['barangays'] = list(
-            Barangay.objects.filter(municipality_id=municipality_id).order_by('name').values('id', 'name')
-        )
+        response['barangays'] = [
+            {
+                'id': b['id'],
+                'name': b['name'],
+                'municipality_id': b['municipality_id'],
+                'latitude': float(b['latitude']) if b['latitude'] is not None else None,
+                'longitude': float(b['longitude']) if b['longitude'] is not None else None,
+                'boundary': b.get('boundary'),
+            }
+            for b in Barangay.objects.filter(municipality_id=municipality_id).order_by('name').values('id', 'name', 'municipality_id', 'latitude', 'longitude', 'boundary')
+        ]
     else:
         response['barangays'] = []
 
     if province_id:
-        response['municipalities'] = list(
-            Municipality.objects.filter(province_id=province_id).order_by('name').values('id', 'name')
-        )
+        response['municipalities'] = [
+            {
+                'id': m['id'],
+                'name': m['name'],
+                'province_id': m['province_id'],
+                'latitude': float(m['latitude']) if m['latitude'] is not None else None,
+                'longitude': float(m['longitude']) if m['longitude'] is not None else None,
+                'boundary': m.get('boundary'),
+            }
+            for m in Municipality.objects.filter(province_id=province_id).order_by('name').values('id', 'name', 'province_id', 'latitude', 'longitude', 'boundary')
+        ]
+        response['province_barangays'] = [
+            {
+                'id': b['id'],
+                'name': b['name'],
+                'municipality_id': b['municipality_id'],
+                'latitude': float(b['latitude']) if b['latitude'] is not None else None,
+                'longitude': float(b['longitude']) if b['longitude'] is not None else None,
+                'boundary': b.get('boundary'),
+            }
+            for b in Barangay.objects.filter(municipality__province_id=province_id).order_by('name').values('id', 'name', 'municipality_id', 'latitude', 'longitude', 'boundary')
+        ]
     else:
-        response['municipalities'] = list(
-            Municipality.objects.order_by('name').values('id', 'name')
-        )
+        response['municipalities'] = [
+            {
+                'id': m['id'],
+                'name': m['name'],
+                'province_id': m['province_id'],
+                'latitude': float(m['latitude']) if m['latitude'] is not None else None,
+                'longitude': float(m['longitude']) if m['longitude'] is not None else None,
+                'boundary': m.get('boundary'),
+            }
+            for m in Municipality.objects.order_by('name').values('id', 'name', 'province_id', 'latitude', 'longitude', 'boundary')
+        ]
+        response['province_barangays'] = []
 
-    return JsonResponse(response)
+    json_response = JsonResponse(response)
+    json_response['Cache-Control'] = 'no-store'
+    return json_response
 
 
 @require_GET
-@cache_page(60 * 3)  # cache API response for 3 minutes
 def public_dashboard_data(request):
     """Public API: Return all approved assessment data for the map dashboard."""
     municipality_id = request.GET.get('municipality_id')
@@ -4715,6 +5150,8 @@ def public_dashboard_data(request):
     cover_sum = 0.0
     cover_count = 0
     trend_years = {}
+    m_ids = set()
+    b_ids = set()
 
     def _health_for_species(species_list):
         if not species_list:
@@ -4731,6 +5168,8 @@ def public_dashboard_data(request):
         m_name = a.municipality.name
         b_id = a.barangay_id
         b_name = a.barangay.name
+        m_ids.add(m_id)
+        b_ids.add(b_id)
 
         if m_id not in municipalities:
             municipalities[m_id] = {
@@ -4809,11 +5248,20 @@ def public_dashboard_data(request):
             trend_years[year]['sum'] += cover
             trend_years[year]['count'] += 1
 
+    munis_geo = {
+        mg.id: mg for mg in Municipality.objects.filter(id__in=m_ids)
+    }
+    brgs_geo = {
+        bg.id: bg for bg in Barangay.objects.filter(id__in=b_ids)
+    }
+
     result_m = []
     for m_id, m_data in municipalities.items():
+        mgeo = munis_geo.get(m_id)
         b_list = []
         for b_id, b_data in m_data['barangays'].items():
             b_as = b_data['assessments']
+            bgeo = brgs_geo.get(b_id)
             lcv = None
             lc = ''
             for ba in b_as:
@@ -4834,24 +5282,38 @@ def public_dashboard_data(request):
                             all_lats.append(depth_data['e'][0])
                             all_lngs.append(depth_data['e'][1])
 
-            b_lat = round(sum(all_lats) / len(all_lats), 6) if all_lats else None
-            b_lng = round(sum(all_lngs) / len(all_lngs), 6) if all_lngs else None
+            b_lat = None
+            b_lng = None
+            if bgeo and bgeo.latitude is not None and bgeo.longitude is not None:
+                b_lat = float(bgeo.latitude)
+                b_lng = float(bgeo.longitude)
+            elif all_lats:
+                b_lat = round(sum(all_lats) / len(all_lats), 6)
+                b_lng = round(sum(all_lngs) / len(all_lngs), 6)
 
             b_list.append({
                 'id': b_id,
                 'name': b_data['name'],
                 'lat': b_lat,
                 'lng': b_lng,
+                'boundary': bgeo.boundary if bgeo else None,
                 'lcv': lcv,
                 'lc': lc,
                 'ac': len(b_as),
                 'a': b_as,
             })
 
-        m_lngs = [b['lng'] for b in b_list if b['lng']]
-        m_lats = [b['lat'] for b in b_list if b['lat']]
-        m_lat = round(sum(m_lats) / len(m_lats), 6) if m_lats else None
-        m_lng = round(sum(m_lngs) / len(m_lngs), 6) if m_lngs else None
+        m_lat = None
+        m_lng = None
+        if mgeo and mgeo.latitude is not None and mgeo.longitude is not None:
+            m_lat = float(mgeo.latitude)
+            m_lng = float(mgeo.longitude)
+        else:
+            m_lngs = [b['lng'] for b in b_list if b['lng']]
+            m_lats = [b['lat'] for b in b_list if b['lat']]
+            if m_lats:
+                m_lat = round(sum(m_lats) / len(m_lats), 6)
+                m_lng = round(sum(m_lngs) / len(m_lngs), 6)
 
         result_m.append({
             'id': m_id,
@@ -4860,6 +5322,7 @@ def public_dashboard_data(request):
             'province_id': m_data.get('province_id'),
             'lat': m_lat,
             'lng': m_lng,
+            'boundary': mgeo.boundary if mgeo else None,
             'b': b_list,
         })
 
@@ -4882,7 +5345,7 @@ def public_dashboard_data(request):
             'count': td['count'],
         })
 
-    return JsonResponse({
+    json_response = JsonResponse({
         'm': result_m,
         'provinces': result_provinces,
         's': {
@@ -4897,6 +5360,8 @@ def public_dashboard_data(request):
     },
     't': result_t,
 })
+    json_response['Cache-Control'] = 'no-store'
+    return json_response
 
 
 @require_GET

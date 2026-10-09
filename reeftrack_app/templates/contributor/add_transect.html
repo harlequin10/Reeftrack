@@ -1,10 +1,12 @@
 {% extends base_template %}
 {% load static %}
+{% load geo_tags %}
 
 {% block title %}Add Transect - ReefTrack{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+{% if barangay_boundary %}<script type="application/json" id="barangay-boundary">{{ barangay_boundary|tojson }}</script>{% endif %}
 
 <div class="row justify-content-center">
     <div class="col-12 col-lg-10">
@@ -220,9 +222,12 @@
                             <div class="mt-3">
                                 <label class="form-label small fw-bold"><i class="fas fa-map"></i> Map Preview</label>
                                 <div id="transectMap" style="height:350px; border-radius:8px; border:1px solid #dee2e6;"></div>
-                                <div class="d-flex gap-3 mt-2">
+                                <div class="d-flex gap-3 mt-2 flex-wrap">
                                     <small><span style="display:inline-block; width:14px; height:3px; background:#0dcaf0; vertical-align:middle;"></span> Shallow transect</small>
                                     <small><span style="display:inline-block; width:14px; height:3px; background:#0d6efd; vertical-align:middle;"></span> Deep transect</small>
+                                    {% if barangay_boundary %}
+                                    <small><span style="display:inline-block; width:12px; height:12px; background:rgba(14,124,134,.15); border:2px solid #0E7C86; vertical-align:middle;"></span> {{ barangay.name|default:pending.barangay_name }} boundary</small>
+                                    {% endif %}
                                     {% if transects %}
                                     <small><span style="display:inline-block; width:14px; height:3px; background:#6c757d; vertical-align:middle;"></span> Previous transects</small>
                                     {% endif %}
@@ -385,6 +390,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // ── Barangay boundary overlay ──
+    var barangayBoundary = null;
+    var _bbEl = document.getElementById('barangay-boundary');
+    if (_bbEl) { try { barangayBoundary = JSON.parse(_bbEl.textContent); } catch (e) { barangayBoundary = null; } }
+    function bbStyle() { return {color:'#0E7C86', weight:2, opacity:.9, fillColor:'#0E7C86', fillOpacity:.08}; }
+    function addBoundaryTo(targetMap) {
+        if (!barangayBoundary || !targetMap) return null;
+        try { return L.geoJSON(barangayBoundary, {style: bbStyle}).addTo(targetMap); } catch (e) { return null; }
+    }
+
     // ── Leaflet map (gracefully degrades if CDN fails) ──
     var map = null;
     try {
@@ -393,6 +408,8 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_M
 		attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',
 		maxZoom: 18, maxNativeZoom: 16
 	}).addTo(map);
+        var bbMain = addBoundaryTo(map);
+        if (bbMain) map.fitBounds(bbMain.getBounds(), {padding:[20,20]});
     } catch(err) {
         console.warn('Map not available:', err);
         document.getElementById('transectMap').innerHTML = '<div class="alert alert-warning m-2"><i class="fas fa-exclamation-triangle me-1"></i> Map could not be loaded. Coordinates can still be entered manually.</div>';
@@ -718,6 +735,7 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_M
                                 mapEl.dataset.init = '1';
                                 var sugMap = L.map('sugMap' + idx, {minZoom: 5, maxZoom: 18});
                                 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18, maxNativeZoom: 16}).addTo(sugMap);
+                                addBoundaryTo(sugMap);
                                 var sIcon = L.divIcon({className:'',html:'<div style="background:#0dcaf0;color:#000;font-weight:bold;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">S</div>',iconSize:[18,18],iconAnchor:[9,9]});
                                 var dIcon = L.divIcon({className:'',html:'<div style="background:#0d6efd;color:#fff;font-weight:bold;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">D</div>',iconSize:[18,18],iconAnchor:[9,9]});
                                 var b = [];
@@ -757,6 +775,7 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_M
                             container.dataset.init = '1';
                             var allMap = L.map('allSugMap', {minZoom: 5, maxZoom: 18});
                             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS', maxZoom: 18, maxNativeZoom: 16}).addTo(allMap);
+                            var bbAll = addBoundaryTo(allMap);
                             var colors = ['#0dcaf0','#0d6efd','#198754','#ffc107','#dc3545','#6f42c1'];
                             var bds = [];
                             allSuggestions.forEach(function(s, i) {
@@ -771,6 +790,7 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_M
                                 if(s.deep_end_lat&&s.deep_end_lng){L.marker([s.deep_end_lat,s.deep_end_lng],{icon:tIcon(shortLabel)}).addTo(allMap).bindPopup(s.date+' Deep End');bds.push([s.deep_end_lat,s.deep_end_lng]);if(s.deep_start_lat&&s.deep_start_lng)L.polyline([[s.deep_start_lat,s.deep_start_lng],[s.deep_end_lat,s.deep_end_lng]],{color:c,weight:3,dashArray:'6,4'}).addTo(allMap);}
                             });
                             if(bds.length>0) allMap.fitBounds(bds,{padding:[30,30],maxZoom:15});
+                            else if (bbAll) allMap.fitBounds(bbAll.getBounds(),{padding:[30,30],maxZoom:15});
                             else allMap.setView([6.0,125.0],10);
                         }
                     } else {

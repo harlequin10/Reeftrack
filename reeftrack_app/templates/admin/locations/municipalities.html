@@ -1,6 +1,11 @@
 {% extends 'admin/base_admin.html' %}
+{% load geo_tags %}
 
 {% block title %}{{ province.name }} Municipalities - Admin - ReefTrack{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -62,12 +67,19 @@
                         </td>
                         <td>{{ m.approved_assessment_count }}</td>
                         <td>
+                            <a href="{% url 'admin_location_map' 'municipality' m.id %}" class="btn btn-sm btn-outline-success" title="View on Map">
+                                <i class="fas fa-map"></i>
+                            </a>
                             <a href="{% url 'admin_manage_barangays' m.id %}" class="btn btn-sm btn-outline-info" title="Manage Barangays">
                                 <i class="fas fa-map-pin"></i>
                             </a>
                             <button class="btn btn-sm btn-outline-primary" title="Edit"
                                     data-bs-toggle="modal" data-bs-target="#editMuni{{ m.id }}">
                                 <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" title="Move to Another Province"
+                                    data-bs-toggle="modal" data-bs-target="#moveMuni{{ m.id }}">
+                                <i class="fas fa-arrow-right"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-danger" title="Delete"
                                     data-bs-toggle="modal" data-bs-target="#deleteMuni{{ m.id }}">
@@ -124,7 +136,7 @@
 <div class="modal fade" id="editMuni{{ m.id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'admin_edit_municipality' m.id %}">
+            <form method="POST" action="{% url 'admin_edit_municipality' m.id %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Municipality</h5>
@@ -133,6 +145,40 @@
                 <div class="modal-body">
                     <label class="form-label fw-bold">Name</label>
                     <input type="text" class="form-control" name="name" value="{{ m.name }}" required>
+                    <hr>
+                    {% if m.boundary %}<script type="application/json" id="gbnd_bmap_edit_muni_{{ m.id }}">{{ m.boundary|tojson }}</script>{% endif %}
+                    <label class="form-label fw-bold"><i class="fas fa-draw-polygon"></i> Draw Boundary (optional)</label>
+                    <div class="rt-geo-editor"
+                         data-map="bmap_edit_muni_{{ m.id }}"
+                         data-draw="bdraw_edit_muni_{{ m.id }}"
+                         data-undo="bund_edit_muni_{{ m.id }}"
+                         data-clear="bclear_edit_muni_{{ m.id }}"
+                         data-out="bjs_edit_muni_{{ m.id }}"
+                         data-clearflag="bclr_edit_muni_{{ m.id }}"
+                         data-status="bstatus_edit_muni_{{ m.id }}"
+                         data-name="Municipality">
+                        <div class="d-flex gap-2 mb-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="bdraw_edit_muni_{{ m.id }}"><i class="fas fa-pen"></i> Draw / Add Point</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="bund_edit_muni_{{ m.id }}">Undo</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="bclear_edit_muni_{{ m.id }}">Clear</button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-dark rt-manual-btn mb-2" id="bmanual_edit_muni_{{ m.id }}"><i class="fas fa-keyboard"></i> Type Coordinates</button>
+                        <div class="rt-manual-wrap d-none mb-2" id="bmanualwrap_edit_muni_{{ m.id }}">
+                            <textarea class="form-control form-control-sm rt-manual-area" id="barea_edit_muni_{{ m.id }}" rows="4" placeholder="One point per line: latitude, longitude&#10;6.9214, 125.0810&#10;6.9300, 125.0900&#10;&#10;(Alternatively, paste a GeoJSON Polygon/MultiPolygon)"></textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-primary rt-manual-apply" id="bapply_edit_muni_{{ m.id }}">Apply to Map</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rt-manual-cancel" id="bcancel_edit_muni_{{ m.id }}">Cancel</button>
+                            </div>
+                            <p class="form-text text-danger mb-0 rt-manual-err" id="berr_edit_muni_{{ m.id }}" style="display:none"></p>
+                        </div>
+                        <div id="bmap_edit_muni_{{ m.id }}" class="rt-geo-map rounded border mb-2" style="height:240px"></div>
+                        <p class="form-text" id="bstatus_edit_muni_{{ m.id }}"></p>
+                        <input type="hidden" name="boundary_json" id="bjs_edit_muni_{{ m.id }}">
+                        <input type="hidden" name="boundary_clear" id="bclr_edit_muni_{{ m.id }}" value="">
+                    </div>
+                    <label class="form-label fw-bold mt-2">Boundary File (optional)</label>
+                    <input type="file" class="form-control" name="geometry_file" accept=".geojson,.json,application/geo+json,application/json">
+                    <div class="form-text">Draw the boundary on the map above, or upload a GeoJSON file (Polygon / MultiPolygon / Point).</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -172,13 +218,48 @@
         </div>
     </div>
 </div>
+
+<!-- Move Modal -->
+<div class="modal fade" id="moveMuni{{ m.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_move_municipality' m.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title">Move Municipality</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Move <strong>{{ m.name }}</strong> to a different province.</p>
+                    <div class="alert alert-info py-2 mb-3">
+                        <i class="fas fa-info-circle"></i>
+                        All its barangays and assessments (including approved ones) will move with it automatically.
+                    </div>
+                    <label class="form-label fw-bold">New Province</label>
+                    <select class="form-select" name="new_province_id" required>
+                        <option value="">-- Select Province --</option>
+                        {% for p in provinces %}
+                        {% if p.id != province.id %}
+                        <option value="{{ p.id }}">{{ p.name }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning text-white">Move Municipality</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endfor %}
 
 <!-- Add Municipality Modal -->
 <div class="modal fade" id="addMunicipalityModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'admin_add_municipality' province_id=province.id %}">
+            <form method="POST" action="{% url 'admin_add_municipality' province_id=province.id %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">Add Municipality</h5>
@@ -187,6 +268,39 @@
                 <div class="modal-body">
                     <label class="form-label fw-bold">Municipality Name</label>
                     <input type="text" class="form-control" name="name" required placeholder="e.g. General Santos">
+                    <hr>
+                    <label class="form-label fw-bold"><i class="fas fa-draw-polygon"></i> Draw Boundary (optional)</label>
+                    <div class="rt-geo-editor"
+                         data-map="bmap_add_muni"
+                         data-draw="bdraw_add_muni"
+                         data-undo="bund_add_muni"
+                         data-clear="bclear_add_muni"
+                         data-out="bjs_add_muni"
+                         data-clearflag="bclr_add_muni"
+                         data-status="bstatus_add_muni"
+                         data-name="Municipality">
+                        <div class="d-flex gap-2 mb-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="bdraw_add_muni"><i class="fas fa-pen"></i> Draw / Add Point</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="bund_add_muni">Undo</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="bclear_add_muni">Clear</button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-dark rt-manual-btn mb-2" id="bmanual_add_muni"><i class="fas fa-keyboard"></i> Type Coordinates</button>
+                        <div class="rt-manual-wrap d-none mb-2" id="bmanualwrap_add_muni">
+                            <textarea class="form-control form-control-sm rt-manual-area" id="barea_add_muni" rows="4" placeholder="One point per line: latitude, longitude&#10;6.9214, 125.0810&#10;6.9300, 125.0900&#10;&#10;(Alternatively, paste a GeoJSON Polygon/MultiPolygon)"></textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-primary rt-manual-apply" id="bapply_add_muni">Apply to Map</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rt-manual-cancel" id="bcancel_add_muni">Cancel</button>
+                            </div>
+                            <p class="form-text text-danger mb-0 rt-manual-err" id="berr_add_muni" style="display:none"></p>
+                        </div>
+                        <div id="bmap_add_muni" class="rt-geo-map rounded border mb-2" style="height:240px"></div>
+                        <p class="form-text" id="bstatus_add_muni"></p>
+                        <input type="hidden" name="boundary_json" id="bjs_add_muni">
+                        <input type="hidden" name="boundary_clear" id="bclr_add_muni" value="">
+                    </div>
+                    <label class="form-label fw-bold mt-2">Boundary File (optional)</label>
+                    <input type="file" class="form-control" name="geometry_file" accept=".geojson,.json,application/geo+json,application/json">
+                    <div class="form-text">Draw the boundary on the map above, or upload a GeoJSON file (Polygon / MultiPolygon / Point).</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -271,5 +385,41 @@ function confirmBulkDelete() {
 
     new bootstrap.Modal(document.getElementById('bulkDeleteModal')).show();
 }
+</script>
+
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/js/geo_draw.js"></script>
+<script>
+(function() {
+    var editors = document.querySelectorAll('.rt-geo-editor');
+    for (var i = 0; i < editors.length; i++) {
+        (function(ed) {
+            var mapId = ed.getAttribute('data-map');
+            var initial = null;
+            var sc = document.getElementById('gbnd_' + mapId);
+            if (sc) {
+                try { initial = JSON.parse(sc.textContent); } catch (e) { initial = null; }
+            }
+            var suffix = mapId.replace('bmap_', '');
+            RTGeoDraw.init({
+                mapEl: mapId,
+                drawBtn: 'bdraw_' + suffix,
+                undoBtn: 'bund_' + suffix,
+                clearBtn: 'bclear_' + suffix,
+                input: 'bjs_' + suffix,
+                clearFlag: 'bclr_' + suffix,
+                status: 'bstatus_' + suffix,
+                manualBtn: 'bmanual_' + suffix,
+                manualWrap: 'bmanualwrap_' + suffix,
+                manualArea: 'barea_' + suffix,
+                manualApply: 'bapply_' + suffix,
+                manualCancel: 'bcancel_' + suffix,
+                manualErr: 'berr_' + suffix,
+                name: ed.getAttribute('data-name') || 'Location',
+                initial: initial
+            });
+        })(editors[i]);
+    }
+})();
 </script>
 {% endblock %}

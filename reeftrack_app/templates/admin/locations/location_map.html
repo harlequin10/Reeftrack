@@ -1,0 +1,351 @@
+{% extends 'admin/base_admin.html' %}
+{% load geo_tags %}
+
+{% block title %}{{ obj.name }} - {{ kind_label }} Map - Admin - ReefTrack{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+<style>
+    #locMap { width: 100%; height: 72vh; min-height: 480px; border-radius: .5rem; z-index: 0; }
+    .loc-sidebar .list-group-item { padding: .5rem .6rem; }
+    .loc-child-btn { font-size: .75rem; padding: .15rem .45rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                {% for crumb in breadcrumb %}
+                {% if crumb.href %}
+                <li class="breadcrumb-item"><a href="{{ crumb.href }}"><i class="fas fa-map-marker-alt"></i> {{ crumb.label }}</a></li>
+                {% else %}
+                <li class="breadcrumb-item active" aria-current="page">{{ crumb.label }}</li>
+                {% endif %}
+                {% endfor %}
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+                {% if loc_type == 'province' %}
+                <i class="fas fa-landmark text-primary"></i>
+                {% elif loc_type == 'municipality' %}
+                <i class="fas fa-map-pin text-info"></i>
+                {% else %}
+                <i class="fas fa-flag text-danger"></i>
+                {% endif %}
+                {{ obj.name }}
+                <span class="badge bg-secondary ms-1">{{ kind_label }}</span>
+            </h4>
+            <div class="d-flex gap-2">
+                {% if loc_type == 'province' %}
+                <a href="{% url 'admin_manage_municipalities' obj.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-map-pin"></i> Manage Municipalities</a>
+                {% elif loc_type == 'municipality' %}
+                <a href="{% url 'admin_manage_barangays' obj.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-map-pin"></i> Manage Barangays</a>
+                {% else %}
+                <a href="{% url 'admin_manage_barangays' obj.municipality_id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-map-pin"></i> Manage Barangays</a>
+                {% endif %}
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editLocationModal">
+                    <i class="fas fa-edit"></i> Edit {{ kind_label }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not stats.has_center and not obj.boundary and not children %}
+<div class="alert alert-warning d-flex align-items-center" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <div>No boundary or coordinates are set for this {{ kind_label }} yet. Use the <strong>Edit</strong> button above to draw or type them.</div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+    <!-- Sidebar -->
+    <div class="col-lg-4 col-xl-3 loc-sidebar">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header py-2"><i class="fas fa-circle-info"></i> Details</div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-draw-polygon text-muted me-1"></i> Boundary</span>
+                    {% if stats.boundary_type %}
+                    <span class="badge bg-success"><i class="fas fa-check"></i> {{ stats.boundary_type }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Not set</span>
+                    {% endif %}
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-location-dot text-muted me-1"></i> Coordinates</span>
+                    {% if center %}
+                    <span class="text-muted small">{{ center.0|floatformat:4 }}, {{ center.1|floatformat:4 }}</span>
+                    {% else %}
+                    <span class="text-muted small">Not set</span>
+                    {% endif %}
+                </li>
+                {% if stats.first %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-list-ul text-muted me-1"></i>{{ stats.first|capfirst }}</span>
+                    <span class="badge bg-light text-dark border">{{ children|length }}</span>
+                </li>
+                {% endif %}
+                {% if stats.second %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-route text-muted me-1"></i>{{ stats.second|capfirst }}</span>
+                </li>
+                {% endif %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-clipboard-check text-muted me-1"></i> Approved assessments</span>
+                    <span class="badge bg-success">{{ stats.approved }}</span>
+                </li>
+            </ul>
+        </div>
+
+        {% if children %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header py-2">
+                <i class="fas fa-map-marked-alt"></i> {{ child_label }} under this location
+            </div>
+            <ul class="list-group list-group-flush" style="max-height: 320px; overflow-y: auto;">
+                {% for c in children %}
+                <li class="list-group-item d-flex align-items-center justify-content-between">
+                    <div class="me-2">
+                        <strong>{{ c.name }}</strong>
+                        <div class="small text-muted">
+                            {{ c.label }} &middot;
+                            {% if loc_type == 'province' %}{{ c.barangay_count }} barangays{% else %}{{ c.coord_count }} refs{% endif %}
+                            {% if c.lat_lng %} &middot; has coords{% endif %}
+                            {% if c.boundary %} &middot; has boundary{% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-1 flex-shrink-0">
+                        <a href="{{ c.view_url }}" class="btn btn-sm btn-outline-primary loc-child-btn" title="View on map"><i class="fas fa-map"></i></a>
+                        {% if c.manage_url %}
+                        <a href="{{ c.manage_url }}" class="btn btn-sm btn-outline-secondary loc-child-btn" title="Manage"><i class="fas fa-cog"></i></a>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if refs %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header py-2"><i class="fas fa-route"></i> Reference coordinates ({{ refs|length }})</div>
+            <ul class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                {% for r in refs %}
+                <li class="list-group-item small text-muted">
+                    #{{ forloop.counter }}
+                    Shallow {{ r.sLat|floatformat:4 }}, {{ r.sLng|floatformat:4 }} &rarr; {{ r.eLat|floatformat:4 }}, {{ r.eLng|floatformat:4 }}
+                    {% if r.dSLat %} &middot; Deep {{ r.dSLat|floatformat:4 }}, {{ r.dSLng|floatformat:4 }} &rarr; {{ r.dELat|floatformat:4 }}, {{ r.dELng|floatformat:4 }}{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Map -->
+    <div class="col-lg-8 col-xl-9">
+        <div class="card shadow-sm">
+            <div class="card-header py-2 d-flex align-items-center">
+                <i class="fas fa-map me-2"></i> {{ kind_label }} Map
+                <span class="ms-auto small text-muted">
+                    {% if stats.boundary_type %}Boundary drawn{% endif %}{% if center and stats.boundary_type %} &middot; {% endif %}{% if center %}Coord marker at ({{ center.0|floatformat:4 }}, {{ center.1|floatformat:4 }}){% endif %}
+                </span>
+            </div>
+            <div class="card-body p-2">
+                <div id="locMap"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Location Modal -->
+<div class="modal fade" id="editLocationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" enctype="multipart/form-data"
+                  action="{% if loc_type == 'province' %}{% url 'admin_edit_province' obj.id %}{% elif loc_type == 'municipality' %}{% url 'admin_edit_municipality' obj.id %}{% else %}{% url 'admin_edit_barangay' obj.id %}{% endif %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit {{ kind_label }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-bold">Name</label>
+                    <input type="text" class="form-control" name="name" value="{{ obj.name }}" required>
+                    <hr>
+                    {% if obj.boundary %}<script type="application/json" id="gbnd_bmap_locmap">{{ obj.boundary|tojson }}</script>{% endif %}
+                    <label class="form-label fw-bold"><i class="fas fa-draw-polygon"></i> Draw Boundary (optional)</label>
+                    <div class="rt-geo-editor"
+                         data-map="bmap_locmap"
+                         data-name="{{ kind_label }}">
+                        <div class="d-flex gap-2 mb-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="bdraw_locmap"><i class="fas fa-pen"></i> Draw / Add Point</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="bund_locmap">Undo</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="bclear_locmap">Clear</button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-dark rt-manual-btn mb-2" id="bmanual_locmap"><i class="fas fa-keyboard"></i> Type Coordinates</button>
+                        <div class="rt-manual-wrap d-none mb-2" id="bmanualwrap_locmap">
+                            <textarea class="form-control form-control-sm rt-manual-area" id="barea_locmap" rows="4" placeholder="One point per line: latitude, longitude&#10;6.9214, 125.0810&#10;6.9300, 125.0900&#10;&#10;(Alternatively, paste a GeoJSON Polygon/MultiPolygon)"></textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-primary rt-manual-apply" id="bapply_locmap">Apply to Map</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rt-manual-cancel" id="bcancel_locmap">Cancel</button>
+                            </div>
+                            <p class="form-text text-danger mb-0 rt-manual-err" id="berr_locmap" style="display:none"></p>
+                        </div>
+                        <div id="bmap_locmap" class="rt-geo-map rounded border mb-2" style="height:240px"></div>
+                        <p class="form-text" id="bstatus_locmap"></p>
+                        <input type="hidden" name="boundary_json" id="bjs_locmap">
+                        <input type="hidden" name="boundary_clear" id="bclr_locmap" value="">
+                    </div>
+                    <label class="form-label fw-bold mt-2">Boundary File (optional)</label>
+                    <input type="file" class="form-control" name="geometry_file" accept=".geojson,.json,application/geo+json,application/json">
+                    <div class="form-text">Draw the boundary on the map above, or upload a GeoJSON file (Polygon / MultiPolygon / Point).</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="locMapData">{{ map_data|tojson }}</script>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script>
+(function() {
+    var data;
+    try { data = JSON.parse(document.getElementById('locMapData').textContent); } catch (e) { return; }
+
+    var initCenter = (data.center && data.center.length === 2) ? [data.center[0], data.center[1]] : [12.0, 122.0];
+    var initZoom = data.type === 'barangay' ? 14 : (data.type === 'municipality' ? 13 : 11);
+    var map = L.map('locMap', { scrollWheelZoom: false, center: initCenter, zoom: initZoom });
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',
+        maxZoom: 18, maxNativeZoom: 16
+    }).addTo(map);
+
+    var selfStyle = {
+        color: '#0d6efd', weight: 3, opacity: 0.9,
+        fillColor: '#0d6efd', fillOpacity: 0.15
+    };
+    var childStyle = {
+        province:  { color: '#495057', weight: 1.5, opacity: 0.9, fillColor: '#0d6efd', fillOpacity: 0.10 },
+        municipality: { color: '#0dcaf0', weight: 1.5, opacity: 0.9, fillColor: '#0dcaf0', fillOpacity: 0.10 },
+        barangay:  { color: '#d63384', weight: 1.5, opacity: 0.9, fillColor: '#d63384', fillOpacity: 0.10 }
+    };
+    var childMarkerColor = { Municipality: '#0dcaf0', Barangay: '#d63384' };
+
+    var fit = null;
+
+    function extendFit(latlngs) {
+        if (!latlngs || !latlngs.length) return;
+        if (!fit) fit = L.latLngBounds(latlngs);
+        else fit.extend(L.latLngBounds(latlngs));
+    }
+    function extendPoint(latlng) {
+        if (!latlng) return;
+        if (!fit) fit = L.latLngBounds([latlng, latlng]);
+        else fit.extend(latlng);
+    }
+
+    // 1) The location's own boundary
+    if (data.boundary) {
+        var selfLayer = L.geoJSON(data.boundary, { style: selfStyle });
+        selfLayer.addTo(map);
+        try { extendFit([selfLayer.getBounds().getNorthEast(), selfLayer.getBounds().getSouthWest()]); } catch (e) {}
+    }
+
+    // 2) Self reference marker (centroid / stored coordinates)
+    if (data.center) {
+        L.circleMarker([data.center[0], data.center[1]], {
+            radius: 9, color: '#0d6efd', weight: 2,
+            fillColor: '#ffc107', fillOpacity: 1
+        }).addTo(map).bindTooltip('<strong>' + data.name + '</strong>', { direction: 'top', offset: [0, -8] });
+        extendPoint([data.center[0], data.center[1]]);
+    }
+
+    // 3) Children markers + boundaries
+    (data.children || []).forEach(function(c) {
+        var color = childMarkerColor[c.label] || '#0d6efd';
+        if (c.boundary) {
+            L.geoJSON(c.boundary, { style: childStyle[data.type] || childStyle.municipality }).addTo(map);
+        }
+        if (c.lat !== null && c.lat !== undefined && c.lng !== null && c.lng !== undefined) {
+            var mk = L.circleMarker([c.lat, c.lng], {
+                radius: 7, color: '#fff', weight: 1.5,
+                fillColor: color, fillOpacity: 0.95
+            });
+            var lines = [];
+            if (c.viewUrl) lines.push('<a href="' + c.viewUrl + '" class="btn btn-sm btn-outline-primary w-100 mb-1"><i class="fas fa-map"></i> View map</a>');
+            if (c.manageUrl) lines.push('<a href="' + c.manageUrl + '" class="btn btn-sm btn-outline-secondary w-100"><i class="fas fa-cog"></i> Manage</a>');
+            mk.bindPopup('<strong>' + c.name + '</strong><br><span class="text-muted small">' + c.label + ' &middot; ' + (c.countLabel || '') + '</span>' + (lines.length ? '<hr class="my-1">' + lines.join('') : ''));
+            mk.addTo(map);
+            extendPoint([c.lat, c.lng]);
+        }
+    });
+
+    // 4) Reference transect lines (barangay level)
+    (data.refs || []).forEach(function(r) {
+        var pts = [];
+        if (r.sLat !== null && r.sLat !== undefined && r.eLat !== null && r.eLat !== undefined) {
+            pts.push([r.sLat, r.sLng]);
+            pts.push([r.eLat, r.eLng]);
+            L.polyline(pts, { color: '#17a2b8', weight: 3, dashArray: '6 4' }).addTo(map);
+            L.circleMarker([r.sLat, r.sLng], { radius: 5, color: '#087990', fillColor: '#17a2b8', fillOpacity: 1 }).addTo(map);
+            L.circleMarker([r.eLat, r.eLng], { radius: 5, color: '#087990', fillColor: '#17a2b8', fillOpacity: 1 }).addTo(map);
+        }
+        if (r.dSLat !== null && r.dSLat !== undefined && r.dELat !== null && r.dELat !== undefined) {
+            L.polyline([[r.dSLat, r.dSLng], [r.dELat, r.dELng]], { color: '#2743ff', weight: 3 }).addTo(map);
+            L.circleMarker([r.dSLat, r.dSLng], { radius: 5, color: '#1a2fb8', fillColor: '#2743ff', fillOpacity: 1 }).addTo(map);
+            L.circleMarker([r.dELat, r.dELng], { radius: 5, color: '#1a2fb8', fillColor: '#2743ff', fillOpacity: 1 }).addTo(map);
+        }
+        pts.forEach(function(p) { extendPoint(p); });
+    });
+
+    // 5) Fit / initial view
+    if (fit) {
+        map.fitBounds(fit.pad(0.15));
+    } else if (data.center) {
+        map.setView([data.center[0], data.center[1]], data.type === 'barangay' ? 14 : data.type === 'municipality' ? 13 : 11);
+    } else {
+        map.setView([12.0, 122.0], 6);
+    }
+})();
+</script>
+<script src="/static/js/geo_draw.js"></script>
+<script>
+(function() {
+    var ed = document.querySelector('#editLocationModal .rt-geo-editor');
+    if (!ed || typeof RTGeoDraw === 'undefined') return;
+    var mapId = ed.getAttribute('data-map');
+    var initial = null;
+    var sc = document.getElementById('gbnd_' + mapId);
+    if (sc) {
+        try { initial = JSON.parse(sc.textContent); } catch (e) { initial = null; }
+    }
+    var suffix = mapId.replace('bmap_', '');
+    RTGeoDraw.init({
+        mapEl: mapId,
+        drawBtn: 'bdraw_' + suffix,
+        undoBtn: 'bund_' + suffix,
+        clearBtn: 'bclear_' + suffix,
+        input: 'bjs_' + suffix,
+        clearFlag: 'bclr_' + suffix,
+        status: 'bstatus_' + suffix,
+        manualBtn: 'bmanual_' + suffix,
+        manualWrap: 'bmanualwrap_' + suffix,
+        manualArea: 'barea_' + suffix,
+        manualApply: 'bapply_' + suffix,
+        manualCancel: 'bcancel_' + suffix,
+        manualErr: 'berr_' + suffix,
+        name: ed.getAttribute('data-name') || 'Location',
+        initial: initial
+    });
+})();
+</script>
+{% endblock %}

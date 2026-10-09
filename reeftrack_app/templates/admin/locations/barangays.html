@@ -1,4 +1,5 @@
 {% extends 'admin/base_admin.html' %}
+{% load geo_tags %}
 
 {% block title %}{{ municipality.name }} Barangays - Admin - ReefTrack{% endblock %}
 
@@ -62,9 +63,17 @@
         <div id="brgy{{ b.id }}" class="accordion-collapse collapse" data-bs-parent="#barangayAccordion">
             <div class="accordion-body">
                 <div class="d-flex justify-content-end mb-2">
+                    <a class="btn btn-sm btn-outline-success me-1" title="View on Map"
+                            href="{% url 'admin_location_map' 'barangay' b.id %}">
+                        <i class="fas fa-map"></i> View Map
+                    </a>
                     <button class="btn btn-sm btn-outline-primary me-1" title="Edit Barangay Name"
                             data-bs-toggle="modal" data-bs-target="#editBrgy{{ b.id }}">
-                        <i class="fas fa-edit"></i> Edit Name
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning me-1" title="Move to Another Municipality"
+                            data-bs-toggle="modal" data-bs-target="#moveBrgy{{ b.id }}">
+                        <i class="fas fa-arrow-right"></i> Move
                     </button>
                     <button class="btn btn-sm btn-outline-danger" title="Delete Barangay"
                             data-bs-toggle="modal" data-bs-target="#deleteBrgy{{ b.id }}">
@@ -280,10 +289,18 @@
                 </div>
                 <div class="modal-body">
                     <p>Are you sure you want to delete these reference coordinates from <strong>{{ b.name }}</strong>?</p>
+                    {% if t.source == 'assessment' or t.used_in_assessment %}
+                    <div class="alert alert-danger py-2 mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        This reference is linked to an assessment and cannot be deleted.
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    {% if t.source != 'assessment' and not t.used_in_assessment %}
                     <button type="submit" class="btn btn-danger">Delete</button>
+                    {% endif %}
                 </div>
             </form>
         </div>
@@ -296,7 +313,7 @@
 <div class="modal fade" id="editBrgy{{ b.id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'admin_edit_barangay' b.id %}">
+            <form method="POST" action="{% url 'admin_edit_barangay' b.id %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Barangay</h5>
@@ -305,6 +322,40 @@
                 <div class="modal-body">
                     <label class="form-label fw-bold">Name</label>
                     <input type="text" class="form-control" name="name" value="{{ b.name }}" required>
+                    <hr>
+                    {% if b.boundary %}<script type="application/json" id="gbnd_bmap_edit_brgy_{{ b.id }}">{{ b.boundary|tojson }}</script>{% endif %}
+                    <label class="form-label fw-bold"><i class="fas fa-draw-polygon"></i> Draw Boundary (optional)</label>
+                    <div class="rt-geo-editor"
+                         data-map="bmap_edit_brgy_{{ b.id }}"
+                         data-draw="bdraw_edit_brgy_{{ b.id }}"
+                         data-undo="bund_edit_brgy_{{ b.id }}"
+                         data-clear="bclear_edit_brgy_{{ b.id }}"
+                         data-out="bjs_edit_brgy_{{ b.id }}"
+                         data-clearflag="bclr_edit_brgy_{{ b.id }}"
+                         data-status="bstatus_edit_brgy_{{ b.id }}"
+                         data-name="Barangay">
+                        <div class="d-flex gap-2 mb-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="bdraw_edit_brgy_{{ b.id }}"><i class="fas fa-pen"></i> Draw / Add Point</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="bund_edit_brgy_{{ b.id }}">Undo</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="bclear_edit_brgy_{{ b.id }}">Clear</button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-dark rt-manual-btn mb-2" id="bmanual_edit_brgy_{{ b.id }}"><i class="fas fa-keyboard"></i> Type Coordinates</button>
+                        <div class="rt-manual-wrap d-none mb-2" id="bmanualwrap_edit_brgy_{{ b.id }}">
+                            <textarea class="form-control form-control-sm rt-manual-area" id="barea_edit_brgy_{{ b.id }}" rows="4" placeholder="One point per line: latitude, longitude&#10;6.9214, 125.0810&#10;6.9300, 125.0900&#10;&#10;(Alternatively, paste a GeoJSON Polygon/MultiPolygon)"></textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-primary rt-manual-apply" id="bapply_edit_brgy_{{ b.id }}">Apply to Map</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rt-manual-cancel" id="bcancel_edit_brgy_{{ b.id }}">Cancel</button>
+                            </div>
+                            <p class="form-text text-danger mb-0 rt-manual-err" id="berr_edit_brgy_{{ b.id }}" style="display:none"></p>
+                        </div>
+                        <div id="bmap_edit_brgy_{{ b.id }}" class="rt-geo-map rounded border mb-2" style="height:240px"></div>
+                        <p class="form-text" id="bstatus_edit_brgy_{{ b.id }}"></p>
+                        <input type="hidden" name="boundary_json" id="bjs_edit_brgy_{{ b.id }}">
+                        <input type="hidden" name="boundary_clear" id="bclr_edit_brgy_{{ b.id }}" value="">
+                    </div>
+                    <label class="form-label fw-bold mt-2">Boundary File (optional)</label>
+                    <input type="file" class="form-control" name="geometry_file" accept=".geojson,.json,application/geo+json,application/json">
+                    <div class="form-text">Draw the boundary on the map above, or upload a GeoJSON file (Polygon / MultiPolygon / Point).</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -339,6 +390,46 @@
                     {% if b.approved_assessment_count == 0 %}
                     <button type="submit" class="btn btn-danger">Delete</button>
                     {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Move Barangay Modal -->
+<div class="modal fade" id="moveBrgy{{ b.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_move_barangay' b.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title">Move Barangay</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Move <strong>{{ b.name }}</strong> to a different municipality.</p>
+                    <div class="alert alert-info py-2 mb-3">
+                        <i class="fas fa-info-circle"></i>
+                        Its assessments (including approved ones) will be re-pointed to the new municipality and its province will follow automatically.
+                    </div>
+                    <label class="form-label fw-bold">New Municipality</label>
+                    <select class="form-select" name="new_municipality_id" required>
+                        <option value="">-- Select Municipality --</option>
+                        {% regroup municipalities by province.name as muni_groups %}
+                        {% for group in muni_groups %}
+                        <optgroup label="{{ group.grouper }}">
+                            {% for mp in group.list %}
+                            {% if mp.id != municipality.id %}
+                            <option value="{{ mp.id }}">{{ mp.name }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning text-white">Move Barangay</button>
                 </div>
             </form>
         </div>
@@ -435,7 +526,7 @@ var map = L.map('allMap' + brgyId, {minZoom: 5, maxZoom: 18});
 <div class="modal fade" id="addBarangayModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'admin_add_barangay' municipality.id %}">
+            <form method="POST" action="{% url 'admin_add_barangay' municipality.id %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">Add Barangay to {{ municipality.name }}</h5>
@@ -444,6 +535,39 @@ var map = L.map('allMap' + brgyId, {minZoom: 5, maxZoom: 18});
                 <div class="modal-body">
                     <label class="form-label fw-bold">Barangay Name</label>
                     <input type="text" class="form-control" name="name" required placeholder="e.g. Labangal">
+                    <hr>
+                    <label class="form-label fw-bold"><i class="fas fa-draw-polygon"></i> Draw Boundary (optional)</label>
+                    <div class="rt-geo-editor"
+                         data-map="bmap_add_brgy"
+                         data-draw="bdraw_add_brgy"
+                         data-undo="bund_add_brgy"
+                         data-clear="bclear_add_brgy"
+                         data-out="bjs_add_brgy"
+                         data-clearflag="bclr_add_brgy"
+                         data-status="bstatus_add_brgy"
+                         data-name="Barangay">
+                        <div class="d-flex gap-2 mb-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="bdraw_add_brgy"><i class="fas fa-pen"></i> Draw / Add Point</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="bund_add_brgy">Undo</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="bclear_add_brgy">Clear</button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-dark rt-manual-btn mb-2" id="bmanual_add_brgy"><i class="fas fa-keyboard"></i> Type Coordinates</button>
+                        <div class="rt-manual-wrap d-none mb-2" id="bmanualwrap_add_brgy">
+                            <textarea class="form-control form-control-sm rt-manual-area" id="barea_add_brgy" rows="4" placeholder="One point per line: latitude, longitude&#10;6.9214, 125.0810&#10;6.9300, 125.0900&#10;&#10;(Alternatively, paste a GeoJSON Polygon/MultiPolygon)"></textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-primary rt-manual-apply" id="bapply_add_brgy">Apply to Map</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rt-manual-cancel" id="bcancel_add_brgy">Cancel</button>
+                            </div>
+                            <p class="form-text text-danger mb-0 rt-manual-err" id="berr_add_brgy" style="display:none"></p>
+                        </div>
+                        <div id="bmap_add_brgy" class="rt-geo-map rounded border mb-2" style="height:240px"></div>
+                        <p class="form-text" id="bstatus_add_brgy"></p>
+                        <input type="hidden" name="boundary_json" id="bjs_add_brgy">
+                        <input type="hidden" name="boundary_clear" id="bclr_add_brgy" value="">
+                    </div>
+                    <label class="form-label fw-bold mt-2">Boundary File (optional)</label>
+                    <input type="file" class="form-control" name="geometry_file" accept=".geojson,.json,application/geo+json,application/json">
+                    <div class="form-text">Draw the boundary on the map above, or upload a GeoJSON file (Polygon / MultiPolygon / Point).</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -560,4 +684,40 @@ function confirmBulkDeleteBrgy() {
         </div>
     </div>
 </div>
+
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/js/geo_draw.js"></script>
+<script>
+(function() {
+    var editors = document.querySelectorAll('.rt-geo-editor');
+    for (var i = 0; i < editors.length; i++) {
+        (function(ed) {
+            var mapId = ed.getAttribute('data-map');
+            var initial = null;
+            var sc = document.getElementById('gbnd_' + mapId);
+            if (sc) {
+                try { initial = JSON.parse(sc.textContent); } catch (e) { initial = null; }
+            }
+            var suffix = mapId.replace('bmap_', '');
+            RTGeoDraw.init({
+                mapEl: mapId,
+                drawBtn: 'bdraw_' + suffix,
+                undoBtn: 'bund_' + suffix,
+                clearBtn: 'bclear_' + suffix,
+                input: 'bjs_' + suffix,
+                clearFlag: 'bclr_' + suffix,
+                status: 'bstatus_' + suffix,
+                manualBtn: 'bmanual_' + suffix,
+                manualWrap: 'bmanualwrap_' + suffix,
+                manualArea: 'barea_' + suffix,
+                manualApply: 'bapply_' + suffix,
+                manualCancel: 'bcancel_' + suffix,
+                manualErr: 'berr_' + suffix,
+                name: ed.getAttribute('data-name') || 'Location',
+                initial: initial
+            });
+        })(editors[i]);
+    }
+})();
+</script>
 {% endblock %}

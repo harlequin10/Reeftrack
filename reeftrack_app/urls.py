@@ -86,6 +86,7 @@ urlpatterns = [
     path('manage/locations/<int:province_id>/municipalities/bulk-delete/',     views.admin_bulk_delete_municipalities,name='admin_bulk_delete_municipalities'),
     path('manage/locations/municipalities/<int:municipality_id>/edit/',        views.admin_edit_municipality,        name='admin_edit_municipality'),
     path('manage/locations/municipalities/<int:municipality_id>/delete/',      views.admin_delete_municipality,      name='admin_delete_municipality'),
+    path('manage/locations/municipalities/<int:municipality_id>/move/',        views.admin_move_municipality,        name='admin_move_municipality'),
 
     # Barangay management (within municipality)
     path('manage/locations/municipalities/<int:municipality_id>/barangays/',              views.admin_manage_barangays,     name='admin_manage_barangays'),
@@ -93,6 +94,10 @@ urlpatterns = [
     path('manage/locations/municipalities/<int:municipality_id>/barangays/add/',          views.admin_add_barangay,         name='admin_add_barangay'),
     path('manage/locations/barangays/<int:barangay_id>/edit/',                            views.admin_edit_barangay,        name='admin_edit_barangay'),
     path('manage/locations/barangays/<int:barangay_id>/delete/',                          views.admin_delete_barangay,      name='admin_delete_barangay'),
+    path('manage/locations/barangays/<int:barangay_id>/move/',                            views.admin_move_barangay,        name='admin_move_barangay'),
+
+    # Location map view (province / municipality / barangay)
+    path('manage/locations/view/<str:loc_type>/<int:loc_id>/', views.admin_location_map, name='admin_location_map'),
 
     # ==================== ADMIN SPECIES MANAGEMENT ====================
     path('manage/coral-life-forms/', views.admin_manage_species, name='admin_manage_species'),
