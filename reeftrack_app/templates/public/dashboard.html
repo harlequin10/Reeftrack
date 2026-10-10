@@ -345,7 +345,9 @@ var map,chart,mCluster,tLayer,bLayer,bdLayer,hlLayer,lblLayer;
 var D={m:[],s:{},t:[]};
 var showT=false;
 var selMuni=null,selBrgy=null;
-var muniPin={},_hiddenMuniPin=null;
+var muniPin={};
+var _hiddenMuniPins=[];
+var _preDrillView=null;
 var _firstLoc=true;
 var _aPage=0,_aFiltered=null,_aPP=10;
 var _tlPage=0,_tlFiltered=null,_tlPP=10;
@@ -383,6 +385,13 @@ function init(){
   map.addLayer(hlLayer);
   lblLayer=L.layerGroup();
   map.addLayer(lblLayer);
+
+  map.on('click',function(e){
+    if(!selMuni)return;
+    var geom=muniBoundary(selMuni.id);
+    if(geom&&geom.coordinates&&pointInGeom(e.latlng.lng,e.latlng.lat,geom))return;
+    exitMuniView();
+  });
 
   document.getElementById('btnTransects').onclick=function(){
     showT=!showT;
@@ -525,14 +534,13 @@ function drawBds(scp){
   var prov=scp.province_id||(pvEl?pvEl.value:'all');
   bdLayer.clearLayers();
   if(lblLayer)lblLayer.clearLayers();
-  var styleThin={color:'#0E7C86',weight:1.3,opacity:.55,fillColor:'#0E7C86',fillOpacity:.03};
-  var styleMuni={color:'#0E7C86',weight:1.5,opacity:.7,fillColor:'#0E7C86',fillOpacity:.05};
-  var styleBrgy={color:'#f472b6',weight:2.2,opacity:.95,fillColor:'#f472b6',fillOpacity:.08};
+  var styleMuniAll={color:'#0E7C86',weight:1.9,opacity:.9,fillColor:'#0E7C86',fillOpacity:.06};
+  var styleMuni={color:'#0E7C86',weight:2.4,opacity:.95,fillColor:'#0E7C86',fillOpacity:.08};
   function drawGeom(geom,name,style,onClick){
     if(!geom)return;
     try{
       var lyr=L.geoJSON(geom,{style:style,interactive:!!onClick});
-      if(onClick)lyr.on('click',function(){onClick();});
+      if(onClick)lyr.on('click',function(e){L.DomEvent.stopPropagation(e);onClick();});
       lyr.addTo(bdLayer);
     }catch(e){}
   }
@@ -558,9 +566,20 @@ function drawBds(scp){
   }
   if(brgy&&brgy!=='all'){
     var bd=brgyGeom(brgy);
-    if(bd)drawGeom(bd.boundary,bd.name,styleBrgy,function(){clickBrgy(bd.id);});
+    if(bd){
+      var hitf=findBrgyInD(bd.id);
+      var colf=(hitf&&hitf.b.lc&&HC[hitf.b.lc])?HC[hitf.b.lc]:'#0E7C86';
+      drawGeom(bd.boundary,bd.name,{color:colf,weight:2.4,opacity:.95,fillColor:colf,fillOpacity:.12},function(){clickBrgy(bd.id);});
+    }
   }else if(muni&&muni!=='all'){
     var md=muniGeom(muni);
+    var styleMuniFade={color:'#0E7C86',weight:2,opacity:.7,fillColor:'#0E7C86',fillOpacity:.05};
+    Object.keys(_geoM).forEach(function(k){
+      var mx=_geoM[k];
+      if(String(mx.id)===String(muni))return;
+      if(prov&&prov!=='all'&&String(mx.province_id)!==String(prov))return;
+      drawGeom(mx.boundary,mx.name,styleMuniFade,function(){clickMuni(mx.id);});
+    });
     if(md)drawGeom(md.boundary,md.name,styleMuni,function(){clickMuni(md.id);});
     Object.keys(_geoB).forEach(function(k){
       var bx=_geoB[k];
@@ -572,30 +591,42 @@ function drawBds(scp){
       var mx=_geoM[k];
       if(String(mx.province_id)===String(prov))drawGeom(mx.boundary,mx.name,styleMuni,function(){clickMuni(mx.id);});
     });
-    Object.keys(_geoB).forEach(function(k){
-      var bx=_geoB[k];
-      var mm=_geoM[String(bx.municipality_id)];
-      if(!mm||String(mm.province_id)!==String(prov))return;
-      drawBrgy(bx,1.6);
-    });
   }else{
-    (_provData||[]).forEach(function(p){if(p.boundary)drawGeom(p.boundary,p.name,styleThin);});
-    Object.keys(_geoM).forEach(function(k){drawGeom(_geoM[k].boundary,_geoM[k].name,styleThin,function(){clickMuni(_geoM[k].id);});});
+    Object.keys(_geoM).forEach(function(k){drawGeom(_geoM[k].boundary,_geoM[k].name,styleMuniAll,function(){clickMuni(_geoM[k].id);});});
   }
   refreshBrgyLabels();
 }
 
+function activeMuni(){
+  if(selMuni)return selMuni;
+  var el=document.getElementById('fMuni');
+  var fv=el?el.value:'all';
+  if(fv&&fv!=='all'){var r=null;D.m.forEach(function(m){if(String(m.id)===String(fv))r=m;});return r;}
+  return null;
+}
+function addBrgyCountLabel(b){
+  if(!b||!(b.ac>0))return;
+  var ctr=brgySeaEdgePoint(b);
+  var above=false;
+  if(!ctr){
+    var bnd=brgyBoundary(b);
+    ctr=bnd?pointOnSurface(bnd):((b.lat&&b.lng)?[b.lat,b.lng]:null);
+    above=!bnd;
+  }
+  if(!ctr)return;
+  var col=(b.lc&&HC[b.lc])?HC[b.lc]:'#0E7C86';
+  addCountLabel(ctr,b.ac,col,b.id,above);
+}
 function refreshBrgyLabels(){
   if(!lblLayer)return;
   lblLayer.clearLayers();
-  if(!selBrgy)return;
-  var hit=findBrgyInD(selBrgy.id);
-  if(!hit||!(hit.b.ac>0))return;
-  var bnd=brgyBoundary(hit.b);
-  if(!bnd)return;
-  var col=(hit.b.lc&&HC[hit.b.lc])?HC[hit.b.lc]:'#0E7C86';
-  var ctr=(hit.b.lat&&hit.b.lng)?[hit.b.lat,hit.b.lng]:geomCenter(bnd);
-  addCountLabel(ctr,hit.b.ac,col,hit.b.id);
+  if(selBrgy){
+    var hit=findBrgyInD(selBrgy.id);
+    if(hit)addBrgyCountLabel(hit.b);
+    return;
+  }
+  var muni=activeMuni();
+  if(muni){(muni.b||[]).forEach(addBrgyCountLabel);}
 }
 
 function glowGeom(geom,color){
@@ -620,6 +651,8 @@ function highlightLocation(kind,id){
   hlLayer.clearLayers();
   var color='#f472b6',geom=null,center=null,g=null;
   if(kind==='barangay'){
+    var hit=findBrgyInD(id);
+    color=(hit&&hit.b.lc&&HC[hit.b.lc])?HC[hit.b.lc]:'#0E7C86';
     g=_geoB[String(id)];
     if(g){geom=g.boundary||null;if(g.lat&&g.lng)center=[g.lat,g.lng];}
     if(!geom&&!center){
@@ -643,25 +676,72 @@ function highlightLocation(kind,id){
 }
 
 function clickMuni(id){
-  selBrgy=null;refreshBrgyLabels();
+  selBrgy=null;refreshBrgyLabels();restoreAllMuniPins();
   var has=false;D.m.forEach(function(mx){if(String(mx.id)===String(id))has=true;});
   if(has){window.ZM(id);}else{highlightLocation('municipality',id);}
 }
 
+function brgySeaPoints(b){
+  var pts=[];
+  if(b&&b.a)b.a.forEach(function(as){
+    (as.tr||[]).forEach(function(t){
+      [t.s,t.d].forEach(function(dd){
+        if(!dd)return;
+        if(dd.s)pts.push(dd.s);
+        if(dd.e)pts.push(dd.e);
+      });
+    });
+  });
+  return pts;
+}
+function focusBrgy(b){
+  if(!b)return;
+  var pts=brgySeaPoints(b);
+  if(pts.length===1){map.setView(pts[0],13);return;}
+  if(pts.length>1){map.fitBounds(L.latLngBounds(pts),{padding:[50,50],maxZoom:13});return;}
+  var bnd=brgyBoundary(b);
+  if(bnd){try{var bb=L.geoJSON(bnd).getBounds();if(bb&&bb.isValid()){map.fitBounds(bb,{padding:[40,40],maxZoom:12});return;}}catch(e){}}
+  if(b.lat&&b.lng)map.setView([b.lat,b.lng],12);
+}
+function brgySeaEdgePoint(b){
+  var bnd=brgyBoundary(b);
+  if(!bnd)return null;
+  var pts=brgySeaPoints(b);
+  if(!pts.length)return null;
+  var rings=[];
+  if(bnd.type==='Polygon')rings=[bnd.coordinates[0]];
+  else if(bnd.type==='MultiPolygon')rings=bnd.coordinates.map(function(p){return p[0];});
+  else return null;
+  var bestV=null,bestD=Infinity;
+  rings.forEach(function(ring){
+    ring.forEach(function(v){
+      pts.forEach(function(s){
+        var dx=v[0]-s[1],dy=v[1]-s[0],d=dx*dx+dy*dy;
+        if(d<bestD){bestD=d;bestV=v;}
+      });
+    });
+  });
+  var inside=pointOnSurface(bnd);
+  if(!inside)return null;
+  var cx=inside[1],cy=inside[0];
+  if(!bestV)return [cy,cx];
+  var dx=bestV[0]-cx,dy=bestV[1]-cy;
+  for(var f=0.3;f>=0.05;f-=0.1){
+    var px=cx+dx*f,py=cy+dy*f;
+    if(pointInGeom(px,py,bnd))return [py,px];
+  }
+  return [cy,cx];
+}
 function clickBrgy(id){
   var b=null,m=null;
   D.m.forEach(function(mx){mx.b.forEach(function(bx){if(String(bx.id)===String(id)){b=bx;m=mx;}});});
   if(b&&m){
     selBrgy=b;
-    if(!selMuni&&mCluster){
-      if(_hiddenMuniPin!=null&&muniPin[_hiddenMuniPin]&&!mCluster.hasLayer(muniPin[_hiddenMuniPin]))mCluster.addLayer(muniPin[_hiddenMuniPin]);
-      _hiddenMuniPin=null;
-      if(muniPin[m.id]){mCluster.removeLayer(muniPin[m.id]);_hiddenMuniPin=m.id;}
-    }
+    if(!selMuni&&mCluster){hideAllMuniPins();}
     refreshBrgyLabels();
     showBDetails(b,m);buildTimeline(b);
     highlightLocation('barangay',b.id);
-    if(b.lat&&b.lng)map.setView([b.lat,b.lng],15);
+    focusBrgy(b);
     if(window.innerWidth<=1024&&window.openSheet)window.openSheet();
   }else{
     highlightLocation('barangay',id);
@@ -681,6 +761,13 @@ function findBrgyInD(id){
   return r;
 }
 
+function muniBoundary(id){
+  var g=_geoM[String(id)];
+  if(g&&g.boundary)return g.boundary;
+  var r=null;D.m.forEach(function(mx){if(String(mx.id)===String(id))r=mx;});
+  return (r&&r.boundary)||null;
+}
+
 function flattenCoords(arr,out){
   if(!arr)return out;
   if(typeof arr[0]==='number'&&typeof arr[1]==='number'){out.push(arr);return out;}
@@ -698,9 +785,60 @@ function geomCenter(geom){
   }catch(e){return null;}
 }
 
-function addCountLabel(center,count,color,id){
+function pointInRing(x,y,ring){
+  var inside=false;
+  for(var i=0,j=ring.length-1;i<ring.length;j=i++){
+    var xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+function pointInPolygon(x,y,rings){
+  if(!rings||!rings.length||!pointInRing(x,y,rings[0]))return false;
+  for(var h=1;h<rings.length;h++){if(pointInRing(x,y,rings[h]))return false;}
+  return true;
+}
+function pointInGeom(x,y,geom){
+  try{
+    if(!geom||!geom.coordinates)return false;
+    if(geom.type==='Polygon')return pointInPolygon(x,y,geom.coordinates);
+    if(geom.type==='MultiPolygon')return geom.coordinates.some(function(rings){return pointInPolygon(x,y,rings);});
+    return false;
+  }catch(e){return false;}
+}
+// Returns [lat,lng] guaranteed to lie inside the polygon (falls back to bbox center / vertex average).
+function pointOnSurface(geom){
+  try{
+    if(!geom||!geom.coordinates)return null;
+    if(geom.type==='Point')return [geom.coordinates[1],geom.coordinates[0]];
+    var polys=geom.type==='Polygon'?[geom.coordinates]:(geom.type==='MultiPolygon'?geom.coordinates:null);
+    if(!polys)return geomCenter(geom);
+    var best=null,bestD=Infinity;
+    polys.forEach(function(rings){
+      var pts=flattenCoords(rings[0],[]);
+      if(!pts.length)return;
+      var minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+      pts.forEach(function(p){if(p[0]<minx)minx=p[0];if(p[0]>maxx)maxx=p[0];if(p[1]<miny)miny=p[1];if(p[1]>maxy)maxy=p[1];});
+      var cx=(minx+maxx)/2,cy=(miny+maxy)/2,N=20;
+      for(var i=0;i<=N;i++){
+        for(var j=0;j<=N;j++){
+          var x=minx+(maxx-minx)*i/N,y=miny+(maxy-miny)*j/N;
+          if(pointInPolygon(x,y,rings)){
+            var d=(x-cx)*(x-cx)+(y-cy)*(y-cy);
+            if(d<bestD){bestD=d;best=[y,x];}
+          }
+        }
+      }
+    });
+    if(best)return best;
+    var c=geomCenter(geom);
+    return c;
+  }catch(e){return geomCenter(geom);}
+}
+
+function addCountLabel(center,count,color,id,above){
   if(!center)return;
-  var ic=L.divIcon({className:'',html:'<div class="rt-dash-bc" style="background:'+color+'"><span>'+count+'</span></div>',iconSize:[24,24],iconAnchor:[12,12]});
+  var ic=L.divIcon({className:'',html:'<div class="rt-dash-bc" style="background:'+color+'"><span>'+count+'</span></div>',iconSize:[24,24],iconAnchor:[12,above?26:12]});
   var mk=L.marker(center,{icon:ic,zIndexOffset:600});
   mk.on('click',function(){clickBrgy(id);});
   lblLayer.addLayer(mk);
@@ -740,10 +878,24 @@ function popBrgySel(bs){
   s.innerHTML=h;
 }
 
+function hideAllMuniPins(){
+  restoreAllMuniPins();
+  if(!mCluster)return;
+  Object.keys(muniPin).forEach(function(k){
+    var mk=muniPin[k];
+    if(mk&&mCluster.hasLayer(mk)){mCluster.removeLayer(mk);_hiddenMuniPins.push(k);}
+  });
+}
+function restoreAllMuniPins(){
+  if(!mCluster){_hiddenMuniPins=[];return;}
+  _hiddenMuniPins.forEach(function(k){var mk=muniPin[k];if(mk&&!mCluster.hasLayer(mk))mCluster.addLayer(mk);});
+  _hiddenMuniPins=[];
+}
+
 function dispMarkers(d){
   mCluster.clearLayers();bLayer.clearLayers();
   if(map.hasLayer(bLayer))map.removeLayer(bLayer);
-  muniPin={};_hiddenMuniPin=null;
+  muniPin={};_hiddenMuniPins=[];
   d.m.forEach(function(m){
     if(!m.lat||!m.lng)return;
     var ta=0;m.b.forEach(function(b){ta+=b.ac;});
@@ -776,7 +928,7 @@ function autoDrillBrgy(bid){
       buildTimeline(bb);
       drawBds({barangay_id:bb.id});
       highlightLocation('barangay',bb.id);
-      if(bb.lat&&bb.lng)map.setView([bb.lat,bb.lng],15);
+      focusBrgy(bb);
       if(showT)showBLines(bb);
     },250);
   },30);
@@ -785,6 +937,7 @@ function autoDrillBrgy(bid){
 window.ZM=function(mid){
   var m=null;D.m.forEach(function(x){if(x.id===mid)m=x;});
   if(!m)return;
+  if(!selMuni)_preDrillView={center:map.getCenter(),zoom:map.getZoom()};
   selMuni=m;selBrgy=null;map.closePopup();
   document.getElementById('backToMuniBtn').style.display='';
   ensureBrgyGeo(mid,function(){
@@ -795,15 +948,20 @@ window.ZM=function(mid){
       if(b.lat&&b.lng)pts.push([b.lat,b.lng]);
       else{var bnd=brgyBoundary(b);if(bnd){var c=geomCenter(bnd);if(c)pts.push(c);}}
     });
-    mCluster.clearLayers();bLayer.clearLayers();map.addLayer(bLayer);
-    if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:14});
+    mCluster.clearLayers();bLayer.clearLayers();map.addLayer(bLayer);_hiddenMuniPins=[];
+    var muniBnd=muniBoundary(mid);
+    if(muniBnd){
+      var bnds=L.geoJSON(muniBnd).getBounds();
+      if(bnds&&bnds.isValid())map.fitBounds(bnds,{padding:[30,30],maxZoom:12});
+      else if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:13});
+    }else if(pts.length){map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:13});}
     m.b.forEach(function(b){
       if(brgyBoundary(b))return;
       if(!b.lat||!b.lng)return;
       var c=HC[b.lc]||'#6b7280';
       var ic=L.divIcon({className:'',html:'<div class="rt-dash-bm" style="border-color:'+c+'"><i class="fas fa-water"></i></div>',iconSize:[26,26],iconAnchor:[13,13]});
       var mk=L.marker([b.lat,b.lng],{icon:ic});
-      mk.on('click',function(){selBrgy=b;showBDetails(b,m);buildTimeline(b);highlightLocation('barangay',b.id);if(b.lat&&b.lng)map.setView([b.lat,b.lng],15);if(window.innerWidth<=1024&&window.openSheet)window.openSheet();});
+      mk.on('click',function(){selBrgy=b;showBDetails(b,m);buildTimeline(b);highlightLocation('barangay',b.id);focusBrgy(b);if(window.innerWidth<=1024&&window.openSheet)window.openSheet();});
       bLayer.addLayer(mk);
     });
     updChartM(m);
@@ -1047,6 +1205,25 @@ function drawLine(t,a,bn){
   }
 }
 
+function exitMuniView(){
+  if(!selMuni)return;
+  selMuni=null;selBrgy=null;
+  if(hlLayer)hlLayer.clearLayers();
+  if(lblLayer)lblLayer.clearLayers();
+  if(tLayer)tLayer.clearLayers();
+  if(bLayer)bLayer.clearLayers();
+  if(map.hasLayer(bLayer))map.removeLayer(bLayer);
+  if(map.hasLayer(tLayer))map.removeLayer(tLayer);
+  document.getElementById('timelineCard').style.display='none';
+  document.getElementById('backToMuniBtn').style.display='none';
+  dispMarkers(D);
+  drawBds();
+  document.getElementById('pDetails').innerHTML='<div class="rt-dash-empty"><i class="fas fa-map-marker-alt"></i><p>Click a marker on the map to view barangay details</p></div>';
+  updChart(D.t);updStats(D.s);updHealth(D.m);
+  if(_preDrillView&&_preDrillView.center){map.setView(_preDrillView.center,_preDrillView.zoom);}
+  _preDrillView=null;
+}
+
 function backToMuni(){
   selBrgy=null;
   document.getElementById('timelineCard').style.display='none';
@@ -1072,10 +1249,12 @@ function backToMuni(){
       if(b.lat&&b.lng)pts.push([b.lat,b.lng]);
       else{var bnd=brgyBoundary(b);if(bnd){var cc=geomCenter(bnd);if(cc)pts.push(cc);}}
     });
-    if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:14});
+    var mb=muniBoundary(selMuni.id);
+    if(mb){var mbb=L.geoJSON(mb).getBounds();if(mbb&&mbb.isValid())map.fitBounds(mbb,{padding:[30,30],maxZoom:12});else if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:13});}
+    else if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:13});
     else if(selMuni.lat&&selMuni.lng)map.setView([selMuni.lat,selMuni.lng],12);
   }else{
-    muniPin={};_hiddenMuniPin=null;
+  muniPin={};_hiddenMuniPins=[];
     D.m.forEach(function(m){
       if(!m.lat||!m.lng)return;
       var ta=0;m.b.forEach(function(b){ta+=b.ac;});
@@ -1106,7 +1285,6 @@ function filterBrgyAssessments(year){
 }
 
 function resetFilters(){
-  if(_latestProv)document.getElementById('fProv').value=_latestProv;
   document.getElementById('fMuni').value='all';
   document.getElementById('fBrgy').value='all';
   document.getElementById('fYearFrom').value='';
@@ -1230,9 +1408,9 @@ window.ZB=function(mid,bid){
     var m=null;D.m.forEach(function(x){if(x.id===mid)m=x;});
     if(!m)return;
     var b=null;m.b.forEach(function(x){if(x.id===bid)b=x;});
-    if(!b||!b.lat||!b.lng)return;
+    if(!b)return;
     selBrgy=b;showBDetails(b,m);
-    map.setView([b.lat,b.lng],15);
+    focusBrgy(b);
     showBLines(b);buildTimeline(b);
   },400);
 };

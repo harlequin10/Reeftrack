@@ -223,7 +223,7 @@
 
     var initCenter = (data.center && data.center.length === 2) ? [data.center[0], data.center[1]] : [12.0, 122.0];
     var initZoom = data.type === 'barangay' ? 14 : (data.type === 'municipality' ? 13 : 11);
-    var map = L.map('locMap', { scrollWheelZoom: false, center: initCenter, zoom: initZoom });
+    var map = L.map('locMap', { scrollWheelZoom: true, center: initCenter, zoom: initZoom });
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS',
         maxZoom: 18, maxNativeZoom: 16
